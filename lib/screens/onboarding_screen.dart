@@ -1,6 +1,7 @@
 // /lib/screens/onboarding_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Import for SharedPreferences
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({Key? key}) : super(key: key);
@@ -37,26 +38,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  void _nextPage() {
+  void _nextPage() async { // Made async to use await
     if (_currentPage < _slides.length - 1) {
       _pageController.nextPage(
-        duration: Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 300),
         curve: Curves.ease,
       );
     } else {
+      // Set the flag that onboarding has been seen
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('hasSeenOnboarding', true);
       // Navigate to home screen
       Navigator.pushReplacementNamed(context, '/home');
     }
   }
 
   Widget _buildDot(int index) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 4),
-      width: 8,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      margin: const EdgeInsets.symmetric(horizontal: 5),
       height: 8,
+      width: _currentPage == index ? 24 : 8,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: _currentPage == index ? Colors.white : Colors.white.withOpacity(0.5),
+        color: _currentPage == index ? Colors.white : Colors.white54,
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }
@@ -65,78 +70,59 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
-        fit: StackFit.expand,
         children: [
-          // Background gradient
+          // Background Gradient
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF87CEEB), // Sky Blue
                   Color(0xFF1E90FF), // Dodger Blue
+                  Color(0xFF007BFF), // Deeper Blue
                 ],
               ),
             ),
           ),
-
-          // Content
           Column(
             children: [
               Expanded(
-                flex: 3,
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: _slides.length,
-                  onPageChanged: (index) {
+                  onPageChanged: (int page) {
                     setState(() {
-                      _currentPage = index;
+                      _currentPage = page;
                     });
                   },
                   itemBuilder: (context, index) {
-                    final slide = _slides[index];
                     return Padding(
                       padding: const EdgeInsets.all(40.0),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Icon illustration
-                          Container(
-                            padding: EdgeInsets.all(25),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.2),
-                            ),
-                            child: Icon(
-                              slide['icon'] as IconData,
-                              size: 80,
-                              color: Colors.white,
-                            ),
+                          Icon(
+                            _slides[index]["icon"],
+                            size: 120,
+                            color: Colors.white,
                           ),
-                          SizedBox(height: 30),
-
-                          // Title
+                          const SizedBox(height: 30),
                           Text(
-                            slide['title']!,
+                            _slides[index]["title"],
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
-                              height: 1.4,
                             ),
                           ),
-                          SizedBox(height: 15),
-
-                          // Subtitle
+                          const SizedBox(height: 15),
                           Text(
-                            slide['subtitle']!,
+                            _slides[index]["subtitle"],
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
+                              fontSize: 18,
+                              color: Colors.white.withOpacity(0.8),
                             ),
                           ),
                         ],
@@ -145,8 +131,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   },
                 ),
               ),
-
-              // Indicator dots
+              // Dots indicator
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(_slides.length, (index) => _buildDot(index)),
@@ -159,8 +144,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
-                      child: Text(
+                      onPressed: () async { // Made async
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('hasSeenOnboarding', true); // Set flag on skip
+                        Navigator.pushReplacementNamed(context, '/home');
+                      },
+                      child: const Text(
                         "Skip",
                         style: TextStyle(color: Colors.white),
                       ),
@@ -173,7 +162,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                       ),
                       child: Text(
                         _currentPage == _slides.length - 1 ? "Get Started" : "Next",

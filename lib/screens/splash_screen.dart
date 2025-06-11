@@ -1,6 +1,8 @@
 // /lib/screens/splash_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // Import for kIsWeb
+import 'package:shared_preferences/shared_preferences.dart'; // Import for SharedPreferences
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -34,9 +36,22 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Wait for at least 4 seconds before navigating
-    Future.delayed(const Duration(seconds: 20), () {
-      Navigator.pushReplacementNamed(context, '/onboarding');
+    // Wait for animation completion and then navigate based on platform and onboarding status
+    Future.delayed(const Duration(seconds: 10), () async { // Changed from 20s to 10s based on user's last provided file
+      if (kIsWeb) {
+        // For web, skip onboarding and go directly to home
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        // For mobile, check if onboarding has been seen
+        final prefs = await SharedPreferences.getInstance();
+        final bool hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+
+        if (hasSeenOnboarding) {
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        }
+      }
     });
   }
 
@@ -54,73 +69,78 @@ class _SplashScreenState extends State<SplashScreen>
         children: [
           // Background Gradient (Blue to Dodger Blue)
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [
                   Color(0xFF1E90FF), // Dodger Blue
-                  Color(0xFF003366), // Deep Blue
+                  Color(0xFF007BFF), // Deeper Blue
                 ],
               ),
             ),
           ),
-
-          // Overlay for depth
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withOpacity(0.2),
-                  Colors.black.withOpacity(0.5),
-                ],
-              ),
-            ),
-          ),
-
-          // Centered Animated Content
-          FadeTransition(
-            opacity: _opacityAnimation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: Offset(0, 0.05),
-                end: Offset.zero,
-              ).animate(_controller),
+          Center(
+            child: Padding(
+              // Vertical padding adjusted to bring logo/name closer in previous step
+              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 15.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo Placeholder (Text-based for now)
-                  Container(
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.3), width: 1.5),
-                    ),
-                    child: Text(
-                      "SORA",
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 2.5,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withOpacity(0.4),
-                            blurRadius: 5,
-                            offset: Offset(0, 3),
-                          )
-                        ],
+                  // App Logo with Fade and Scale Animation
+                  FadeTransition(
+                    opacity: _opacityAnimation,
+                    child: ScaleTransition(
+                      scale: _controller.drive(
+                          Tween<double>(begin: 0.5, end: 1.0).chain(
+                              CurveTween(curve: Curves.easeOutBack))),
+                      child: Image.asset(
+                        'assets/images/sora_logo.png', // Path to your transparent image asset
+                        height: 220, // Logo size remains 220
+                        width: 220,  // Logo size remains 220
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
 
-                  SizedBox(height: 20),
+                  // Removed SizedBox here in previous steps to reduce margin
 
-                  // Slogan with Slide Up
+                  // App Title with Slide and Fade Animation
+                  // Using Transform.translate to pull the text slightly upwards
+                  Transform.translate(
+                    offset: const Offset(0, -15.0), // Adjust this value to control how much closer it gets
+                    child: FadeTransition(
+                      opacity: _opacityAnimation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.5),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: _controller,
+                          curve: Curves.easeOutCubic,
+                        )),
+                        child: Text(
+                          "SORA",
+                          style: TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            shadows: [
+                              Shadow(
+                                blurRadius: 10.0,
+                                color: Colors.black.withOpacity(0.3),
+                                offset: const Offset(3.0, 3.0),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10), // Margin between name and slogan
+
+                  // Slogan with Slide Animation
                   AnimatedBuilder(
                     animation: _slideAnimation,
                     builder: (context, child) {
@@ -141,7 +161,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
 
-                  SizedBox(height: 40),
+                  const SizedBox(height: 40),
 
                   // Loading Indicator with Glow Effect
                   Container(
@@ -154,7 +174,7 @@ class _SplashScreenState extends State<SplashScreen>
                           color: Colors.white.withOpacity(0.4),
                           blurRadius: 10,
                           spreadRadius: 2,
-                          offset: Offset(0, 0),
+                          offset: const Offset(0, 0),
                         )
                       ],
                     ),
