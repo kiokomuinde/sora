@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "197935670341",
+    "project_id": "sora-4f25b",
+    "storage_bucket": "sora-4f25b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:197935670341:android:79588250c2945b4bffaf2c",
+        "android_client_info": {
+          "package_name": "com.example.sora_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUy-zM8ZggucAwilnoICNmVNiK45SR85w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

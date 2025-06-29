@@ -1,7 +1,7 @@
 // /lib/screens/splash_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // Import for kIsWeb
+// kIsWeb import is no longer needed here as main.dart handles the web check
 import 'package:shared_preferences/shared_preferences.dart'; // Import for SharedPreferences
 
 class SplashScreen extends StatefulWidget {
@@ -22,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
 
     _controller = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 2), // Animation duration
       vsync: this,
     );
 
@@ -30,27 +30,24 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    _slideAnimation = Tween<double>(begin: -30, end: 0).animate(
+    _slideAnimation = Tween<double>(begin: -10, end: 0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
     );
 
     _controller.forward();
 
-    // Wait for animation completion and then navigate based on platform and onboarding status
-    Future.delayed(const Duration(seconds: 10), () async { // Changed from 20s to 10s based on user's last provided file
-      if (kIsWeb) {
-        // For web, skip onboarding and go directly to home
+    // After a short delay (e.g., 3 seconds), determine navigation for mobile.
+    // For web, main.dart already redirects directly to /home, so this logic won't run.
+    Future.delayed(const Duration(seconds: 1), () async {
+      final prefs = await SharedPreferences.getInstance();
+      final bool hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+
+      if (hasSeenOnboarding) {
+        // If onboarding has been seen, go straight to home
         Navigator.pushReplacementNamed(context, '/home');
       } else {
-        // For mobile, check if onboarding has been seen
-        final prefs = await SharedPreferences.getInstance();
-        final bool hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
-
-        if (hasSeenOnboarding) {
-          Navigator.pushReplacementNamed(context, '/home');
-        } else {
-          Navigator.pushReplacementNamed(context, '/onboarding');
-        }
+        // If onboarding has NOT been seen, go to the onboarding screen
+        Navigator.pushReplacementNamed(context, '/onboarding');
       }
     });
   }
@@ -63,6 +60,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    // This SplashScreen widget will only be rendered on non-web platforms,
+    // as main.dart handles the initial routing for web.
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -82,7 +81,6 @@ class _SplashScreenState extends State<SplashScreen>
           ),
           Center(
             child: Padding(
-              // Vertical padding adjusted to bring logo/name closer in previous step
               padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 15.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -96,43 +94,37 @@ class _SplashScreenState extends State<SplashScreen>
                               CurveTween(curve: Curves.easeOutBack))),
                       child: Image.asset(
                         'assets/images/sora_logo.png', // Path to your transparent image asset
-                        height: 220, // Logo size remains 220
-                        width: 220,  // Logo size remains 220
+                        height: 220, // Increased size
+                        width: 220,  // Increased size
                         fit: BoxFit.contain,
                       ),
                     ),
                   ),
 
-                  // Removed SizedBox here in previous steps to reduce margin
-
                   // App Title with Slide and Fade Animation
-                  // Using Transform.translate to pull the text slightly upwards
-                  Transform.translate(
-                    offset: const Offset(0, -15.0), // Adjust this value to control how much closer it gets
-                    child: FadeTransition(
-                      opacity: _opacityAnimation,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.5),
-                          end: Offset.zero,
-                        ).animate(CurvedAnimation(
-                          parent: _controller,
-                          curve: Curves.easeOutCubic,
-                        )),
-                        child: Text(
-                          "SORA",
-                          style: TextStyle(
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 10.0,
-                                color: Colors.black.withOpacity(0.3),
-                                offset: const Offset(3.0, 3.0),
-                              ),
-                            ],
-                          ),
+                  FadeTransition(
+                    opacity: _opacityAnimation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.5),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: _controller,
+                        curve: Curves.easeOutCubic,
+                      )),
+                      child: const Text( // Added const for Text widget
+                        "SORA",
+                        style: TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 10.0,
+                              color: Colors.black, // Changed color for shadow
+                              offset: Offset(3.0, 3.0),
+                            ),
+                          ],
                         ),
                       ),
                     ),
