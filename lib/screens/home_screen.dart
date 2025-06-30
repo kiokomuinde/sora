@@ -8,7 +8,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // Import for F
 import 'package:sora_app/screens/about_screen.dart'; // Import the AboutScreen
 import 'package:sora_app/services/auth_service.dart'; // Import AuthService
 import 'package:firebase_auth/firebase_auth.dart'; // Import for User type
-import 'dart:ui'; // Import for ImageFilter
+// import 'dart:ui'; // Not explicitly needed for the code below, can be removed if unused elsewhere
 
 class HomeScreen extends StatefulWidget {
   final AuthService authService; // Receive AuthService
@@ -23,13 +23,17 @@ class _HomeScreenState extends State<HomeScreen> {
   // Although carousels are removed, keeping controllers if they might be used elsewhere
   // in future iterations or there's a possibility to bring carousels back.
   // For now, they are not actively used in the UI.
-  late ScrollController _featuredScrollController;
-  late ScrollController _trendingScrollController;
-  late ScrollController _recommendedScrollController;
+  // The original file only used _scrollControllers within _RecommendedPropertiesCarousel,
+  // so these might not be needed at this level.
+  // Keeping them commented out for now as they are declared but not directly used globally here.
+  // late ScrollController _featuredScrollController;
+  // late ScrollController _trendingScrollController;
+  // late ScrollController _recommendedScrollController; // Renamed from _newPropertiesScrollController for clarity with carousel naming
 
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _newsletterEmailController = TextEditingController();
 
+  // Renamed to follow typical Flutter naming conventions and avoid confusion with other internal filters.
   String _currentListingTypeFilter = '';
 
   // Removed _isLoggedIn and _currentUser state variables here as they are now directly
@@ -658,7 +662,7 @@ class _HomeScreenState extends State<HomeScreen> {
           "A lavish 4-bedroom bungalow located in Ongata Rongai. Comes with a spacious living room, modern kitchen, and a large compound.",
       "isFavorite": false,
     },
-    
+
     {
       "title": "2BR Apartment - Kilifi",
       "price": "KSH 19,000/month",
@@ -699,7 +703,7 @@ class _HomeScreenState extends State<HomeScreen> {
       "type": "Apartment",
       "listingType": "Buy",
       "description":
-          "Modern 3br apartment located in Kikuyu 100 metres from the tarmac. Close to shops, schools, and transport hubs.",
+          "Modern 3 bedroom apartment located in Kikuyu 100 metres from the tarmac. Close to shops, schools, and transport hubs.",
       "isFavorite": false,
     },
 
@@ -950,42 +954,34 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _searchResults = [];
   late List<Map<String, dynamic>> _popularPropertiesList;
   late List<Map<String, dynamic>> _hottestPropertiesList;
-  late List<Map<String, dynamic>> _newPropertiesList; // New list for 'New Properties'
+  late List<Map<String, dynamic>> _newPropertiesList; // List for 'New Properties'
 
   @override
   void initState() {
     super.initState();
-    _featuredScrollController = ScrollController();
-    _trendingScrollController = ScrollController();
-    _recommendedScrollController = ScrollController();
 
-    // Initialize state properties, these will be updated by the listener
-    // This is redundant as ValueListenableBuilder directly reads from currentUserNotifier now.
-    // _currentUser = widget.authService.getCurrentUser();
-    // _isLoggedIn = _currentUser != null;
-
-    // The listener below ensures that _isLoggedIn and _currentUser are always up-to-date
-    // The previous implementation used _onAuthStateChanged to setState. This is now
-    // replaced by direct use of ValueListenableBuilder.
-
+    // Initialize all properties from the main list.
     _searchResults.addAll(allProperties);
 
+    // Shuffle a copy of allProperties to pick unique ones for each section.
     final List<Map<String, dynamic>> shuffledAllProperties = List<Map<String, dynamic>>.from(allProperties)..shuffle();
-    final List<Map<String, dynamic>> buyProps = shuffledAllProperties.where((p) => p['listingType'] == 'Buy').toList().cast<Map<String, dynamic>>();
-    final List<Map<String, dynamic>> rentProps = shuffledAllProperties.where((p) => p['listingType'] == 'Rent').toList().cast<Map<String, dynamic>>();
-    final List<Map<String, dynamic>> leaseProps = shuffledAllProperties.where((p) => p['listingType'] == 'Lease').toList().cast<Map<String, dynamic>>();
 
+    // Separate properties by listing type for more controlled picking
+    final List<Map<String, dynamic>> buyProps = shuffledAllProperties.where((p) => p['listingType'] == 'Buy').toList();
+    final List<Map<String, dynamic>> rentProps = shuffledAllProperties.where((p) => p['listingType'] == 'Rent').toList();
+    final List<Map<String, dynamic>> leaseProps = shuffledAllProperties.where((p) => p['listingType'] == 'Lease').toList();
+
+    // Populate Popular Properties (e.g., mix of Buy, Rent, Lease)
     _popularPropertiesList = [];
     _popularPropertiesList.addAll(buyProps.take(4));
     _popularPropertiesList.addAll(rentProps.take(3));
     _popularPropertiesList.addAll(leaseProps.take(3));
-    _popularPropertiesList.shuffle();
+    _popularPropertiesList.shuffle(); // Shuffle again for mixed order in display
 
+    // Populate Hottest Properties, ensuring they are unique from Popular
     final List<Map<String, dynamic>> remainingForHottest = List<Map<String, dynamic>>.from(shuffledAllProperties)
         .where((p) => !_popularPropertiesList.contains(p))
-        .toList()
-        .cast<Map<String, dynamic>>();
-
+        .toList();
     _hottestPropertiesList = [];
     final int hottestCount = 10;
     for (int i = 0; i < hottestCount && i < remainingForHottest.length; i++) {
@@ -993,23 +989,23 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     _hottestPropertiesList.shuffle();
 
+    // Fill in if not enough unique properties were found for hottest
     if (_hottestPropertiesList.length < hottestCount) {
       final int needed = hottestCount - _hottestPropertiesList.length;
       final List<Map<String, dynamic>> fillInHottest = List<Map<String, dynamic>>.from(allProperties)
           .where((p) => !_popularPropertiesList.contains(p) && !_hottestPropertiesList.contains(p))
-          .toList()
-          .cast<Map<String, dynamic>>();
+          .toList();
       fillInHottest.shuffle();
       for (int i = 0; i < needed && i < fillInHottest.length; i++) {
         _hottestPropertiesList.add(fillInHottest[i]);
       }
     }
 
+
+    // Populate New Properties, ensuring they are unique from Popular and Hottest
     final List<Map<String, dynamic>> remainingForNew = List<Map<String, dynamic>>.from(shuffledAllProperties)
         .where((p) => !_popularPropertiesList.contains(p) && !_hottestPropertiesList.contains(p))
-        .toList()
-        .cast<Map<String, dynamic>>();
-
+        .toList();
     _newPropertiesList = [];
     final int newCount = 10;
     for (int i = 0; i < newCount && i < remainingForNew.length; i++) {
@@ -1017,12 +1013,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     _newPropertiesList.shuffle();
 
+    // Fill in if not enough unique properties were found for new properties
     if (_newPropertiesList.length < newCount) {
       final int needed = newCount - _newPropertiesList.length;
       final List<Map<String, dynamic>> fillInNew = List<Map<String, dynamic>>.from(allProperties)
           .where((p) => !_popularPropertiesList.contains(p) && !_hottestPropertiesList.contains(p) && !_newPropertiesList.contains(p))
-          .toList()
-          .cast<Map<String, dynamic>>();
+          .toList();
       fillInNew.shuffle();
       for (int i = 0; i < needed && i < fillInNew.length; i++) {
         _newPropertiesList.add(fillInNew[i]);
@@ -1030,20 +1026,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // No longer needed if ValueListenableBuilder is used directly for UI updates
-  // void _onAuthStateChanged() {
-  //   setState(() {
-  //     _currentUser = widget.authService.getCurrentUser();
-  //     _isLoggedIn = _currentUser != null;
-  //   });
-  // }
 
   @override
   void dispose() {
-    // widget.authService.currentUserNotifier.removeListener(_onAuthStateChanged); // No longer needed
-    _featuredScrollController.dispose();
-    _trendingScrollController.dispose();
-    _recommendedScrollController.dispose();
     _searchController.dispose();
     _newsletterEmailController.dispose();
     super.dispose();
@@ -1085,87 +1070,42 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPropertyCarousel(String title, List<Map<String, dynamic>> properties, ScrollController controller) {
-    final filteredProperties = properties.where((p) {
-      bool inSearchResults = _searchResults.contains(p);
-      return inSearchResults;
-    }).toList().cast<Map<String, dynamic>>();
-
-    if (filteredProperties.isEmpty) {
-      return const SizedBox.shrink();
+  // This method now handles only the sign-out action without navigating.
+  // The UI will update automatically via ValueListenableBuilder.
+  Future<void> _handleSignOut() async {
+    try {
+      await widget.authService.signOut();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logged out successfully!')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = "An unknown error occurred.";
+      if (e.code == 'network-request-failed') {
+        errorMessage =
+            "Network error. Please check your internet connection and try again.";
+      } else if (e.code == 'requires-recent-login') {
+        errorMessage =
+            "This operation is sensitive and requires recent authentication. Please log in again.";
+      } else {
+        errorMessage = "Sign out failed: ${e.message}";
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An unexpected error occurred during sign out: $e')),
+        );
+      }
     }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E90FF),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Stack(
-            children: [
-              SizedBox(
-                height: 350,
-                child: ListView.builder(
-                  controller: controller,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: filteredProperties.length,
-                  itemBuilder: (context, index) {
-                    return PropertyCardWithCarousel(
-                        property: filteredProperties[index],
-                        onFavoriteToggle: (property) {
-                          setState(() {
-                            final index = allProperties.indexWhere((p) => p['title'] == property['title']);
-                            if (index != -1) {
-                              allProperties[index]['isFavorite'] = !allProperties[index]['isFavorite'];
-                            }
-                          });
-                        },
-                        // Pass isLoggedIn directly from AuthService notifier
-                        isLoggedIn: widget.authService.currentUserNotifier.value != null,
-                        showLoginPrompt: _showLoginSignupDialog,
-                    );
-                  },
-                ),
-              ),
-              if (kIsWeb) ...[
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Center(
-                    child: _buildScrollButton(
-                      controller,
-                      isLeft: true,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Center(
-                    child: _buildScrollButton(
-                      controller,
-                      isLeft: false,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
   }
 
+  // Common dialog for login/signup prompt
   void _showLoginSignupDialog() {
     showDialog(
       context: context,
@@ -1224,69 +1164,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
-  Widget _buildScrollButton(ScrollController controller, {required bool isLeft}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            spreadRadius: 2,
-          ),
-        ],
-        shape: BoxShape.circle,
-      ),
-      child: IconButton(
-        icon: Icon(isLeft ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
-        color: const Color(0xFF1E90FF),
-        onPressed: () {
-          controller.animateTo(
-            controller.offset + (isLeft ? -300 : 300),
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        },
-      ),
-    );
-  }
-
-  // This method now handles only the sign-out action without navigating.
-  // The UI will update automatically via ValueListenableBuilder.
-  Future<void> _handleSignOut() async {
-    try {
-      await widget.authService.signOut();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Logged out successfully!')),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage = "An unknown error occurred.";
-      if (e.code == 'network-request-failed') {
-        errorMessage =
-            "Network error. Please check your internet connection and try again.";
-      } else if (e.code == 'requires-recent-login') {
-        errorMessage =
-            "This operation is sensitive and requires recent authentication. Please log in again.";
-      } else {
-        errorMessage = "Sign out failed: ${e.message}";
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An unexpected error occurred during sign out: $e')),
-        );
-      }
-    }
-  }
-
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -1318,6 +1195,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     Image.asset(
                       'assets/images/sora_logo.png',
                       height: 45,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.home, size: 45, color: Color(0xFF0A66C2)); // Fallback icon
+                      },
                     ),
                     const SizedBox(width: 8),
                     const Text(
@@ -1748,7 +1628,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // --- New: Hottest in Sora Section ---
+            // --- Hottest in Sora Section ---
             Padding(
               padding: EdgeInsets.only(
                 top: 40.0,
@@ -1803,7 +1683,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // --- New: New Properties Section ---
+            // --- NEW PROPERTIES SECTION (Corrected to include carousel) ---
             Padding(
               padding: EdgeInsets.only(
                 top: 40.0,
@@ -1834,12 +1714,32 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 10),
+                    // !!! THIS IS THE MISSING PART THAT ADDS THE CAROUSEL !!!
+                    _RecommendedPropertiesCarousel(
+                      propertiesToDisplay: _newPropertiesList, // Use the _newPropertiesList
+                      isLargeScreen: isLargeScreen,
+                      isMediumScreen: isMediumScreen,
+                      buildPropertyCard: (property) => PropertyCardWithCarousel(
+                        property: property,
+                        onFavoriteToggle: (p) {
+                          setState(() {
+                            final index = allProperties.indexWhere((prop) => prop['title'] == p['title']);
+                            if (index != -1) {
+                              allProperties[index]['isFavorite'] = !allProperties[index]['isFavorite'];
+                            }
+                          });
+                        },
+                        isLoggedIn: widget.authService.currentUserNotifier.value != null,
+                        showLoginPrompt: _showLoginSignupDialog,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
 
-            // --- New: Why Choose SORA? Section ---
+            // --- Why Choose SORA? Section ---
             Container(
               width: double.infinity,
               color: Colors.grey[50],
@@ -1891,7 +1791,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 40),
 
-            // --- New: How It Works Section ---
+            // --- How It Works Section ---
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 24.0),
               child: ConstrainedBox(
@@ -1939,7 +1839,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 40),
 
-            // --- New: Sell Your Property Section ---
+            // --- Sell Your Property Section ---
             _buildSellSection(isLargeScreen: isLargeScreen || isMediumScreen),
             const SizedBox(height: 40),
 
@@ -2230,7 +2130,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Icon(icon, size: 30, color: const Color(0xFF0A66C2)),
-                    const SizedBox(height: 10),
+                    const SizedBox(width: 10), // Added width here for spacing
                     Text(
                       title,
                       style: const TextStyle(
@@ -2550,9 +2450,11 @@ class _PropertyCardWithCarouselState extends State<PropertyCardWithCarousel> {
     super.initState();
     _pageController = PageController();
     _pageController.addListener(() {
-      setState(() {
-        _currentPageIndex = _pageController.page?.round() ?? 0;
-      });
+      if (_pageController.hasClients) { // Add this check
+        setState(() {
+          _currentPageIndex = _pageController.page?.round() ?? 0;
+        });
+      }
     });
   }
 
@@ -2608,9 +2510,24 @@ class _PropertyCardWithCarouselState extends State<PropertyCardWithCarousel> {
                         controller: _pageController,
                         itemCount: widget.property['images'].length,
                         itemBuilder: (context, index) {
+                          // Add errorBuilder to Image.asset to debug missing images
                           return Image.asset(
                             widget.property['images'][index],
                             fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[300],
+                                child: const Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                                      Text('Image Missing', style: TextStyle(color: Colors.grey)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           );
                         },
                       ),
@@ -2812,6 +2729,7 @@ class _RecommendedPropertiesCarouselState extends State<_RecommendedPropertiesCa
   void initState() {
     super.initState();
     _scrollController.addListener(_updateNavButtonState);
+    // Ensure initial state is updated after layout render
     WidgetsBinding.instance.addPostFrameCallback((_) => _updateNavButtonState());
   }
 
@@ -2823,10 +2741,15 @@ class _RecommendedPropertiesCarouselState extends State<_RecommendedPropertiesCa
   }
 
   void _updateNavButtonState() {
-    final maxScroll = _scrollController.position.hasContentDimensions ? _scrollController.position.maxScrollExtent : 0;
+    if (!_scrollController.position.hasContentDimensions) {
+      // Content dimensions not yet available, cannot determine scroll state
+      return;
+    }
+    final maxScroll = _scrollController.position.maxScrollExtent;
     setState(() {
       _canScrollLeft = _scrollController.offset > 0;
-      _canScrollRight = _scrollController.offset < maxScroll;
+      // Allow slight tolerance for floating point precision issues
+      _canScrollRight = _scrollController.offset < maxScroll - 1.0;
     });
   }
 
@@ -2868,8 +2791,16 @@ class _RecommendedPropertiesCarouselState extends State<_RecommendedPropertiesCa
 
   @override
   Widget build(BuildContext context) {
+    // Only build the carousel if there are properties to display
+    if (widget.propertiesToDisplay.isEmpty) {
+      return const SizedBox.shrink(); // Hide the carousel if no properties
+    }
+
     double cardWidth = widget.isLargeScreen ? 320 : (widget.isMediumScreen ? 260 : 200);
-    double carouselHeight = widget.isLargeScreen ? 400 : (widget.isMediumScreen ? 360 : 320);
+    // The previous height for PropertyCard was 280.
+    // PropertyCardWithCarousel seems to have height around 320-350 including padding, adjusting for visual consistency.
+    double carouselHeight = 350; // Set a fixed height for the carousel container
+
     double horizontalPadding = widget.isLargeScreen ? 24.0 : (widget.isMediumScreen ? 16.0 : 8.0);
 
     return MouseRegion(
@@ -2895,7 +2826,7 @@ class _RecommendedPropertiesCarouselState extends State<_RecommendedPropertiesCa
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20.0),
-              itemCount: widget.propertiesToDisplay.length + 1,
+              itemCount: widget.propertiesToDisplay.length + 1, // +1 for the "Find More" button
               separatorBuilder: (context, index) => const SizedBox(width: 16),
               itemBuilder: (context, index) {
                 if (index < widget.propertiesToDisplay.length) {
@@ -2904,17 +2835,31 @@ class _RecommendedPropertiesCarouselState extends State<_RecommendedPropertiesCa
                     child: widget.buildPropertyCard(widget.propertiesToDisplay[index]),
                   );
                 } else {
+                  // "Find More" button
                   return MouseRegion(
                     onEnter: (_) => setState(() => _isFindMoreHovered = true),
                     onExit: (_) => setState(() => _isFindMoreHovered = false),
                     child: GestureDetector(
                       onTap: () {
+                        // Navigate to the property listing screen
                         Navigator.pushNamed(context, '/property_listings');
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        width: cardWidth * 0.6,
-                        height: 120.0,
+                        width: cardWidth * 0.6, // Make the button a bit smaller than a full card
+                        // Match the height of the property cards or adjust as needed
+                        height: carouselHeight - 40, // Adjust for vertical padding
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12.0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              spreadRadius: 2,
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
                         child: CustomPaint(
                           painter: _TriangleButtonPainter(
                             isHovered: _isFindMoreHovered,

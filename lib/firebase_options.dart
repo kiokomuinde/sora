@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'sora-4f25b.firebasestorage.app',
     measurementId: 'G-E1ZGFTR2JF',
   );
+
 }
