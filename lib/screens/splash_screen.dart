@@ -1,7 +1,7 @@
-// /lib/screens/splash_screen.dart
+// lib/screens/splash_screen.dart
 
 import 'package:flutter/material.dart';
-// kIsWeb import is no longer needed here as main.dart handles the web check
+import 'package:flutter/foundation.dart' show kIsWeb; // Import for kIsWeb check
 import 'package:shared_preferences/shared_preferences.dart'; // Import for SharedPreferences
 
 class SplashScreen extends StatefulWidget {
@@ -36,9 +36,24 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // After a short delay (e.g., 3 seconds), determine navigation for mobile.
-    // For web, main.dart already redirects directly to /home, so this logic won't run.
-    Future.delayed(const Duration(seconds: 1), () async {
+    // After a short delay, determine navigation.
+    _navigateToNextScreen();
+  }
+
+  // This method handles navigation after the splash screen.
+  // It ensures that on web, the app always navigates directly to the home screen.
+  _navigateToNextScreen() async {
+    // Simulate some loading time for the splash screen animations to complete
+    await Future.delayed(const Duration(seconds: 2));
+
+    // Check if the application is running on the web platform
+    if (kIsWeb) {
+      // If on web, always push to the '/home' route and replace the current route.
+      // This explicitly bypasses any onboarding logic for web users.
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      // For non-web platforms (e.g., mobile), use SharedPreferences to check
+      // if the user has seen the onboarding screen before.
       final prefs = await SharedPreferences.getInstance();
       final bool hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
 
@@ -49,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen>
         // If onboarding has NOT been seen, go to the onboarding screen
         Navigator.pushReplacementNamed(context, '/onboarding');
       }
-    });
+    }
   }
 
   @override

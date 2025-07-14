@@ -1,24 +1,81 @@
-// /lib/screens/about_screen.dart
+// /lib/screens/blogs_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // Needed for kIsWeb
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:sora_app/screens/home_screen.dart'; // Import HomeScreen
-import 'package:sora_app/services/auth_service.dart'; // Import AuthService
-import 'package:firebase_auth/firebase_auth.dart'; // Import for User type
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sora_app/services/auth_service.dart';
 
-class AboutScreen extends StatefulWidget { // Changed to StatefulWidget to manage state for app bar/footer
-  final AuthService authService; // Receive AuthService
+class BlogsScreen extends StatefulWidget {
+  final AuthService authService;
 
-  const AboutScreen({super.key, required this.authService}); // Add authService to constructor
+  const BlogsScreen({super.key, required this.authService});
 
   @override
-  State<AboutScreen> createState() => _AboutScreenState();
+  State<BlogsScreen> createState() => _BlogsScreenState();
 }
 
-class _AboutScreenState extends State<AboutScreen> {
+class _BlogsScreenState extends State<BlogsScreen> {
   final TextEditingController _newsletterEmailController = TextEditingController();
-  String _currentListingTypeFilter = ''; // Needed for the common app bar buttons
+  String _currentListingTypeFilter = '';
+
+  // Mock blog data
+  final List<Map<String, dynamic>> _blogPosts = [
+    {
+      "id": "1",
+      "title": "The Future of Real Estate in Africa: 2025 Trends",
+      "image": "assets/images/blog1.webp",
+      "category": "Market Trends",
+      "date": "July 10, 2025",
+      "snippet": "Explore the emerging trends shaping the African real estate market, from sustainable development to digital transformation.",
+      "content": "The African real estate market is on the cusp of a major transformation. With rapid urbanization, a growing middle class, and increased foreign investment, the demand for both residential and commercial properties is soaring. In 2025, we anticipate several key trends to dominate the landscape. Firstly, sustainable and green building practices will become more prevalent as developers respond to environmental concerns and government incentives. Secondly, proptech (property technology) will continue to revolutionize how properties are bought, sold, and managed, making processes more efficient and transparent. Virtual tours, AI-powered valuation tools, and blockchain for secure transactions are no longer futuristic concepts but present realities. Thirdly, affordable housing initiatives will gain momentum, driven by both public and private sectors aiming to address housing deficits across the continent. Finally, the rise of co-living and co-working spaces will cater to the evolving lifestyles of young professionals and digital nomads, fostering community and flexibility. These trends collectively point towards a dynamic and innovative future for real estate in Africa, promising significant opportunities for investors and homeowners alike."
+    },
+    {
+      "id": "2",
+      "title": "Investing in African Property: A Beginner's Guide",
+      "image": "assets/images/blog2.webp",
+      "category": "Investment",
+      "date": "June 28, 2025",
+      "snippet": "A comprehensive guide for new investors looking to enter the vibrant and diverse African property market.",
+      "content": "Investing in African property can be highly rewarding, but it requires careful consideration and a solid understanding of local markets. For beginners, the first step is to research specific countries and cities. Each region has its unique economic drivers, legal frameworks, and property types that influence investment viability. Key factors to consider include political stability, economic growth rates, infrastructure development, and population demographics. Diversification is crucial; instead of putting all your eggs in one basket, consider a mix of residential, commercial, and even agricultural properties. Engaging with local experts, such as reputable real estate agents, lawyers, and financial advisors, is indispensable. They can provide invaluable insights into market nuances, assist with due diligence, and navigate complex legal processes. Understanding financing options, including local bank loans and international investment funds, is also vital. Finally, be prepared for long-term commitment. Real estate investment, especially in emerging markets, often yields the best returns over extended periods. With strategic planning and informed decisions, African property can be a cornerstone of a robust investment portfolio."
+    },
+    {
+      "id": "3",
+      "title": "Top 5 Eco-Friendly Home Features for 2025",
+      "image": "assets/images/blog3.webp",
+      "category": "Sustainable Living",
+      "date": "June 15, 2025",
+      "snippet": "Discover the top eco-friendly features that are becoming essential for modern homes in Africa.",
+      "content": "As environmental consciousness grows and energy costs fluctuate, eco-friendly home features are no longer niche but mainstream. For 2025, here are the top five features making a significant impact in African homes: 1. Solar Power Systems: Beyond basic solar water heaters, full-fledged photovoltaic (PV) systems are gaining traction, providing energy independence and reducing electricity bills. Advances in battery storage make off-grid living more feasible. 2. Rainwater Harvesting and Greywater Recycling: Efficient systems for collecting rainwater for irrigation and recycling greywater (from sinks, showers) for non-potable uses are essential for water conservation, especially in water-stressed regions. 3. Natural Ventilation and Passive Cooling: Architects are increasingly designing homes to maximize natural airflow and minimize heat gain, reducing the need for air conditioning. This includes strategic window placement, high ceilings, and thermal mass construction. 4. Smart Home Energy Management: Integrated smart home systems allow homeowners to monitor and control energy consumption of appliances, lighting, and HVAC systems, optimizing efficiency and reducing waste. 5. Sustainable Building Materials: The use of locally sourced, recycled, and low-carbon materials like bamboo, compressed earth blocks, and recycled plastic bricks is becoming more common, reducing the environmental footprint of construction. These features not only benefit the planet but also offer long-term cost savings and enhanced living comfort."
+    },
+    {
+      "id": "4",
+      "title": "Navigating Property Laws in East Africa",
+      "image": "assets/images/blog4.webp",
+      "category": "Legal Guide",
+      "date": "May 30, 2025",
+      "snippet": "A simplified overview of the key property laws and regulations across East African countries.",
+      "content": "Navigating property laws in East Africa can be complex due to varying legal systems and land tenure arrangements across countries like Kenya, Tanzania, Uganda, and Rwanda. While each nation has its specific nuances, some common themes and critical considerations emerge for buyers and sellers. Firstly, land tenure systems differ significantly, ranging from freehold and leasehold to customary land rights. It is paramount to understand the specific tenure of a property before any transaction. Secondly, due diligence is non-negotiable. This involves verifying the authenticity of title deeds, checking for encumbrances (e.g., mortgages, caveats), and ensuring the seller has the legal right to dispose of the property. Engaging a local, reputable lawyer is crucial for this process. Thirdly, foreign ownership rules vary. Some countries have restrictions or specific requirements for non-citizens acquiring land. Fourthly, registration processes are vital for securing ownership. Property transfers must be registered with the relevant land registries to be legally recognized. Finally, taxes and fees associated with property transactions (e.g., stamp duty, capital gains tax) should be factored into the overall cost. Staying informed and seeking expert legal advice are the best ways to ensure a smooth and secure property transaction in East Africa."
+    },
+    {
+      "id": "5",
+      "title": "The Rise of Smart Homes: Technology in Real Estate",
+      "image": "assets/images/blog5.webp",
+      "category": "Technology",
+      "date": "May 10, 2025",
+      "snippet": "How smart home technology is transforming living spaces and property values in the modern era.",
+      "content": "Smart home technology is rapidly evolving from a luxury to a standard expectation in modern real estate, fundamentally transforming how we interact with our living spaces. These integrated systems, which connect devices like lighting, thermostats, security cameras, and entertainment systems, offer unparalleled convenience, energy efficiency, and security. For homeowners, smart technology provides remote control over various aspects of their home, allowing them to adjust settings, monitor security, and even manage appliances from anywhere in the world via a smartphone app. This level of control enhances comfort and peace of mind. From a property value perspective, homes equipped with advanced smart features are increasingly attractive to buyers, often commanding higher prices and selling faster. Energy-saving smart thermostats and lighting systems appeal to environmentally conscious buyers and those looking to reduce utility bills. Enhanced security features, such as smart locks and surveillance systems, provide an added layer of safety. The integration of voice assistants and automated routines further streamlines daily life, making homes more intuitive and responsive to inhabitants' needs. As technology continues to advance, smart homes will become an even more integral part of the real estate landscape, redefining modern living."
+    },
+    {
+      "id": "6",
+      "title": "Affordable Housing Solutions for Urban Africa",
+      "image": "assets/images/blog6.webp",
+      "category": "Urban Development",
+      "date": "April 22, 2025",
+      "snippet": "Addressing the challenge of affordable housing in rapidly growing urban centers across Africa.",
+      "content": "Rapid urbanization across Africa presents a significant challenge: providing adequate and affordable housing for its burgeoning urban populations. Traditional construction methods often struggle to keep pace with demand, leading to informal settlements and overcrowding. However, innovative solutions are emerging to tackle this critical issue. One key approach is the adoption of modular and prefabricated construction techniques, which significantly reduce building time and costs while maintaining quality. These methods allow for mass production of housing units, making them more accessible. Another strategy involves leveraging local materials and sustainable building practices, which not only lower expenses but also promote environmental responsibility. Governments and private developers are increasingly forming partnerships to implement large-scale affordable housing projects, often incorporating mixed-income developments to foster inclusive communities. Furthermore, innovative financing models, such as rent-to-own schemes, microfinance for housing, and public-private partnerships, are making homeownership more attainable for lower and middle-income households. Policy reforms that simplify land acquisition and streamline regulatory processes are also crucial. By combining technological innovation, sustainable practices, and supportive policies, urban Africa can move closer to ensuring that all its citizens have access to safe, decent, and affordable housing."
+    },
+  ];
 
   @override
   void dispose() {
@@ -26,7 +83,7 @@ class _AboutScreenState extends State<AboutScreen> {
     super.dispose();
   }
 
-  // Common dialog for login/signup prompt, copied from home_screen.dart
+  // Common dialog for login/signup prompt
   void _showLoginSignupDialog() {
     showDialog(
       context: context,
@@ -63,7 +120,7 @@ class _AboutScreenState extends State<AboutScreen> {
               child: const Text('Sign Up'),
               onPressed: () {
                 Navigator.of(context).pop();
-                Navigator.pushNamed(context, '/signup'); // Navigate to signup screen
+                Navigator.pushNamed(context, '/signup');
               },
             ),
             ElevatedButton(
@@ -75,7 +132,7 @@ class _AboutScreenState extends State<AboutScreen> {
               child: const Text('Login'),
               onPressed: () {
                 Navigator.of(context).pop();
-                Navigator.pushNamed(context, '/signin'); // Navigate to signin screen
+                Navigator.pushNamed(context, '/signin');
               },
             ),
           ],
@@ -84,7 +141,7 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  // Handles sign-out action, copied from home_screen.dart
+  // Handles sign-out action
   Future<void> _handleSignOut() async {
     try {
       await widget.authService.signOut();
@@ -118,7 +175,6 @@ class _AboutScreenState extends State<AboutScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -140,7 +196,7 @@ class _AboutScreenState extends State<AboutScreen> {
             children: [
               GestureDetector(
                 onTap: () {
-                  Navigator.pushReplacementNamed(context, '/home'); // Navigate back to home
+                  Navigator.pushReplacementNamed(context, '/home');
                 },
                 child: Row(
                   children: [
@@ -151,7 +207,7 @@ class _AboutScreenState extends State<AboutScreen> {
                         return Container(
                           color: const Color(0xFF1E90FF),
                           child: const Center(
-                            child: Icon(Icons.home, size: 45, color: Color(0xFF0A66C2)), // Fallback icon
+                            child: Icon(Icons.home, size: 45, color: Color(0xFF0A66C2)),
                           ),
                         );
                       },
@@ -210,9 +266,7 @@ class _AboutScreenState extends State<AboutScreen> {
                           },
                         ),
                         const SizedBox(width: 40),
-                        // Search bar is omitted as it's not directly needed on About screen,
-                        // but if a global search is desired, it could be re-added.
-                        const SizedBox(width: 20), // Adjusted spacing after removing search bar
+                        const SizedBox(width: 20),
                         _buildAppBarButton('List Property', () {
                           if (widget.authService.currentUserNotifier.value == null) {
                             _showLoginSignupDialog();
@@ -383,29 +437,36 @@ class _AboutScreenState extends State<AboutScreen> {
             ListTile(
               title: const Text('Agents'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
+                Navigator.pop(context);
                 Navigator.pushNamed(context, '/agents');
               },
             ),
             ListTile(
               title: const Text('About'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
+                Navigator.pop(context);
                 Navigator.pushNamed(context, '/about');
               },
             ),
             ListTile(
-              title: const Text('Contact'), // Added Contact link
+              title: const Text('Contact'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
+                Navigator.pop(context);
                 Navigator.pushNamed(context, '/contact');
               },
             ),
-            ListTile( // Added Careers link
+            ListTile(
               title: const Text('Careers'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
+                Navigator.pop(context);
                 Navigator.pushNamed(context, '/careers');
+              },
+            ),
+            ListTile(
+              title: const Text('Blog'), // Added Blog link
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/blogs');
               },
             ),
             ValueListenableBuilder<User?>(
@@ -447,13 +508,13 @@ class _AboutScreenState extends State<AboutScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Hero Section for About Page
+            // Hero Section for Blog Page
             Container(
               width: double.infinity,
               height: 250,
               decoration: const BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage('assets/images/about_hero.webp'),
+                  image: AssetImage('assets/images/blog_hero.webp'), // Placeholder image
                   fit: BoxFit.cover,
                 ),
               ),
@@ -475,7 +536,7 @@ class _AboutScreenState extends State<AboutScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        'Connecting Dreams to Addresses',
+                        'Insights from the World of Real Estate',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 36,
@@ -496,107 +557,44 @@ class _AboutScreenState extends State<AboutScreen> {
                 ),
               ),
             ),
-            // Main Content Section
+            // Blog Categories/Filter Section (Optional, but good for creativity)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 24.0),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildCategoryChip('All', isSelected: true),
+                    _buildCategoryChip('Market Trends'),
+                    _buildCategoryChip('Investment'),
+                    _buildCategoryChip('Sustainable Living'),
+                    _buildCategoryChip('Legal Guide'),
+                    _buildCategoryChip('Technology'),
+                    _buildCategoryChip('Urban Development'),
+                  ],
+                ),
+              ),
+            ),
+            // Main Blog Grid Section
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Our Story',
+                    'Latest Articles',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0A66C2),
                     ),
                   ),
-                  const SizedBox(height: 15),
-                  Text(
-                    'SORA was founded with a clear vision: to revolutionize the real estate experience across Africa. We saw a need for a platform that combines advanced technology with a deep understanding of local markets, ensuring that finding, buying, selling, or leasing property is as seamless and transparent as possible. From our humble beginnings, we’ve grown into a trusted name, committed to empowering individuals and families to achieve their property dreams.',
-                    style: TextStyle(fontSize: 16, height: 1.5, color: Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 30),
-                  Text(
-                    'Our Mission',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    'To be the most innovative and trusted real estate platform in Africa, providing unparalleled access to property listings and expert guidance, making every property journey a success story.',
-                    style: TextStyle(fontSize: 16, height: 1.5, color: Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 30),
-                  Text(
-                    'Our Values',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  _buildValueRow(
-                    icon: Icons.lightbulb_outline,
-                    title: 'Innovation',
-                    description: 'We continuously explore and implement cutting-edge technologies to enhance the user experience and simplify complex processes.',
-                  ),
-                  _buildValueRow(
-                    icon: Icons.security,
-                    title: 'Trust & Transparency',
-                    description: 'We believe in honest dealings, clear communication, and providing all necessary information to build lasting trust with our clients.',
-                  ),
-                  _buildValueRow(
-                    icon: Icons.people_alt_outlined,
-                    title: 'Client-Centricity',
-                    description: 'Your needs and aspirations are at the heart of everything we do. We strive to provide personalized solutions and exceptional support.',
-                  ),
-                  _buildValueRow(
-                    icon: Icons.verified_outlined,
-                    title: 'Excellence',
-                    description: 'We are committed to delivering the highest quality in every aspect of our service, from our platform\'s performance to our customer interactions.',
-                  ),
-                  const SizedBox(height: 30),
-                  Text(
-                    'Meet the Team',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  Center(
-                    child: Wrap(
-                      spacing: 20.0,
-                      runSpacing: 20.0,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        _buildTeamMemberCard(
-                          name: 'Dr. Alex Mwaura',
-                          title: 'Founder & CEO',
-                          imageAsset: 'assets/images/team_alex.webp',
-                        ),
-                        _buildTeamMemberCard(
-                          name: 'Sarah Njoroge',
-                          title: 'Chief Operations Officer',
-                          imageAsset: 'assets/images/team_sarah.webp',
-                        ),
-                        _buildTeamMemberCard(
-                          name: 'David Kimani',
-                          title: 'Head of Technology',
-                          imageAsset: 'assets/images/team_david.webp',
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 20),
+                  _buildBlogGrid(isLargeScreen, isMediumScreen, isSmallScreen, _blogPosts),
                 ],
               ),
             ),
+            const SizedBox(height: 40),
             // --- Footer ---
             Container(
               width: double.infinity,
@@ -619,8 +617,10 @@ class _AboutScreenState extends State<AboutScreen> {
                               Navigator.pushNamed(context, '/agents');
                             } else if (linkText == 'Contact') {
                               Navigator.pushNamed(context, '/contact');
-                            } else if (linkText == 'Careers') { // Added Careers link
+                            } else if (linkText == 'Careers') {
                               Navigator.pushNamed(context, '/careers');
+                            } else if (linkText == 'Blog') {
+                              Navigator.pushNamed(context, '/blogs');
                             }
                             else {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -696,7 +696,7 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  // Helper method for AppBar buttons (copied from home_screen.dart)
+  // Helper method for AppBar buttons
   Widget _buildAppBarButton(String text, VoidCallback onPressed, {bool isSelected = false, bool isFilled = false, IconData? icon}) {
     return TextButton(
       style: TextButton.styleFrom(
@@ -729,87 +729,159 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  Widget _buildValueRow({required IconData icon, required String title, required String description}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 30, color: const Color(0xFF1E90FF)),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0A66C2),
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  description,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTeamMemberCard({required String name, required String title, required String imageAsset}) {
+  // Helper method for Blog Category Chips
+  Widget _buildCategoryChip(String text, {bool isSelected = false}) {
     return Container(
-      width: 180,
-      padding: const EdgeInsets.all(15.0),
+      margin: const EdgeInsets.symmetric(horizontal: 5.0),
+      padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: isSelected ? const Color(0xFF0A66C2) : Colors.grey[200],
+        borderRadius: BorderRadius.circular(20.0),
+        border: Border.all(color: const Color(0xFF0A66C2).withOpacity(isSelected ? 1.0 : 0.3)),
       ),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundImage: AssetImage(imageAsset),
-            backgroundColor: Colors.grey[200],
-          ),
-          const SizedBox(height: 15),
-          Text(
-            name,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0A66C2),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
+      child: Text(
+        text,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.grey[800],
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
       ),
     );
   }
 
-  // Helper method for Footer columns (copied from home_screen.dart)
+  // Grid View for Blog Posts
+  Widget _buildBlogGrid(bool isLargeScreen, bool isMediumScreen, bool isSmallScreen, List<Map<String, dynamic>> blogs) {
+    int crossAxisCount;
+    if (isLargeScreen) {
+      crossAxisCount = 3;
+    } else if (isMediumScreen) {
+      crossAxisCount = 2;
+    } else {
+      crossAxisCount = 1;
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(), // Disable scrolling for the grid itself
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 20.0,
+        mainAxisSpacing: 20.0,
+        childAspectRatio: isSmallScreen ? 0.8 : (isMediumScreen ? 0.9 : 1.0), // Adjust aspect ratio
+      ),
+      itemCount: blogs.length,
+      itemBuilder: (context, index) {
+        return _buildBlogCard(blogs[index]);
+      },
+    );
+  }
+
+  // Helper method for individual Blog Cards in the grid
+  Widget _buildBlogCard(Map<String, dynamic> blog) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/blog_view',
+          arguments: blog, // Pass the entire blog map to the view screen
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)),
+              child: Image.asset(
+                blog['image']!,
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 180,
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: Icon(Icons.image_not_supported, size: 80, color: Colors.grey),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    blog['category']!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    blog['title']!,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0A66C2),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    blog['snippet']!,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/blog_view',
+                          arguments: blog,
+                        );
+                      },
+                      icon: const Icon(Icons.arrow_forward, size: 18, color: Color(0xFF1E90FF)),
+                      label: const Text(
+                        'Read More',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E90FF),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper method for Footer columns
   Widget _buildFooterColumn(String title, List<String> links, {ValueChanged<String>? onLinkTapped}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -828,23 +900,16 @@ class _AboutScreenState extends State<AboutScreen> {
           child: GestureDetector(
             onTap: () {
               if (onLinkTapped != null) {
-                // Specific navigation for 'About', 'Agents', 'Contact', 'Careers'
                 if (link == 'About') {
                   Navigator.pushNamed(context, '/about');
                 } else if (link == 'Agents') {
                   Navigator.pushNamed(context, '/agents');
                 } else if (link == 'Contact') {
                   Navigator.pushNamed(context, '/contact');
-                } else if (link == 'Careers') { // Added Careers link
+                } else if (link == 'Careers') {
                   Navigator.pushNamed(context, '/careers');
-                }
-                // Navigation for property listing types
-                else if (link == 'Buy') {
-                  Navigator.pushNamed(context, '/property_listings', arguments: {'listingType': 'Buy'});
-                } else if (link == 'Rent') {
-                  Navigator.pushNamed(context, '/property_listings', arguments: {'listingType': 'Rent'});
-                } else if (link == 'Lease') {
-                  Navigator.pushNamed(context, '/property_listings', arguments: {'listingType': 'Lease'});
+                } else if (link == 'Blog') {
+                  Navigator.pushNamed(context, '/blogs');
                 }
                 else {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -863,7 +928,7 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  // Helper method for Newsletter section in Footer (copied from home_screen.dart)
+  // Helper method for Newsletter section in Footer
   Widget _buildNewsletterSection() {
     return Container(
       width: 300,
@@ -923,7 +988,7 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  // Helper method for Social Icons in Footer (copied from home_screen.dart)
+  // Helper method for Social Icons in Footer
   Widget _buildSocialIcon(IconData icon, String socialMediaName, Color color) {
     return IconButton(
       icon: FaIcon(icon, size: 28, color: color),

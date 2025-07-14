@@ -35,7 +35,7 @@ class AuthService {
         password: password,
       );
       return userCredential;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       // Re-throw the exception to be handled by the UI
       rethrow;
     } catch (e) {
@@ -53,7 +53,7 @@ class AuthService {
         password: password,
       );
       return userCredential;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       // Re-throw the exception to be handled by the UI
       rethrow;
     } catch (e) {
@@ -67,7 +67,7 @@ class AuthService {
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _firebaseAuth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       // Re-throw the exception to be handled by the UI
       rethrow;
     } catch (e) {
