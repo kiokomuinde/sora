@@ -1,13 +1,13 @@
-// lib/screens/privacy_policy_screen.dart
+// lib/screens/cookie_policy_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 
-class PrivacyPolicyScreen extends StatelessWidget {
+class CookiePolicyScreen extends StatelessWidget {
   final AuthService authService;
 
-  const PrivacyPolicyScreen({Key? key, required this.authService}) : super(key: key);
+  const CookiePolicyScreen({Key? key, required this.authService}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +40,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Privacy Policy',
+                    'Cookie Policy',
                     style: TextStyle(
                       fontSize: isLargeScreen ? 48 : (isMediumScreen ? 38 : 28),
                       fontWeight: FontWeight.bold,
@@ -49,7 +49,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   ),
                   SizedBox(height: isLargeScreen ? 20 : 10),
                   Text(
-                    'Your privacy is our priority. Learn how we collect, use, and protect your data.',
+                    'Understanding how we use cookies to enhance your experience.',
                     style: TextStyle(
                       fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
                       color: Colors.white70,
@@ -67,38 +67,33 @@ class PrivacyPolicyScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionTitle('Introduction'),
+                  _buildSectionTitle('What are Cookies?'),
                   _buildSectionContent(
-                    'This Privacy Policy describes how SORA Properties collects, uses, and discloses information, and what choices you have with respect to the information. This policy applies to information we collect when you use our websites, mobile applications, and other online products and services (collectively, the "Services") or when you otherwise interact with us.',
+                    'Cookies are small text files that are placed on your computer or mobile device when you visit a website. They are widely used to make websites work, or work more efficiently, as well as to provide information to the owners of the site.',
                     isLargeScreen, isMediumScreen,
                   ),
-                  _buildSectionTitle('Information We Collect'),
+                  _buildSectionTitle('How We Use Cookies'),
                   _buildSectionContent(
-                    'We collect information you provide directly to us. For example, we collect information when you create an account, create a listing, use the Services, request customer support, or otherwise communicate with us. The types of information we may collect include your name, email address, postal address, phone number, payment information, and any other information you choose to provide.',
+                    'We use cookies to enhance your browsing experience, analyze site traffic, personalize content and ads, and provide social media features. Specifically, we use cookies for:',
                     isLargeScreen, isMediumScreen,
                   ),
+                  _buildListItem('Essential Website Cookies: These cookies are strictly necessary to provide you with services available through our Website and to use some of its features, such as access to secure areas.'),
+                  _buildListItem('Performance and Functionality Cookies: These cookies are used to enhance the performance and functionality of our Website but are non-essential to their use. However, without these cookies, certain functionality may become unavailable.'),
+                  _buildListItem('Analytics and Customization Cookies: These cookies collect information that is used either in aggregate form to help us understand how our Website is being used or how effective our marketing campaigns are, or to help us customize our Website for you.'),
+                  _buildListItem('Advertising Cookies: These cookies are used to make advertising messages more relevant to you. They perform functions like preventing the same ad from continuously reappearing, ensuring that ads are properly displayed for advertisers, and in some cases selecting advertisements that are based on your interests.'),
+                  _buildSectionTitle('Your Choices Regarding Cookies'),
                   _buildSectionContent(
-                    'We also collect information automatically when you use our Services, such as log information (e.g., IP address, browser type, access times), device information, and information collected by cookies and similar technologies.',
+                    'You have the right to decide whether to accept or reject cookies. You can exercise your cookie preferences by clicking on the appropriate opt-out links provided in the cookie banner or by modifying your browser settings. Most browsers allow you to refuse to accept cookies and to delete cookies.',
                     isLargeScreen, isMediumScreen,
                   ),
-                  _buildSectionTitle('How We Use Your Information'),
+                  _buildSectionTitle('Changes to Our Cookie Policy'),
                   _buildSectionContent(
-                    'We use the information we collect to provide, maintain, and improve our Services, such as to process transactions, send you technical notices, updates, security alerts, and support messages. We may also use the information to personalize and improve the Services, provide advertisements, and for research and analytics.',
-                    isLargeScreen, isMediumScreen,
-                  ),
-                  _buildSectionTitle('Sharing of Information'),
-                  _buildSectionContent(
-                    'We may share information with vendors, consultants, and other service providers who need access to such information to carry out work on our behalf. We may also share information in response to a request for information if we believe disclosure is in accordance with, or required by, any applicable law, regulation, or legal process.',
-                    isLargeScreen, isMediumScreen,
-                  ),
-                  _buildSectionTitle('Your Choices'),
-                  _buildSectionContent(
-                    'You have choices regarding the information we collect. You may update, correct, or delete information about you at any time by logging into your online account. You may also opt out of receiving promotional emails from us by following the instructions in those emails.',
+                    'We may update this Cookie Policy from time to time in order to reflect, for example, changes to the cookies we use or for other operational, legal or regulatory reasons. Please therefore re-visit this Cookie Policy regularly to stay informed about our use of cookies and related technologies.',
                     isLargeScreen, isMediumScreen,
                   ),
                   _buildSectionTitle('Contact Us'),
                   _buildSectionContent(
-                    'If you have any questions about this Privacy Policy, please contact us at privacy@sora.com.',
+                    'If you have any questions about our use of cookies or other technologies, please email us at cookies@sora.com.',
                     isLargeScreen, isMediumScreen,
                   ),
                   SizedBox(height: isLargeScreen ? 40 : 20),
@@ -145,6 +140,24 @@ class PrivacyPolicyScreen extends StatelessWidget {
           color: Colors.grey[700],
           height: 1.5,
         ),
+      ),
+    );
+  }
+
+  Widget _buildListItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 20.0, bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(fontSize: 16, color: Colors.grey)),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 16, color: Colors.grey[700], height: 1.5),
+            ),
+          ),
+        ],
       ),
     );
   }

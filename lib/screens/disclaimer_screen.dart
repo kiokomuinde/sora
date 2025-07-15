@@ -1,13 +1,13 @@
-// lib/screens/privacy_policy_screen.dart
+// lib/screens/disclaimer_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 
-class PrivacyPolicyScreen extends StatelessWidget {
+class DisclaimerScreen extends StatelessWidget {
   final AuthService authService;
 
-  const PrivacyPolicyScreen({Key? key, required this.authService}) : super(key: key);
+  const DisclaimerScreen({Key? key, required this.authService}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +40,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Privacy Policy',
+                    'Disclaimer',
                     style: TextStyle(
                       fontSize: isLargeScreen ? 48 : (isMediumScreen ? 38 : 28),
                       fontWeight: FontWeight.bold,
@@ -49,7 +49,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   ),
                   SizedBox(height: isLargeScreen ? 20 : 10),
                   Text(
-                    'Your privacy is our priority. Learn how we collect, use, and protect your data.',
+                    'Important information regarding the use of our services and content.',
                     style: TextStyle(
                       fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
                       color: Colors.white70,
@@ -67,38 +67,34 @@ class PrivacyPolicyScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionTitle('Introduction'),
+                  _buildSectionTitle('General Information'),
                   _buildSectionContent(
-                    'This Privacy Policy describes how SORA Properties collects, uses, and discloses information, and what choices you have with respect to the information. This policy applies to information we collect when you use our websites, mobile applications, and other online products and services (collectively, the "Services") or when you otherwise interact with us.',
+                    'The information provided by SORA Properties on our website and mobile application is for general informational purposes only. All information is provided in good faith, however, we make no representation or warranty of any kind, express or implied, regarding the accuracy, adequacy, validity, reliability, availability, or completeness of any information on the Site or our mobile application.',
                     isLargeScreen, isMediumScreen,
                   ),
-                  _buildSectionTitle('Information We Collect'),
+                  _buildSectionTitle('External Links Disclaimer'),
                   _buildSectionContent(
-                    'We collect information you provide directly to us. For example, we collect information when you create an account, create a listing, use the Services, request customer support, or otherwise communicate with us. The types of information we may collect include your name, email address, postal address, phone number, payment information, and any other information you choose to provide.',
+                    'Our Services may contain links to external websites that are not provided or maintained by or in any way affiliated with SORA Properties. Please note that the SORA Properties does not guarantee the accuracy, relevance, timeliness, or completeness of any information on these external websites.',
                     isLargeScreen, isMediumScreen,
                   ),
+                  _buildSectionTitle('Professional Advice Disclaimer'),
                   _buildSectionContent(
-                    'We also collect information automatically when you use our Services, such as log information (e.g., IP address, browser type, access times), device information, and information collected by cookies and similar technologies.',
+                    'The information provided on our Services is not intended as, and shall not be understood or construed as, financial, legal, tax, or other professional advice. While the employees and contributors of SORA Properties are professionals, the information provided on this website is not a substitute for professional advice. Accordingly, before making any decisions or taking any actions, you should consult with a qualified professional.',
                     isLargeScreen, isMediumScreen,
                   ),
-                  _buildSectionTitle('How We Use Your Information'),
+                  _buildSectionTitle('Errors and Omissions Disclaimer'),
                   _buildSectionContent(
-                    'We use the information we collect to provide, maintain, and improve our Services, such as to process transactions, send you technical notices, updates, security alerts, and support messages. We may also use the information to personalize and improve the Services, provide advertisements, and for research and analytics.',
+                    'Every effort has been made to ensure the accuracy of the information presented on our Services. However, SORA Properties assumes no responsibility for any errors or omissions in the contents of the Service. In no event shall SORA Properties be liable for any special, direct, indirect, consequential, or incidental damages or any damages whatsoever, whether in an action of contract, negligence, or other tort, arising out of or in connection with the use of the Service or the contents of the Service.',
                     isLargeScreen, isMediumScreen,
                   ),
-                  _buildSectionTitle('Sharing of Information'),
+                  _buildSectionTitle('Fair Use Disclaimer'),
                   _buildSectionContent(
-                    'We may share information with vendors, consultants, and other service providers who need access to such information to carry out work on our behalf. We may also share information in response to a request for information if we believe disclosure is in accordance with, or required by, any applicable law, regulation, or legal process.',
-                    isLargeScreen, isMediumScreen,
-                  ),
-                  _buildSectionTitle('Your Choices'),
-                  _buildSectionContent(
-                    'You have choices regarding the information we collect. You may update, correct, or delete information about you at any time by logging into your online account. You may also opt out of receiving promotional emails from us by following the instructions in those emails.',
+                    'SORA Properties may use copyrighted material which has not always been specifically authorized by the copyright owner. We are making such material available in our efforts to advance understanding of environmental, political, human rights, economic, scientific, and social justice issues, etc. We believe this constitutes a "fair use" of any such copyrighted material as provided for in section 107 of the US Copyright Law.',
                     isLargeScreen, isMediumScreen,
                   ),
                   _buildSectionTitle('Contact Us'),
                   _buildSectionContent(
-                    'If you have any questions about this Privacy Policy, please contact us at privacy@sora.com.',
+                    'If you have any questions about this Disclaimer, please contact us at disclaimer@sora.com.',
                     isLargeScreen, isMediumScreen,
                   ),
                   SizedBox(height: isLargeScreen ? 40 : 20),

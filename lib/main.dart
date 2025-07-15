@@ -6,167 +6,140 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Import for User type
 import 'package:sora_app/firebase_options.dart'; // Assuming this file exists and provides DefaultFirebaseOptions
 import 'package:sora_app/services/auth_service.dart'; // Import AuthService
-import 'dart:convert'; // Import for jsonDecode
-import 'dart:js' as js; // Import for dart:js to interact with JS global objects
+import 'dart:html' as html; // Import for dart:html for web paths (still needed for location.pathname)
 
+// New screens
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/property_listing_screen.dart'; // This is the correct import for your full PropertyListingScreen
-import 'package:sora_app/screens/about_screen.dart';
-import 'package:sora_app/screens/signin_screen.dart';
-import 'package:sora_app/screens/signup_screen.dart';
-import 'package:sora_app/screens/agents_screen.dart';
-import 'package:sora_app/screens/contact_screen.dart';
-import 'package:sora_app/screens/careers_screen.dart';
-import 'package:sora_app/screens/blogs_screen.dart';
-import 'package:sora_app/screens/blog_view_screen.dart';
-
-// New screens
-import 'package:sora_app/screens/testimonials_screen.dart';
-import 'package:sora_app/screens/faqs_screen.dart';
-import 'package:sora_app/screens/support_screen.dart';
-import 'package:sora_app/screens/terms_screen.dart';
-import 'package:sora_app/screens/local_guides_screen.dart';
-import 'package:sora_app/screens/events_screen.dart';
-import 'package:sora_app/screens/terms_of_service_screen.dart';
-import 'package:sora_app/screens/sitemap_screen.dart';
+import 'screens/property_listing_screen.dart';
+import 'screens/about_screen.dart';
+import 'screens/signin_screen.dart';
+import 'screens/signup_screen.dart';
+import 'screens/agents_screen.dart';
+import 'screens/contact_screen.dart';
+import 'screens/careers_screen.dart';
+import 'screens/blogs_screen.dart';
+import 'screens/blog_view_screen.dart';
+import 'screens/testimonials_screen.dart';
+import 'screens/faqs_screen.dart';
+import 'screens/local_guides_screen.dart';
+import 'screens/terms_of_service_screen.dart';
+import 'screens/sitemap_screen.dart';
+import 'screens/support_screen.dart';
+import 'screens/events_screen.dart';
+import 'screens/privacy_policy_screen.dart';
+import 'screens/cookie_policy_screen.dart';
+import 'screens/disclaimer_screen.dart';
+import 'screens/sell_property_screen.dart';
+import 'screens/list_property_screen.dart';
+import 'screens/my_favorites_screen.dart';
+import 'screens/my_listings_screen.dart';
+import 'screens/profile_settings_screen.dart';
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Access Firebase config and auth token from global JavaScript scope if on web
-  Map<String, dynamic> firebaseConfig = {};
-  String initialAuthToken = '';
-
-  if (kIsWeb) {
-    if (js.context.hasProperty('__firebase_config')) {
-      try {
-        firebaseConfig = jsonDecode(js.context['__firebase_config'] as String);
-        print('Firebase config loaded from JS context.');
-      } catch (e) {
-        print('Error parsing __firebase_config from JS context: $e');
-      }
-    }
-    if (js.context.hasProperty('__initial_auth_token')) {
-      initialAuthToken = js.context['__initial_auth_token'] as String;
-      print('Initial auth token loaded from JS context.');
-    }
-  }
-
+  // Initialize Firebase using DefaultFirebaseOptions for all platforms
   try {
-    if (firebaseConfig['apiKey'] != null && (firebaseConfig['apiKey'] as String).isNotEmpty) {
-      await Firebase.initializeApp(
-        options: FirebaseOptions(
-          apiKey: firebaseConfig['apiKey'] as String,
-          appId: firebaseConfig['appId'] as String,
-          messagingSenderId: firebaseConfig['messagingSenderId'] as String,
-          projectId: firebaseConfig['projectId'] as String,
-          authDomain: firebaseConfig['authDomain'] as String?,
-          databaseURL: firebaseConfig['databaseURL'] as String?,
-          storageBucket: firebaseConfig['storageBucket'] as String?,
-        ),
-      );
-      print('Firebase initialized with provided config.');
-    } else {
-      // Fallback for local development or if config not provided by JS context
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      print('Firebase initialized with DefaultFirebaseOptions.');
-    }
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Firebase initialized successfully for current platform.');
   } catch (e) {
     print('Error during Firebase initialization: $e');
-    // If Firebase initialization fails, the app might not function correctly,
-    // but we still try to runApp to avoid a blank screen.
+    // You might want to show an error screen or dialog here
   }
 
-  // Initialize AuthService once and pass it down
-  final AuthService authService = AuthService();
-
-  // Sign in anonymously if no initial auth token is provided or custom token fails
-  final auth = FirebaseAuth.instance;
-  try {
-    if (initialAuthToken.isNotEmpty) {
-      try {
-        await auth.signInWithCustomToken(initialAuthToken);
-        print('Signed in with custom token successfully.');
-      } on FirebaseAuthException catch (e) {
-        print('Firebase Auth Error with custom token: ${e.code} - ${e.message}');
-        // If custom token fails, try anonymous sign-in
-        await auth.signInAnonymously();
-        print('Signed in anonymously as a fallback from custom token failure.');
-      } catch (e) {
-        print('Unexpected error during custom token sign-in: $e');
-        // If custom token fails for other reasons, try anonymous sign-in
-        await auth.signInAnonymously();
-        print('Signed in anonymously as a fallback from unexpected custom token error.');
-      }
-    } else {
-      // If no initial auth token, sign in anonymously
-      await auth.signInAnonymously();
-      print('No initial auth token, signed in anonymously.');
-    }
-  } catch (e) {
-    print('Error during Firebase authentication (anonymous or custom token): $e');
-    // If authentication itself fails, the app might still run but without auth.
+  // Initialize AuthService ONLY if Firebase has been successfully initialized
+  AuthService? authService;
+  if (Firebase.apps.isNotEmpty) {
+    // Pass FirebaseAuth.instance to AuthService constructor
+    authService = AuthService(firebaseAuth: FirebaseAuth.instance);
+  } else {
+    print('AuthService not initialized because Firebase is not initialized.');
   }
 
   runApp(SoraApp(authService: authService));
 }
 
 class SoraApp extends StatelessWidget {
-  final AuthService authService; // Receive AuthService
+  final AuthService? authService; // Now nullable
 
   const SoraApp({super.key, required this.authService});
 
   @override
   Widget build(BuildContext context) {
-    Map<String, WidgetBuilder> appRoutes = {
-      // SplashScreen only used on non-web, as per previous logic.
-      // It will handle navigation to Onboarding or Home.
-      '/': (context) => const SplashScreen(), // This route is only active if !kIsWeb
-      '/home': (context) => HomeScreen(authService: authService),
-      '/property_listings': (context) {
-        final args = ModalRoute.of(context)?.settings.arguments as Map<String, String>?;
-        return PropertyListingScreen( // This will now correctly refer to the imported Stateful Widget
-          authService: authService, // Ensure authService is passed
-          listingType: args?['listingType'] ?? '',
-        );
-      },
-      '/about': (context) => AboutScreen(authService: authService),
-      '/signin': (context) => SignInScreen(authService: authService),
-      '/signup': (context) => SignUpScreen(authService: authService),
-      '/agents': (context) => AgentsScreen(authService: authService),
-      '/contact': (context) => ContactScreen(authService: authService),
-      '/careers': (context) => CareersScreen(authService: authService),
-      '/blogs': (context) => BlogsScreen(authService: authService),
-      '/blog_view': (context) {
-        final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-        return BlogViewScreen(
-          authService: authService, // Ensure authService is passed
-          blogPost: args, // Pass the blog post data
-        );
-      },
-      // New routes for the requested screens
-      '/testimonials': (context) => TestimonialsScreen(authService: authService),
-      '/faqs': (context) => FAQsScreen(authService: authService),
-      '/support': (context) => SupportScreen(authService: authService),
-      '/terms': (context) => TermsScreen(authService: authService),
-      '/local_guides': (context) => LocalGuidesScreen(authService: authService),
-      '/events': (context) => EventsScreen(authService: authService),
-      '/terms_of_service': (context) => TermsOfServiceScreen(authService: authService),
-      '/sitemap': (context) => SitemapScreen(authService: authService),
-    };
-
-    // Conditionally add the onboarding route ONLY if NOT on web
-    if (!kIsWeb) {
-      appRoutes['/onboarding'] = (context) => const OnboardingScreen();
+    // If authService is null, it means Firebase initialization failed.
+    // Display a loading indicator or an error message.
+    if (authService == null) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 20),
+                Text('Initializing app... Please ensure Firebase is configured correctly.'),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
-    // Debug print for initial route
-    final String chosenInitialRoute = kIsWeb ? '/home' : '/';
+    // Define routes with AuthService passed to each screen
+    final Map<String, WidgetBuilder> appRoutes = {
+      '/splash': (context) => const SplashScreen(),
+      '/onboarding': (context) => const OnboardingScreen(),
+      '/home': (context) => HomeScreen(authService: authService!), // Use ! because we checked for null above
+      '/buy': (context) => PropertyListingScreen(authService: authService!, listingType: 'Buy'),
+      '/rent': (context) => PropertyListingScreen(authService: authService!, listingType: 'Rent'),
+      '/lease': (context) => PropertyListingScreen(authService: authService!, listingType: 'Lease'),
+      '/about': (context) => AboutScreen(authService: authService!),
+      '/signin': (context) => SignInScreen(authService: authService!),
+      '/signup': (context) => SignUpScreen(authService: authService!),
+      '/agents': (context) => AgentsScreen(authService: authService!),
+      '/contact': (context) => ContactScreen(authService: authService!),
+      '/careers': (context) => CareersScreen(authService: authService!),
+      '/blogs': (context) => BlogsScreen(authService: authService!),
+      '/blog_view': (context) => const BlogViewScreen(), // BlogViewScreen gets blog data via arguments
+      '/testimonials': (context) => TestimonialsScreen(authService: authService!),
+      '/faqs': (context) => FAQsScreen(authService: authService!),
+      '/local_guides': (context) => LocalGuidesScreen(authService: authService!),
+      '/terms_of_service': (context) => TermsOfServiceScreen(authService: authService!),
+      '/sitemap': (context) => SitemapScreen(authService: authService!),
+      '/support': (context) => SupportScreen(authService: authService!),
+      '/events': (context) => EventsScreen(authService: authService!),
+
+      // New placeholder routes
+      '/privacy_policy': (context) => PrivacyPolicyScreen(authService: authService!),
+      '/cookie_policy': (context) => CookiePolicyScreen(authService: authService!),
+      '/disclaimer': (context) => DisclaimerScreen(authService: authService!),
+      '/sell_property': (context) => SellPropertyScreen(authService: authService!),
+      '/list_property': (context) => ListPropertyScreen(authService: authService!),
+      '/my_favorites': (context) => MyFavoritesScreen(authService: authService!),
+      '/my_listings': (context) => MyListingsScreen(authService: authService!),
+      '/profile_settings': (context) => ProfileSettingsScreen(authService: authService!),
+    };
+
+    // Determine the initial route based on platform
+    String chosenInitialRoute;
+    if (kIsWeb) {
+      // On web, always start at home or the requested path if provided
+      // Ensure pathname is not null before assigning
+      chosenInitialRoute = html.window.location.pathname ?? '/home'; // Added null-aware operator and fallback
+      if (!appRoutes.keys.contains(chosenInitialRoute)) {
+        chosenInitialRoute = '/home'; // Fallback to home if path is not a defined route
+      }
+    } else {
+      // On mobile, use the splash screen to determine onboarding status
+      chosenInitialRoute = '/splash';
+    }
+
     print('App starting with initial route: $chosenInitialRoute (kIsWeb: $kIsWeb)');
 
     return MaterialApp(
@@ -184,23 +157,6 @@ class SoraApp extends StatelessWidget {
         print('Unknown route attempted: ${settings.name}'); // Debug print for unknown routes
         return MaterialPageRoute(builder: (context) => Text('Error: Unknown route ${settings.name}'));
       },
-    );
-  }
-}
-
-// Placeholder class for BlogViewScreen (if it's still a placeholder in its own file)
-// If you have a full BlogViewScreen in lib/screens/blog_view_screen.dart, you should remove this placeholder too.
-class BlogViewScreen extends StatelessWidget {
-  final AuthService authService;
-  final Map<String, dynamic>? blogPost;
-
-  const BlogViewScreen({Key? key, required this.authService, this.blogPost}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(blogPost?['title'] ?? 'Blog Post')),
-      body: Center(child: Text('Blog View Screen for ${blogPost?['title'] ?? 'a blog post'}')),
     );
   }
 }

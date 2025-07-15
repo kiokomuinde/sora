@@ -19,7 +19,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late CommonWidgets commonWidgets;
-  final TextEditingController _searchController = TextEditingController();
 
   String _currentListingTypeFilter = '';
 
@@ -38,450 +37,268 @@ class _HomeScreenState extends State<HomeScreen> {
       _popularPropertiesList = [];
       _hottestPropertiesList = [];
       _newPropertiesList = [];
-      return; // No properties to display
-    }
-
-    // Ensure we have enough properties for each list, repeating if necessary
-    // This is for demonstration purposes to ensure carousels are never empty.
-    final List<Map<String, dynamic>> tempAll = List.from(mutableAllProperties);
-    while (tempAll.length < 30) { // Ensure at least 30 properties for better distribution
-      tempAll.addAll(List.from(mutableAllProperties)); // Repeat properties if too few
-    }
-    tempAll.shuffle(); // Shuffle the larger temporary list
-
-    // Populate lists ensuring they always have content for display
-    // Take a maximum of 10 items for each, distributing them from the shuffled list
-    _popularPropertiesList = tempAll.sublist(0, (tempAll.length * 0.3).toInt()).take(10).toList();
-    _hottestPropertiesList = tempAll.sublist((tempAll.length * 0.3).toInt(), (tempAll.length * 0.6).toInt()).take(10).toList();
-    _newPropertiesList = tempAll.sublist((tempAll.length * 0.6).toInt()).take(10).toList();
-
-    // Fallback: If any list is still empty (e.g., due to very small initial PropertyData.allProperties),
-    // ensure it gets at least one property.
-    if (_popularPropertiesList.isEmpty && mutableAllProperties.isNotEmpty) {
-      _popularPropertiesList.add(mutableAllProperties[0]);
-    }
-    if (_hottestPropertiesList.isEmpty && mutableAllProperties.isNotEmpty) {
-      _hottestPropertiesList.add(mutableAllProperties[0]); // Could be the same as popular, acceptable for dummy data
-    }
-    if (_newPropertiesList.isEmpty && mutableAllProperties.isNotEmpty) {
-      _newPropertiesList.add(mutableAllProperties[0]); // Could be the same, acceptable for dummy data
+    } else {
+      // Initialize property lists with sample data.
+      // For a real app, this would come from a backend or more complex filtering.
+      _popularPropertiesList = List.from(mutableAllProperties.where((p) => p['listingType'] == 'Rent').take(5));
+      _hottestPropertiesList = List.from(mutableAllProperties.where((p) => p['listingType'] == 'Buy').take(5));
+      _newPropertiesList = List.from(mutableAllProperties.where((p) => p['listingType'] == 'Lease').take(5));
     }
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
-  }
-
-  void _performSearch(String query) {
-    print('Search query from AppBar: $query');
-    // Example: Navigate to property_listings with search query
-    // Navigator.pushNamed(context, '/property_listings', arguments: {'searchQuery': query});
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final bool isSmallScreen = screenWidth < 600;
-    final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
     final bool isLargeScreen = screenWidth >= 1000;
+    final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: commonWidgets.buildAppBar(
-        showSearchBar: true,
-        onSearchChanged: _performSearch,
+        // Pass the currentListingTypeFilter to AppBar if it uses it for highlighting
         currentListingTypeFilter: _currentListingTypeFilter,
+        // No need to pass onSearchChanged, onListingTypeFilterChanged, showLoginSignupDialog, authService
+        // as common_widgets.buildAppBar doesn't accept them directly in its current signature.
+        // authService is already part of the CommonWidgets instance.
       ),
-      endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
+      endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null, // Use drawer for mobile/tablet
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // --- Hero Section ---
-            SizedBox(
-              width: double.infinity,
-              height: isLargeScreen ? 500 : (isMediumScreen ? 400 : 350),
-              child: Stack(
-                children: [
-                  if (kIsWeb)
-                    Positioned.fill(
-                      child: Image.asset(
-                        'assets/images/real_estate_hero.webp', // Ensure this asset path is correct
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: const Color(0xFF1E90FF),
-                            child: const Center(
-                              child: Icon(Icons.broken_image, color: Colors.white, size: 80),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withOpacity(0.0),
-                            const Color(0xFF1E90FF).withOpacity(0.2),
-                            Colors.purple.withOpacity(0.3),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 900),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Your Dream Home Awaits',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: isLargeScreen ? 56 : (isMediumScreen ? 48 : 40),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 20.0,
-                                  color: Colors.black.withOpacity(0.7),
-                                  offset: const Offset(3.0, 3.0),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          BlinkingGradientText(
-                            text: 'Explore millions of properties across Africa.',
-                            style: TextStyle(
-                              fontSize: isLargeScreen ? 22 : (isMediumScreen ? 20 : 18),
-                              fontWeight: FontWeight.w500,
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 15.0,
-                                  color: Colors.black.withOpacity(0.6),
-                                  offset: const Offset(2.0, 2.0),
-                                ),
-                              ],
-                            ),
-                            colors: const [
-                              Colors.white,
-                              Color(0xFF4B0082),
-                            ],
-                          ),
-                          const SizedBox(height: 40),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            // Hero Section
+            _buildHeroSection(isLargeScreen, isMediumScreen),
+
+            // Removed Search Section as per request
+
+            // Categories Section (existing)
+            _buildCategoriesSection(isLargeScreen, isMediumScreen),
+
+            // Popular Properties Section (Now a horizontal carousel)
+            _buildPropertiesCarousel(
+              context,
+              'Popular Properties',
+              _popularPropertiesList,
+              isLargeScreen,
+              isMediumScreen,
             ),
 
-            // --- Popular Properties Section ---
-            Padding(
-              padding: EdgeInsets.only(
-                top: 40.0,
-                left: isLargeScreen ? 24.0 : (isMediumScreen ? 16.0 : 8.0),
-                right: isLargeScreen ? 24.0 : (isMediumScreen ? 16.0 : 8.0),
-                bottom: 24.0,
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: double.infinity),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Popular Properties',
-                          style: TextStyle(
-                            fontSize: isLargeScreen ? 40 : (isMediumScreen ? 36 : 32),
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0A66C2),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Icon(
-                          Icons.star,
-                          size: isLargeScreen ? 36 : (isMediumScreen ? 32 : 28),
-                          color: Colors.amber,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    _RecommendedPropertiesCarousel(
-                      propertiesToDisplay: _popularPropertiesList,
-                      isLargeScreen: isLargeScreen,
-                      isMediumScreen: isMediumScreen,
-                      buildPropertyCard: (property) => PropertyCardWithCarousel(
-                        property: property,
-                        onFavoriteToggle: (p) {
-                          setState(() {
-                            // Update favorite status in the centralized list
-                            final index = PropertyData.allProperties.indexWhere((prop) => prop['title'] == p['title']);
-                            if (index != -1) {
-                              PropertyData.allProperties[index]['isFavorite'] = !PropertyData.allProperties[index]['isFavorite'];
-                            }
-                          });
-                        },
-                        isLoggedIn: widget.authService.currentUserNotifier.value != null,
-                        showLoginPrompt: commonWidgets.showLoginSignupDialog, // Use commonWidgets' method
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            // Hottest Deals Section (Now a horizontal carousel)
+            _buildPropertiesCarousel(
+              context,
+              'Hottest Deals',
+              _hottestPropertiesList,
+              isLargeScreen,
+              isMediumScreen,
             ),
 
-            // --- Hottest in Sora Section ---
-            Padding(
-              padding: EdgeInsets.only(
-                top: 40.0,
-                left: isLargeScreen ? 24.0 : (isMediumScreen ? 16.0 : 8.0),
-                right: isLargeScreen ? 24.0 : (isMediumScreen ? 16.0 : 8.0),
-                bottom: 24.0,
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: double.infinity),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Hottest in Sora',
-                          style: TextStyle(
-                            fontSize: isLargeScreen ? 40 : (isMediumScreen ? 36 : 32),
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0A66C2),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Icon(
-                          Icons.local_fire_department,
-                          size: isLargeScreen ? 36 : (isMediumScreen ? 32 : 28),
-                          color: Colors.deepOrange,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    _RecommendedPropertiesCarousel(
-                      propertiesToDisplay: _hottestPropertiesList,
-                      isLargeScreen: isLargeScreen,
-                      isMediumScreen: isMediumScreen,
-                      buildPropertyCard: (property) => PropertyCardWithCarousel(
-                        property: property,
-                        onFavoriteToggle: (p) {
-                          setState(() {
-                            // Update favorite status in the centralized list
-                            final index = PropertyData.allProperties.indexWhere((prop) => prop['title'] == p['title']);
-                            if (index != -1) {
-                              PropertyData.allProperties[index]['isFavorite'] = !PropertyData.allProperties[index]['isFavorite'];
-                            }
-                          });
-                        },
-                        isLoggedIn: widget.authService.currentUserNotifier.value != null,
-                        showLoginPrompt: commonWidgets.showLoginSignupDialog,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            // New in Market Section (Now a horizontal carousel)
+            _buildPropertiesCarousel(
+              context,
+              'New in Market',
+              _newPropertiesList,
+              isLargeScreen,
+              isMediumScreen,
             ),
 
-            // --- NEW PROPERTIES SECTION (Corrected to include carousel) ---
-            Padding(
-              padding: EdgeInsets.only(
-                top: 40.0,
-                left: isLargeScreen ? 24.0 : (isMediumScreen ? 16.0 : 8.0),
-                right: isLargeScreen ? 24.0 : (isMediumScreen ? 16.0 : 8.0),
-                bottom: 24.0,
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: double.infinity),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'New Properties',
-                          style: TextStyle(
-                            fontSize: isLargeScreen ? 40 : (isMediumScreen ? 36 : 32),
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0A66C2),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Icon(
-                          Icons.fiber_new,
-                          size: isLargeScreen ? 36 : (isMediumScreen ? 32 : 28),
-                          color: Colors.green,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    _RecommendedPropertiesCarousel(
-                      propertiesToDisplay: _newPropertiesList,
-                      isLargeScreen: isLargeScreen,
-                      isMediumScreen: isMediumScreen,
-                      buildPropertyCard: (property) => PropertyCardWithCarousel(
-                        property: property,
-                        onFavoriteToggle: (p) {
-                          setState(() {
-                            // Update favorite status in the centralized list
-                            final index = PropertyData.allProperties.indexWhere((prop) => prop['title'] == p['title']);
-                            if (index != -1) {
-                              PropertyData.allProperties[index]['isFavorite'] = !PropertyData.allProperties[index]['isFavorite'];
-                            }
-                          });
-                        },
-                        isLoggedIn: widget.authService.currentUserNotifier.value != null,
-                        showLoginPrompt: commonWidgets.showLoginSignupDialog,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // Call to Action Section (existing)
+            _buildCallToActionSection(isLargeScreen, isMediumScreen),
 
-            // --- Why Choose SORA? Section ---
-            Container(
-              width: double.infinity,
-              color: Colors.grey[50],
-              padding: const EdgeInsets.symmetric(vertical: 50.0, horizontal: 24.0),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: isLargeScreen ? 900 : (isMediumScreen ? 600 : double.infinity)),
-                child: Column(
-                  children: [
-                    Text(
-                      'Why Choose SORA?',
-                      style: TextStyle(
-                        fontSize: isLargeScreen ? 40 : (isMediumScreen ? 36 : 32),
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0A66C2),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 30),
-                    Wrap(
-                      spacing: 30.0,
-                      runSpacing: 30.0,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        _buildValueCard(
-                          icon: Icons.lightbulb_outline,
-                          title: 'Innovation',
-                          description: 'Leveraging cutting-edge tech for smarter property searches.',
-                        ),
-                        _buildValueCard(
-                          icon: Icons.security,
-                          title: 'Trust & Transparency',
-                          description: 'Honest dealings and clear information, always.',
-                        ),
-                        _buildValueCard(
-                          icon: Icons.people_alt_outlined,
-                          title: 'Client-Centric',
-                          description: 'Your needs are our priority, with personalized support.',
-                        ),
-                        _buildValueCard(
-                          icon: Icons.verified_outlined,
-                          title: 'Verified Listings',
-                          description: 'Access to genuine properties, thoroughly vetted for quality.',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // Testimonials Section (existing)
+            _buildTestimonialsSection(isLargeScreen, isMediumScreen),
 
-            const SizedBox(height: 40),
-
-            // --- How It Works Section ---
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 24.0),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: isLargeScreen ? 900 : (isMediumScreen ? 700 : double.infinity)),
-                child: Column(
-                  children: [
-                    Text(
-                      'How It Works',
-                      style: TextStyle(
-                        fontSize: isLargeScreen ? 40 : (isMediumScreen ? 36 : 32),
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0A66C2),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 30),
-                    Column(
-                      children: [
-                        _buildProcessStep(
-                          stepNumber: 1,
-                          icon: Icons.search,
-                          title: 'Explore Listings',
-                          description: 'Browse millions of properties with detailed photos and virtual tours. Use our powerful search filters to narrow down your options.',
-                          isLargeScreen: isLargeScreen,
-                        ),
-                        _buildProcessStep(
-                          stepNumber: 2,
-                          icon: Icons.connect_without_contact,
-                          title: 'Connect with Experts',
-                          description: 'Get in touch with qualified real estate agents and brokers who can guide you through the process and answer your questions.',
-                          isLargeScreen: isLargeScreen,
-                        ),
-                        _buildProcessStep(
-                          stepNumber: 3,
-                          icon: Icons.home_work_outlined,
-                          title: 'Secure Your Dream Property',
-                          description: 'From offers to closing, we\'ll support you every step to make your property acquisition smooth and successful.',
-                          isLargeScreen: isLargeScreen,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 40),
-
-            // --- Sell Your Property Section ---
-            _buildSellSection(isLargeScreen: isLargeScreen || isMediumScreen),
-
-            const SizedBox(height: 40),
-
-            // --- Footer ---
-            commonWidgets.buildFooter(), // Use the common footer
+            // Footer
+            commonWidgets.buildFooter(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSection({
-    required String title,
-    required Widget child,
-    bool showViewAll = false,
-    VoidCallback? onViewAllPressed,
-  }) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final bool isLargeScreen = screenWidth >= 1000;
-    final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
-
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isLargeScreen ? 24.0 : (isMediumScreen ? 16.0 : 8.0),
-        vertical: 20.0,
+  Widget _buildHeroSection(bool isLargeScreen, bool isMediumScreen) {
+    return Container(
+      width: double.infinity,
+      height: isLargeScreen ? 500 : (isMediumScreen ? 400 : 300),
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: const AssetImage('assets/images/hero_image.webp'),
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(
+            Colors.black.withOpacity(0.5),
+            BlendMode.darken,
+          ),
+        ),
       ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            BlinkingGradientText(
+              text: 'Find Your Dream Home',
+              style: TextStyle(
+                fontSize: isLargeScreen ? 60 : (isMediumScreen ? 45 : 30),
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              colors: const [Colors.white, Color(0xFF4B0082)], // White to Dark Purple
+            ),
+            SizedBox(height: isLargeScreen ? 20 : 10),
+            Text(
+              'Explore thousands of properties for sale, rent, and lease.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isLargeScreen ? 20 : (isMediumScreen ? 16 : 14),
+                color: Colors.white.withOpacity(0.9),
+              ),
+            ),
+            SizedBox(height: isLargeScreen ? 40 : 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildHeroButton('Buy', () => Navigator.pushNamed(context, '/buy')),
+                SizedBox(width: isLargeScreen ? 20 : 10),
+                _buildHeroButton('Rent', () => Navigator.pushNamed(context, '/rent')),
+                SizedBox(width: isLargeScreen ? 20 : 10),
+                _buildHeroButton('Lease', () => Navigator.pushNamed(context, '/lease')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroButton(String text, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF1E90FF), // Dodger Blue
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        elevation: 5,
+      ),
+      child: Text(text),
+    );
+  }
+
+  // Removed _buildSearchBarSection entirely.
+
+  Widget _buildCategoriesSection(bool isLargeScreen, bool isMediumScreen) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        vertical: isLargeScreen ? 60 : 30,
+        horizontal: isLargeScreen ? 100 : 20,
+      ),
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Explore Categories',
+            style: TextStyle(
+              fontSize: isLargeScreen ? 36 : (isMediumScreen ? 28 : 22),
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF0A66C2),
+            ),
+          ),
+          SizedBox(height: isLargeScreen ? 40 : 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              int crossAxisCount;
+              if (isLargeScreen) {
+                crossAxisCount = 4;
+              } else if (isMediumScreen) {
+                crossAxisCount = 2;
+              } else {
+                crossAxisCount = 1;
+              }
+              double childAspectRatio = isLargeScreen ? 1.2 : (isMediumScreen ? 1.5 : 2.0);
+
+              return GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: childAspectRatio,
+                mainAxisSpacing: isLargeScreen ? 30 : 20,
+                crossAxisSpacing: isLargeScreen ? 30 : 20,
+                children: [
+                  _buildCategoryCard(Icons.house, 'Buy Property', 'Find your dream home to own.', () {
+                    Navigator.pushNamed(context, '/buy'); // Changed to /buy
+                  }),
+                  _buildCategoryCard(Icons.apartment, 'Rent Property', 'Discover perfect apartments and houses for rent.', () {
+                    Navigator.pushNamed(context, '/rent'); // Changed to /rent
+                  }),
+                  _buildCategoryCard(Icons.store, 'Commercial Lease', 'Browse commercial spaces for your business.', () {
+                    Navigator.pushNamed(context, '/lease'); // Changed to /lease
+                  }),
+                  _buildCategoryCard(Icons.agriculture, 'Land & Plots', 'Invest in land for future development.', () {
+                    // This will navigate to a generic property listing, might need a specific '/plots' route
+                    Navigator.pushNamed(context, '/buy', arguments: {'listingType': 'Plot'});
+                  }),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryCard(IconData icon, String title, String description, VoidCallback onPressed) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Card(
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 50, color: const Color(0xFF1E90FF)),
+              const SizedBox(height: 15),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0A66C2),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPropertiesCarousel(BuildContext context, String title, List<Map<String, dynamic>> properties, bool isLargeScreen, bool isMediumScreen) {
+    if (properties.isEmpty) {
+      return const SizedBox.shrink(); // Don't show section if no properties
+    }
+    return Container(
+      padding: EdgeInsets.symmetric(
+        vertical: isLargeScreen ? 60 : 30,
+        horizontal: isLargeScreen ? 100 : 20,
+      ),
+      color: Colors.grey[50],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -491,73 +308,170 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: isLargeScreen ? 40 : (isMediumScreen ? 36 : 32),
+                  fontSize: isLargeScreen ? 36 : (isMediumScreen ? 28 : 22),
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF0A66C2),
                 ),
               ),
-              if (showViewAll && onViewAllPressed != null)
-                TextButton(
-                  onPressed: onViewAllPressed,
-                  child: Text(
-                    'View All',
-                    style: TextStyle(
-                      fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
-                      color: const Color(0xFF1E90FF),
-                      fontWeight: FontWeight.bold,
-                    ),
+              TextButton(
+                onPressed: () {
+                  // Navigate to the full property listing page based on title
+                  String listingType = '';
+                  if (title == 'Popular Properties') {
+                    listingType = 'Rent'; // Example: Popular shows Rent
+                  } else if (title == 'Hottest Deals') {
+                    listingType = 'Buy'; // Example: Hottest shows Buy
+                  } else if (title == 'New in Market') {
+                    listingType = 'Lease'; // Example: New shows Lease
+                  }
+                  Navigator.pushNamed(context, '/property_listing', arguments: {'listingType': listingType});
+                },
+                child: const Text(
+                  'View All',
+                  style: TextStyle(
+                    color: Color(0xFF1E90FF),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+              ),
             ],
           ),
-          const SizedBox(height: 20),
-          child,
+          SizedBox(height: isLargeScreen ? 40 : 20),
+          SizedBox(
+            height: isLargeScreen ? 380 : (isMediumScreen ? 320 : 280), // Adjust height for carousel
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: properties.length,
+              itemBuilder: (context, index) {
+                final property = properties[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  child: _buildPropertyCard(context, property, isLargeScreen, isMediumScreen),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildValueCard({
-    required IconData icon,
-    required String title,
-    required String description,
-  }) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final bool isLargeScreen = screenWidth >= 1000;
-    final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
-
-    return Card(
-      elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+  Widget _buildPropertyCard(BuildContext context, Map<String, dynamic> property, bool isLargeScreen, bool isMediumScreen) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PropertyDetailScreen(property: property),
+          ),
+        );
+      },
       child: Container(
-        width: isLargeScreen ? 250 : (isMediumScreen ? 220 : double.infinity),
-        padding: const EdgeInsets.all(20),
+        width: isLargeScreen ? 300 : (isMediumScreen ? 250 : 220),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              size: isLargeScreen ? 60 : 50,
-              color: const Color(0xFF1E90FF),
-            ),
-            const SizedBox(height: 15),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: isLargeScreen ? 22 : 20,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF0A66C2),
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              child: Image.asset(
+                property['images']![0],
+                height: isLargeScreen ? 200 : (isMediumScreen ? 160 : 140),
+                width: double.infinity,
+                fit: BoxFit.cover,
               ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 10),
-            Text(
-              description,
-              style: TextStyle(
-                fontSize: isLargeScreen ? 16 : 14,
-                color: Colors.grey[700],
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    property['price']!,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0A66C2),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    property['title']!,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          property['location']!,
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (property['bedrooms'] > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.bed, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${property['bedrooms']} Beds',
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (property['bathrooms'] > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.bathtub, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${property['bathrooms']} Baths',
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (property['area'] != null && property['area'] != "0") ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.square_foot, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${property['area']} sqft',
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -565,442 +479,184 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProcessStep({
-    required int stepNumber,
-    required IconData icon,
-    required String title,
-    required String description,
-    required bool isLargeScreen,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20.0),
-      child: isLargeScreen
-          ? Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: const Color(0xFF1E90FF),
-            child: Text(
-              '$stepNumber',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-              ),
-            ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(icon, size: 30, color: const Color(0xFF0A66C2)),
-                    const SizedBox(width: 10),
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0A66C2),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                ),
-              ],
-            ),
-          ),
-        ],
-      )
-          : Column(
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: const Color(0xFF1E90FF),
-            child: Text(
-              '$stepNumber',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Icon(icon, size: 28, color: const Color(0xFF0A66C2)),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0A66C2),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            description,
-            style: TextStyle(fontSize: 15, color: Colors.grey[700]),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSellSection({required bool isLargeScreen}) {
+  Widget _buildCallToActionSection(bool isLargeScreen, bool isMediumScreen) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(
         vertical: isLargeScreen ? 80 : 40,
         horizontal: isLargeScreen ? 100 : 20,
       ),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0A66C2).withOpacity(0.9),
-        borderRadius: BorderRadius.circular(20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0A66C2), Color(0xFF1E90FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Ready to Sell Your Property?',
+            'Ready to find your perfect property?',
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: isLargeScreen ? 48 : 32,
+              fontSize: isLargeScreen ? 40 : (isMediumScreen ? 32 : 26),
               fontWeight: FontWeight.bold,
               color: Colors.white,
-              shadows: [
-                Shadow(
-                  offset: const Offset(2, 2),
-                  blurRadius: 3.0,
-                  color: Colors.black.withOpacity(0.3),
-                ),
-              ],
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isLargeScreen ? 30 : 20),
           Text(
-            'List with Sora for maximum exposure and a seamless selling experience.',
+            'Contact our expert agents today for personalized assistance and guidance.',
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: isLargeScreen ? 20 : 16,
+              fontSize: isLargeScreen ? 20 : (isMediumScreen ? 16 : 14),
               color: Colors.white.withOpacity(0.9),
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 30),
+          SizedBox(height: isLargeScreen ? 40 : 30),
           ElevatedButton.icon(
             onPressed: () {
-              // Navigate to a "List Your Property" or "Contact Us" page
-              commonWidgets.showLoginSignupDialog(); // Or navigate directly if user is logged in
+              Navigator.pushNamed(context, '/contact');
             },
-            icon: const Icon(Icons.arrow_forward_ios, color: Color(0xFF0A66C2)),
+            icon: const Icon(Icons.phone, size: 28),
             label: const Text(
-              'List Your Property',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0A66C2)),
+              'Contact Us',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+              foregroundColor: const Color(0xFF0A66C2),
+              padding: EdgeInsets.symmetric(
+                horizontal: isLargeScreen ? 40 : 30,
+                vertical: isLargeScreen ? 20 : 15,
               ),
-              shadowColor: Colors.black.withOpacity(0.4),
-              elevation: 8,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 5,
             ),
           ),
         ],
       ),
     );
   }
-}
 
-// Helper widget for carousels
-class _RecommendedPropertiesCarousel extends StatefulWidget {
-  final List<Map<String, dynamic>> propertiesToDisplay;
-  final bool isLargeScreen;
-  final bool isMediumScreen;
-  final Widget Function(Map<String, dynamic> property) buildPropertyCard;
+  Widget _buildTestimonialsSection(bool isLargeScreen, bool isMediumScreen) {
+    // Mock testimonials data
+    final List<Map<String, String>> testimonials = [
+      {
+        'quote': 'SORA made finding our dream apartment effortless! Their agents were incredibly helpful and guided us every step of the way. Highly recommend!',
+        'author': 'Alice Johnson',
+        'location': 'Nairobi, Kenya',
+      },
+      {
+        'quote': 'Selling our home through SORA was a breeze. The process was transparent, and we got a fantastic offer much faster than we expected. Thank you, SORA!',
+        'author': 'Bob Williams',
+        'location': 'Mombasa, Kenya',
+      },
+      {
+        'quote': 'As a first-time homebuyer, I was overwhelmed. SORA\'s resources and patient team made the journey enjoyable and stress-free. I\'m so happy in my new home!',
+        'author': 'Carol Davis',
+        'location': 'Kisumu, Kenya',
+      },
+    ];
 
-  const _RecommendedPropertiesCarousel({
-    required this.propertiesToDisplay,
-    required this.isLargeScreen,
-    required this.isMediumScreen,
-    required this.buildPropertyCard,
-  });
-
-  @override
-  State<_RecommendedPropertiesCarousel> createState() => _RecommendedPropertiesCarouselState();
-}
-
-class _RecommendedPropertiesCarouselState extends State<_RecommendedPropertiesCarousel> {
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _scrollLeft() {
-    _scrollController.animateTo(
-      _scrollController.offset - 300, // Adjust scroll amount as needed
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
-  }
-
-  void _scrollRight() {
-    _scrollController.animateTo(
-      _scrollController.offset + 300, // Adjust scroll amount as needed
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.propertiesToDisplay.isEmpty) {
-      return Center(
-        child: Text(
-          'No properties available in this category.',
-          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-        ),
-      );
-    }
-
-    final double itemWidth = widget.isLargeScreen ? 300 : (widget.isMediumScreen ? 250 : 200);
-
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        SizedBox(
-          height: widget.isLargeScreen ? 450 : (widget.isMediumScreen ? 400 : 350), // Adjust height as needed
-          child: ListView.builder(
-            controller: _scrollController,
-            scrollDirection: Axis.horizontal,
-            itemCount: widget.propertiesToDisplay.length,
-            itemBuilder: (context, index) {
-              final property = widget.propertiesToDisplay[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                child: SizedBox(
-                  width: itemWidth,
-                  child: widget.buildPropertyCard(property),
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(
+        vertical: isLargeScreen ? 60 : 30,
+        horizontal: isLargeScreen ? 100 : 20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'What Our Clients Say',
+                style: TextStyle(
+                  fontSize: isLargeScreen ? 32 : (isMediumScreen ? 26 : 22),
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0A66C2),
                 ),
-              );
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/testimonials');
+                },
+                child: const Text(
+                  'View All Testimonials',
+                  style: TextStyle(
+                    color: Color(0xFF1E90FF),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: isLargeScreen ? 30 : 20),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
+              crossAxisSpacing: isLargeScreen ? 30 : 20,
+              mainAxisSpacing: isLargeScreen ? 30 : 20,
+              childAspectRatio: isLargeScreen ? 1.0 : (isMediumScreen ? 0.9 : 1.1),
+            ),
+            itemCount: testimonials.length,
+            itemBuilder: (context, index) {
+              final testimonial = testimonials[index];
+              return _buildTestimonialCard(testimonial);
             },
           ),
-        ),
-        if (widget.propertiesToDisplay.length > (widget.isLargeScreen ? 3 : (widget.isMediumScreen ? 2 : 1))) // Only show arrows if there are more items than fit on screen
-          Positioned(
-            left: 0,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 30),
-              onPressed: _scrollLeft,
-            ),
-          ),
-        if (widget.propertiesToDisplay.length > (widget.isLargeScreen ? 3 : (widget.isMediumScreen ? 2 : 1))) // Only show arrows if there are more items than fit on screen
-          Positioned(
-            right: 0,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_forward_ios, color: Colors.black, size: 30),
-              onPressed: _scrollRight,
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
-}
 
-// Property Card Widget (as defined in previous common_widgets or property_card.dart)
-// This is a simplified version for demonstration.
-// In a real app, this would likely be in its own file.
-class PropertyCardWithCarousel extends StatefulWidget {
-  final Map<String, dynamic> property;
-  final ValueChanged<Map<String, dynamic>> onFavoriteToggle;
-  final bool isLoggedIn;
-  final VoidCallback showLoginPrompt;
-
-  const PropertyCardWithCarousel({
-    super.key,
-    required this.property,
-    required this.onFavoriteToggle,
-    required this.isLoggedIn,
-    required this.showLoginPrompt,
-  });
-
-  @override
-  State<PropertyCardWithCarousel> createState() => _PropertyCardWithCarouselState();
-}
-
-class _PropertyCardWithCarouselState extends State<PropertyCardWithCarousel> {
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildTestimonialCard(Map<String, String> testimonial) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PropertyDetailScreen(property: widget.property),
-            ),
-          );
-        },
+      elevation: 5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              flex: 3,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Image.asset(
-                      widget.property['images'][0],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[300],
-                          child: const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
-                        );
-                      },
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: IconButton(
-                      icon: Icon(
-                        widget.property['isFavorite'] == true ? Icons.favorite : Icons.favorite_border,
-                        color: widget.property['isFavorite'] == true ? Colors.red : Colors.white,
-                      ),
-                      onPressed: () {
-                        if (widget.isLoggedIn) {
-                          widget.onFavoriteToggle(widget.property);
-                        } else {
-                          widget.showLoginPrompt();
-                        }
-                      },
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Text(
-                        widget.property['listingType'],
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ],
+            Icon(Icons.format_quote, size: 40, color: Colors.grey[400]),
+            const SizedBox(height: 10),
+            Text(
+              testimonial['quote']!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey[700],
+              ),
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 15),
+            Text(
+              '- ${testimonial['author']!}',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0A66C2),
               ),
             ),
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.property['price'],
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0A66C2),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.property['title'],
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.bed, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${widget.property['bedrooms']} Beds',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(Icons.bathtub, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${widget.property['bathrooms']} Baths',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            widget.property['location'],
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+            Text(
+              testimonial['location']!,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// Gradient Text Widget (moved from previous common_widgets or home_screen)
-class GradientTextWidget extends StatelessWidget {
-  final String text;
-  final TextStyle style;
-  final List<Color> colors;
-
-  const GradientTextWidget({
-    super.key,
-    required this.text,
-    required this.style,
-    required this.colors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ShaderMask(
-      shaderCallback: (bounds) => LinearGradient(
-        colors: colors,
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(bounds),
-      child: Text(
-        text,
-        style: style.copyWith(color: Colors.white),
       ),
     );
   }
@@ -1058,6 +714,31 @@ class _BlinkingGradientTextState extends State<BlinkingGradientText> with Single
           colors: widget.colors, // Still pass original colors for the gradient effect
         );
       },
+    );
+  }
+}
+
+class GradientTextWidget extends StatelessWidget {
+  const GradientTextWidget({
+    super.key,
+    required this.text,
+    required this.style,
+    required this.colors,
+  });
+
+  final String text;
+  final TextStyle style;
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (bounds) => LinearGradient(
+        colors: colors,
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(bounds),
+      child: Text(text, style: style),
     );
   }
 }

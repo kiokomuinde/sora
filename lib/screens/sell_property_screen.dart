@@ -1,13 +1,13 @@
-// lib/screens/my_favorites_screen.dart
+// lib/screens/sell_property_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 
-class MyFavoritesScreen extends StatelessWidget {
+class SellPropertyScreen extends StatelessWidget {
   final AuthService authService;
 
-  const MyFavoritesScreen({Key? key, required this.authService}) : super(key: key);
+  const SellPropertyScreen({Key? key, required this.authService}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +40,7 @@ class MyFavoritesScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'My Favorites',
+                    'Sell Your Property',
                     style: TextStyle(
                       fontSize: isLargeScreen ? 48 : (isMediumScreen ? 38 : 28),
                       fontWeight: FontWeight.bold,
@@ -49,7 +49,7 @@ class MyFavoritesScreen extends StatelessWidget {
                   ),
                   SizedBox(height: isLargeScreen ? 20 : 10),
                   Text(
-                    'Manage your saved properties and easily revisit your top choices.',
+                    'Ready to sell? We make the process simple, fast, and rewarding.',
                     style: TextStyle(
                       fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
                       color: Colors.white70,
@@ -71,13 +71,13 @@ class MyFavoritesScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         Icon(
-                          Icons.favorite,
+                          Icons.house_siding,
                           size: isLargeScreen ? 120 : 80,
-                          color: Colors.redAccent,
+                          color: Color(0xFF0A66C2),
                         ),
                         SizedBox(height: 20),
                         Text(
-                          'Your Favorites List Coming Soon!',
+                          'Sell Your Property Feature Coming Soon!',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: isLargeScreen ? 28 : (isMediumScreen ? 24 : 20),
@@ -87,7 +87,7 @@ class MyFavoritesScreen extends StatelessWidget {
                         ),
                         SizedBox(height: 10),
                         Text(
-                          'We are building a personalized section for you to keep track of your favorite properties.',
+                          'We are working hard to bring you the best tools to list and sell your property with ease.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
@@ -97,10 +97,10 @@ class MyFavoritesScreen extends StatelessWidget {
                         SizedBox(height: 30),
                         ElevatedButton.icon(
                           onPressed: () {
-                            Navigator.pushNamed(context, '/property_listing');
+                            Navigator.pushNamed(context, '/contact');
                           },
-                          icon: const Icon(Icons.search),
-                          label: const Text('Browse Properties'),
+                          icon: const Icon(Icons.email),
+                          label: const Text('Contact Our Agents'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0A66C2),
                             foregroundColor: Colors.white,

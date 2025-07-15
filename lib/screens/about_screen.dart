@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:sora_app/screens/home_screen.dart'; // Import HomeScreen
 import 'package:sora_app/services/auth_service.dart'; // Import AuthService
 import 'package:firebase_auth/firebase_auth.dart'; // Import for User type
+import 'package:sora_app/widgets/common_widgets.dart'; // Import CommonWidgets
 
 class AboutScreen extends StatefulWidget { // Changed to StatefulWidget to manage state for app bar/footer
   final AuthService authService; // Receive AuthService
@@ -19,6 +20,13 @@ class AboutScreen extends StatefulWidget { // Changed to StatefulWidget to manag
 class _AboutScreenState extends State<AboutScreen> {
   final TextEditingController _newsletterEmailController = TextEditingController();
   String _currentListingTypeFilter = ''; // Needed for the common app bar buttons
+  late CommonWidgets commonWidgets; // Declare commonWidgets
+
+  @override
+  void initState() {
+    super.initState();
+    commonWidgets = CommonWidgets(context: context, authService: widget.authService); // Initialize commonWidgets
+  }
 
   @override
   void dispose() {
@@ -58,24 +66,14 @@ class _AboutScreenState extends State<AboutScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1E90FF),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              child: const Text('Sign Up'),
+              child: const Text('Login / Sign Up'),
               onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushNamed(context, '/signup'); // Navigate to signup screen
-              },
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0A66C2),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Login'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushNamed(context, '/signin'); // Navigate to signin screen
+                Navigator.of(context).pop(); // Dismiss dialog
+                Navigator.pushNamed(context, '/signin'); // Navigate to sign-in
               },
             ),
           ],
@@ -84,855 +82,427 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  // Handles sign-out action, copied from home_screen.dart
-  Future<void> _handleSignOut() async {
-    try {
-      await widget.authService.signOut();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Logged out successfully!')),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage = "An unknown error occurred.";
-      if (e.code == 'network-request-failed') {
-        errorMessage =
-            "Network error. Please check your internet connection and try again.";
-      } else if (e.code == 'requires-recent-login') {
-        errorMessage =
-            "This operation is sensitive and requires recent authentication. Please log in again.";
-      } else {
-        errorMessage = "Sign out failed: ${e.message}";
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An unexpected error occurred during sign out: $e')),
-        );
-      }
-    }
-  }
-
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final bool isSmallScreen = screenWidth < 600;
-    final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
     final bool isLargeScreen = screenWidth >= 1000;
+    final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80.0),
-        child: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          automaticallyImplyLeading: false,
-          titleSpacing: isLargeScreen ? 60.0 : 16.0,
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.pushReplacementNamed(context, '/home'); // Navigate back to home
-                },
-                child: Row(
-                  children: [
-                    Image.asset(
-                      'assets/images/sora_logo.png',
-                      height: 45,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: const Color(0xFF1E90FF),
-                          child: const Center(
-                            child: Icon(Icons.home, size: 45, color: Color(0xFF0A66C2)), // Fallback icon
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'SORA',
-                      style: TextStyle(
-                        color: Color(0xFF0A66C2),
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (isLargeScreen)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 10.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        _buildAppBarButton(
-                          'Buy',
-                              () {
-                            Navigator.pushNamed(
-                              context,
-                              '/property_listings',
-                              arguments: {'listingType': 'Buy'},
-                            );
-                          },
-                          isSelected: _currentListingTypeFilter == 'Buy',
-                        ),
-                        const SizedBox(width: 20),
-                        _buildAppBarButton(
-                          'Rent',
-                              () {
-                            Navigator.pushNamed(
-                              context,
-                              '/property_listings',
-                              arguments: {'listingType': 'Rent'},
-                            );
-                          },
-                          isSelected: _currentListingTypeFilter == 'Rent',
-                        ),
-                        const SizedBox(width: 20),
-                        _buildAppBarButton(
-                          'Lease',
-                              () {
-                            Navigator.pushNamed(
-                              context,
-                              '/property_listings',
-                              arguments: {'listingType': 'Lease'},
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 40),
-                        // Search bar is omitted as it's not directly needed on About screen,
-                        // but if a global search is desired, it could be re-added.
-                        const SizedBox(width: 20), // Adjusted spacing after removing search bar
-                        _buildAppBarButton('List Property', () {
-                          if (widget.authService.currentUserNotifier.value == null) {
-                            _showLoginSignupDialog();
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Redirecting to list property page (coming soon)!')),
-                            );
-                          }
-                        }, isFilled: true),
-                        const SizedBox(width: 20),
-                        ValueListenableBuilder<User?>(
-                          valueListenable: widget.authService.currentUserNotifier,
-                          builder: (context, user, child) {
-                            if (user != null) {
-                              return PopupMenuButton<int>(
-                                icon: CircleAvatar(
-                                  backgroundColor: const Color(0xFF0A66C2),
-                                  radius: 20,
-                                  child: (user.email != null && user.email!.isNotEmpty)
-                                      ? Text(
-                                          user.email![0].toUpperCase(),
-                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                        )
-                                      : const Icon(Icons.person, color: Colors.white),
-                                ),
-                                onSelected: (item) {
-                                  if (item == 0) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Viewing profile for ${user.email ?? "User"}')),
-                                    );
-                                  } else if (item == 1) {
-                                    _handleSignOut();
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem<int>(
-                                    value: 0,
-                                    child: Text('View Profile'),
-                                  ),
-                                  const PopupMenuItem<int>(
-                                    value: 1,
-                                    child: Text('Sign Out'),
-                                  ),
-                                ],
-                              );
-                            } else {
-                              return _buildAppBarButton('Login', () {
-                                Navigator.pushNamed(context, '/signin');
-                              }, icon: Icons.login);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          actions: !isLargeScreen
-              ? [
-                  Builder(
-                    builder: (BuildContext innerContext) {
-                      return IconButton(
-                        icon: const Icon(Icons.menu, color: Color(0xFF0A66C2)),
-                        onPressed: () {
-                          Scaffold.of(innerContext).openEndDrawer();
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                ]
-              : null,
-        ),
+      appBar: commonWidgets.buildAppBar(
+        currentListingTypeFilter: _currentListingTypeFilter,
       ),
-      endDrawer: !isLargeScreen
-          ? Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            Container(
-              height: 100.0,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1E90FF),
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 16.0),
-                  child: ValueListenableBuilder<User?>(
-                    valueListenable: widget.authService.currentUserNotifier,
-                    builder: (context, user, child) {
-                      return Text(
-                        user != null ? 'Hello, ${user.email?.split('@').first ?? "User"}' : 'SORA Menu',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-            Builder(
-              builder: (BuildContext innerContext) {
-                return ListTile(
-                  title: const Text('Buy'),
-                  onTap: () {
-                    Scaffold.of(innerContext).closeEndDrawer();
-                    Navigator.pushNamed(
-                      innerContext,
-                      '/property_listings',
-                      arguments: {'listingType': 'Buy'},
-                    );
-                  },
-                );
-              },
-            ),
-            Builder(
-              builder: (BuildContext innerContext) {
-                return ListTile(
-                  title: const Text('Rent'),
-                  onTap: () {
-                    Scaffold.of(innerContext).closeEndDrawer();
-                    Navigator.pushNamed(
-                      innerContext,
-                      '/property_listings',
-                      arguments: {'listingType': 'Rent'},
-                    );
-                  },
-                );
-              },
-            ),
-            Builder(
-              builder: (BuildContext innerContext) {
-                return ListTile(
-                  title: const Text('Lease'),
-                  onTap: () {
-                    Scaffold.of(innerContext).closeEndDrawer();
-                    Navigator.pushNamed(
-                      innerContext,
-                      '/property_listings',
-                      arguments: {'listingType': 'Lease'},
-                    );
-                  },
-                );
-              },
-            ),
-            Builder(
-              builder: (BuildContext innerContext) {
-                return ListTile(
-                  title: const Text('Sell'),
-                  onTap: () {
-                    Scaffold.of(innerContext).closeEndDrawer();
-                    if (widget.authService.currentUserNotifier.value == null) {
-                      _showLoginSignupDialog();
-                    } else {
-                      ScaffoldMessenger.of(innerContext).showSnackBar(
-                        const SnackBar(content: Text('Redirecting to sell property page (coming soon)!')),
-                      );
-                    }
-                  },
-                );
-              },
-            ),
-            ListTile(
-              title: const Text('Agents'),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                Navigator.pushNamed(context, '/agents');
-              },
-            ),
-            ListTile(
-              title: const Text('About'),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                Navigator.pushNamed(context, '/about');
-              },
-            ),
-            ListTile(
-              title: const Text('Contact'), // Added Contact link
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                Navigator.pushNamed(context, '/contact');
-              },
-            ),
-            ListTile( // Added Careers link
-              title: const Text('Careers'),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                Navigator.pushNamed(context, '/careers');
-              },
-            ),
-            ValueListenableBuilder<User?>(
-              valueListenable: widget.authService.currentUserNotifier,
-              builder: (context, user, child) {
-                if (user != null) {
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: const Color(0xFF0A66C2),
-                      child: (user.email != null && user.email!.isNotEmpty)
-                          ? Text(
-                              user.email![0].toUpperCase(),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            )
-                          : const Icon(Icons.person, color: Colors.white),
-                    ),
-                    title: const Text('Logout'),
-                    onTap: () async {
-                      Navigator.of(context).pop();
-                      _handleSignOut();
-                    },
-                  );
-                } else {
-                  return ListTile(
-                    leading: const Icon(Icons.login),
-                    title: const Text('Login'),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      Navigator.pushNamed(context, '/signin');
-                    },
-                  );
-                }
-              },
-            ),
-          ],
-        ),
-      )
-          : null,
+      endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Hero Section for About Page
+            // About Us Header Section
             Container(
               width: double.infinity,
-              height: 250,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/about_hero.webp'),
-                  fit: BoxFit.cover,
+              padding: EdgeInsets.symmetric(
+                vertical: isLargeScreen ? 80 : (isMediumScreen ? 60 : 40),
+                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF1E90FF).withOpacity(0.8), Color(0xFF0A66C2).withOpacity(0.8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.6),
-                      Colors.transparent,
-                    ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'About SORA Properties',
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 48 : (isMediumScreen ? 38 : 28),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.only(top: 80.0, left: 24.0, right: 24.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Connecting Dreams to Addresses',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 10.0,
-                              color: Colors.black,
-                              offset: Offset(2.0, 2.0),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                    ],
+                  SizedBox(height: isLargeScreen ? 20 : 10),
+                  Text(
+                    'Your trusted partner in real estate, committed to excellence and client satisfaction.',
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
+                      color: Colors.white70,
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
-            // Main Content Section
+
+            // Our Story Section
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: EdgeInsets.symmetric(
+                vertical: isLargeScreen ? 60 : 30,
+                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Our Story',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: isLargeScreen ? 32 : (isMediumScreen ? 26 : 22),
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
+                      color: const Color(0xFF0A66C2),
                     ),
                   ),
-                  const SizedBox(height: 15),
+                  SizedBox(height: isLargeScreen ? 20 : 15),
                   Text(
-                    'SORA was founded with a clear vision: to revolutionize the real estate experience across Africa. We saw a need for a platform that combines advanced technology with a deep understanding of local markets, ensuring that finding, buying, selling, or leasing property is as seamless and transparent as possible. From our humble beginnings, we’ve grown into a trusted name, committed to empowering individuals and families to achieve their property dreams.',
-                    style: TextStyle(fontSize: 16, height: 1.5, color: Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 30),
-                  Text(
-                    'Our Mission',
+                    'Founded in 2010, SORA Properties began with a vision to revolutionize the real estate industry in Kenya. We started as a small team of passionate individuals dedicated to helping people find their dream homes and make sound investments. Over the years, we have grown into a leading real estate agency, known for our integrity, expertise, and client-centric approach.',
                     style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
+                      fontSize: isLargeScreen ? 16 : (isMediumScreen ? 15 : 14),
+                      color: Colors.grey[700],
+                      height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 15),
+                  SizedBox(height: isLargeScreen ? 20 : 15),
                   Text(
-                    'To be the most innovative and trusted real estate platform in Africa, providing unparalleled access to property listings and expert guidance, making every property journey a success story.',
-                    style: TextStyle(fontSize: 16, height: 1.5, color: Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 30),
-                  Text(
-                    'Our Values',
+                    'Our journey has been marked by continuous innovation, adapting to market trends, and embracing technology to provide seamless and efficient services. We pride ourselves on building lasting relationships with our clients, guiding them through every step of their real estate journey, whether it\'s buying, selling, or leasing properties.',
                     style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
+                      fontSize: isLargeScreen ? 16 : (isMediumScreen ? 15 : 14),
+                      color: Colors.grey[700],
+                      height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 15),
-                  _buildValueRow(
-                    icon: Icons.lightbulb_outline,
-                    title: 'Innovation',
-                    description: 'We continuously explore and implement cutting-edge technologies to enhance the user experience and simplify complex processes.',
-                  ),
-                  _buildValueRow(
-                    icon: Icons.security,
-                    title: 'Trust & Transparency',
-                    description: 'We believe in honest dealings, clear communication, and providing all necessary information to build lasting trust with our clients.',
-                  ),
-                  _buildValueRow(
-                    icon: Icons.people_alt_outlined,
-                    title: 'Client-Centricity',
-                    description: 'Your needs and aspirations are at the heart of everything we do. We strive to provide personalized solutions and exceptional support.',
-                  ),
-                  _buildValueRow(
-                    icon: Icons.verified_outlined,
-                    title: 'Excellence',
-                    description: 'We are committed to delivering the highest quality in every aspect of our service, from our platform\'s performance to our customer interactions.',
-                  ),
-                  const SizedBox(height: 30),
-                  Text(
-                    'Meet the Team',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  Center(
-                    child: Wrap(
-                      spacing: 20.0,
-                      runSpacing: 20.0,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        _buildTeamMemberCard(
-                          name: 'Dr. Alex Mwaura',
-                          title: 'Founder & CEO',
-                          imageAsset: 'assets/images/team_alex.webp',
-                        ),
-                        _buildTeamMemberCard(
-                          name: 'Sarah Njoroge',
-                          title: 'Chief Operations Officer',
-                          imageAsset: 'assets/images/team_sarah.webp',
-                        ),
-                        _buildTeamMemberCard(
-                          name: 'David Kimani',
-                          title: 'Head of Technology',
-                          imageAsset: 'assets/images/team_david.webp',
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 40),
                 ],
               ),
             ),
-            // --- Footer ---
+
+            // Our Mission & Vision Section
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 30.0, horizontal: 24.0),
-              color: Colors.grey[100],
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: isLargeScreen ? 1200 : (isMediumScreen ? 800 : double.infinity)),
-                child: Column(
-                  children: [
-                    Wrap(
-                      spacing: 40.0,
-                      runSpacing: 20.0,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        _buildFooterColumn('Sora', ['About', 'Agents', 'Contact', 'Careers', 'Blog', 'Testimonials'],
-                          onLinkTapped: (linkText) {
-                            if (linkText == 'About') {
-                              Navigator.pushNamed(context, '/about');
-                            } else if (linkText == 'Agents') {
-                              Navigator.pushNamed(context, '/agents');
-                            } else if (linkText == 'Contact') {
-                              Navigator.pushNamed(context, '/contact');
-                            } else if (linkText == 'Careers') { // Added Careers link
-                              Navigator.pushNamed(context, '/careers');
-                            }
-                            else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('$linkText functionality coming soon!')),
-                              );
-                            }
-                          },
-                        ),
-                        _buildFooterColumn('Resources', ['Buy', 'Rent', 'Lease', 'FAQs', 'Support', 'Terms'],
-                          onLinkTapped: (linkText) {
-                            if (linkText == 'Buy') {
-                              Navigator.pushNamed(context, '/property_listings', arguments: {'listingType': 'Buy'});
-                            } else if (linkText == 'Rent') {
-                              Navigator.pushNamed(context, '/property_listings', arguments: {'listingType': 'Rent'});
-                            } else if (linkText == 'Lease') {
-                              Navigator.pushNamed(context, '/property_listings', arguments: {'listingType': 'Lease'});
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('$linkText functionality coming soon!')),
-                              );
-                            }
-                          },
-                        ),
-                        _buildFooterColumn('Community', ['Local Guides', 'Events'],
-                          onLinkTapped: (linkText) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('$linkText functionality coming soon!')),
-                            );
-                          },
-                        ),
-                        _buildFooterColumn('Legal', ['Privacy Policy', 'Terms of Service', 'Sitemap'],
-                          onLinkTapped: (linkText) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('$linkText functionality coming soon!')),
-                            );
-                          },
-                        ),
-                        _buildNewsletterSection(),
-                      ],
+              padding: EdgeInsets.symmetric(
+                vertical: isLargeScreen ? 60 : 30,
+                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
+              ),
+              color: Colors.grey[50],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Our Mission & Vision',
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 32 : (isMediumScreen ? 26 : 22),
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF0A66C2),
                     ),
-                    const SizedBox(height: 30),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildSocialIcon(FontAwesomeIcons.facebookF, 'Facebook', const Color(0xFF1877F2)),
-                        const SizedBox(width: 20),
-                        _buildSocialIcon(FontAwesomeIcons.discord, 'Discord', const Color(0xFF5865F2)),
-                        const SizedBox(width: 20),
-                        _buildSocialIcon(FontAwesomeIcons.linkedinIn, 'LinkedIn', const Color(0xFF0A66C2)),
-                        const SizedBox(width: 20),
-                        _buildSocialIcon(FontAwesomeIcons.instagram, 'Instagram', const Color(0xFFE1306C)),
-                        const SizedBox(width: 20),
-                        _buildSocialIcon(FontAwesomeIcons.tiktok, 'TikTok', Colors.black),
-                        const SizedBox(width: 20),
-                        _buildSocialIcon(FontAwesomeIcons.xTwitter, 'X (Twitter)', Colors.black),
-                      ],
-                    ),
-                    const SizedBox(height: 30),
-                    Divider(color: Colors.grey[300]),
-                    const SizedBox(height: 20),
-                    Text(
-                      '© 2025 SORA Properties. All rights reserved.',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+                  ),
+                  SizedBox(height: isLargeScreen ? 20 : 15),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.flag, size: isLargeScreen ? 40 : 30, color: const Color(0xFF1E90FF)),
+                      SizedBox(width: isLargeScreen ? 20 : 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Mission:',
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 22 : (isMediumScreen ? 18 : 16),
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[800],
+                              ),
+                            ),
+                            SizedBox(height: 5),
+                            Text(
+                              'To empower individuals and families to achieve their real estate goals by providing expert guidance, innovative solutions, and unparalleled service.',
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 16 : (isMediumScreen ? 15 : 14),
+                                color: Colors.grey[700],
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: isLargeScreen ? 30 : 20),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.visibility, size: isLargeScreen ? 40 : 30, color: const Color(0xFF1E90FF)),
+                      SizedBox(width: isLargeScreen ? 20 : 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Vision:',
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 22 : (isMediumScreen ? 18 : 16),
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[800],
+                              ),
+                            ),
+                            SizedBox(height: 5),
+                            Text(
+                              'To be the most trusted and innovative real estate platform in Africa, recognized for our commitment to client success and community development.',
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 16 : (isMediumScreen ? 15 : 14),
+                                color: Colors.grey[700],
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  // Helper method for AppBar buttons (copied from home_screen.dart)
-  Widget _buildAppBarButton(String text, VoidCallback onPressed, {bool isSelected = false, bool isFilled = false, IconData? icon}) {
-    return TextButton(
-      style: TextButton.styleFrom(
-        foregroundColor: isSelected ? Colors.white : const Color(0xFF0A66C2),
-        backgroundColor: isSelected ? const Color(0xFF0A66C2) : (isFilled ? const Color(0xFF0A66C2) : Colors.transparent),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          side: isFilled ? BorderSide.none : const BorderSide(color: Color(0xFF0A66C2), width: 1.5),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      ),
-      onPressed: onPressed,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 18, color: isSelected || isFilled ? Colors.white : const Color(0xFF0A66C2)),
-            const SizedBox(width: 8),
-          ],
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: isSelected || isFilled ? FontWeight.bold : FontWeight.normal,
-              color: isSelected || isFilled ? Colors.white : const Color(0xFF0A66C2),
+            // Our Values Section
+            Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: isLargeScreen ? 60 : 30,
+                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Our Values',
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 32 : (isMediumScreen ? 26 : 22),
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF0A66C2),
+                    ),
+                  ),
+                  SizedBox(height: isLargeScreen ? 20 : 15),
+                  _buildValueItem(
+                    Icons.handshake,
+                    'Integrity',
+                    'We operate with the highest ethical standards, ensuring transparency and honesty in all our dealings.',
+                    isLargeScreen,
+                    isMediumScreen,
+                  ),
+                  _buildValueItem(
+                    Icons.lightbulb,
+                    'Innovation',
+                    'We embrace technology and creative solutions to deliver cutting-edge real estate services.',
+                    isLargeScreen,
+                    isMediumScreen,
+                  ),
+                  _buildValueItem(
+                    Icons.people,
+                    'Client-Centricity',
+                    'Our clients are at the heart of everything we do. We are dedicated to understanding and exceeding their expectations.',
+                    isLargeScreen,
+                    isMediumScreen,
+                  ),
+                  _buildValueItem(
+                    Icons.diversity_3,
+                    'Community',
+                    'We believe in giving back and contributing positively to the communities we serve.',
+                    isLargeScreen,
+                    isMediumScreen,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            // Team Section (Placeholder)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                vertical: isLargeScreen ? 60 : 30,
+                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
+              ),
+              color: Colors.grey[50],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Meet Our Team',
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 32 : (isMediumScreen ? 26 : 22),
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF0A66C2),
+                    ),
+                  ),
+                  SizedBox(height: isLargeScreen ? 20 : 15),
+                  Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.groups,
+                          size: isLargeScreen ? 100 : 70,
+                          color: Colors.grey[400],
+                        ),
+                        SizedBox(height: 20),
+                        Text(
+                          'Our amazing team is coming soon!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: isLargeScreen ? 22 : (isMediumScreen ? 18 : 16),
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          'We\'re building a dedicated section to introduce you to the passionate professionals behind SORA Properties.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: isLargeScreen ? 16 : (isMediumScreen ? 14 : 13),
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        SizedBox(height: 30),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/agents'); // Navigate to Agents screen
+                          },
+                          icon: const Icon(Icons.person_search),
+                          label: const Text('Find an Agent'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0A66C2),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Newsletter Signup Section (from original footer, adapted)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                vertical: isLargeScreen ? 60 : 30,
+                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
+              ),
+              color: const Color(0xFFF0F2F5), // Light grey background
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Stay Updated with SORA News',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 32 : (isMediumScreen ? 26 : 22),
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF0A66C2),
+                    ),
+                  ),
+                  SizedBox(height: isLargeScreen ? 20 : 15),
+                  Text(
+                    'Subscribe to our newsletter for the latest property listings, market insights, and exclusive offers.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  SizedBox(height: isLargeScreen ? 30 : 20),
+                  Container(
+                    constraints: BoxConstraints(maxWidth: isLargeScreen ? 500 : double.infinity),
+                    child: TextField(
+                      controller: _newsletterEmailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        hintText: 'Enter your email address',
+                        hintStyle: TextStyle(color: Colors.grey[500]),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      style: TextStyle(color: Colors.grey[800]),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (_newsletterEmailController.text.isNotEmpty && _newsletterEmailController.text.contains('@')) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Subscribed with ${_newsletterEmailController.text}!')),
+                        );
+                        _newsletterEmailController.clear();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a valid email address.')),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E90FF),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    child: const Text('Subscribe'),
+                  ),
+                ],
+              ),
+            ),
+
+            // Footer
+            commonWidgets.buildFooter(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildValueRow({required IconData icon, required String title, required String description}) {
+  // Helper method for Values Section
+  Widget _buildValueItem(IconData icon, String title, String description, bool isLargeScreen, bool isMediumScreen) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      padding: const EdgeInsets.only(bottom: 20.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 30, color: const Color(0xFF1E90FF)),
-          const SizedBox(width: 15),
+          Icon(
+            icon,
+            size: isLargeScreen ? 36 : 28,
+            color: const Color(0xFF1E90FF),
+          ),
+          SizedBox(width: isLargeScreen ? 20 : 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 20,
+                  style: TextStyle(
+                    fontSize: isLargeScreen ? 22 : (isMediumScreen ? 18 : 16),
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF0A66C2),
+                    color: Colors.grey[800],
                   ),
                 ),
-                const SizedBox(height: 5),
+                SizedBox(height: 5),
                 Text(
                   description,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  style: TextStyle(
+                    fontSize: isLargeScreen ? 16 : (isMediumScreen ? 15 : 14),
+                    color: Colors.grey[700],
+                    height: 1.5,
+                  ),
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTeamMemberCard({required String name, required String title, required String imageAsset}) {
-    return Container(
-      width: 180,
-      padding: const EdgeInsets.all(15.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundImage: AssetImage(imageAsset),
-            backgroundColor: Colors.grey[200],
-          ),
-          const SizedBox(height: 15),
-          Text(
-            name,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0A66C2),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper method for Footer columns (copied from home_screen.dart)
-  Widget _buildFooterColumn(String title, List<String> links, {ValueChanged<String>? onLinkTapped}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF0A66C2),
-          ),
-        ),
-        const SizedBox(height: 10),
-        ...links.where((link) => link != 'Sell').map((link) => Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: GestureDetector(
-            onTap: () {
-              if (onLinkTapped != null) {
-                // Specific navigation for 'About', 'Agents', 'Contact', 'Careers'
-                if (link == 'About') {
-                  Navigator.pushNamed(context, '/about');
-                } else if (link == 'Agents') {
-                  Navigator.pushNamed(context, '/agents');
-                } else if (link == 'Contact') {
-                  Navigator.pushNamed(context, '/contact');
-                } else if (link == 'Careers') { // Added Careers link
-                  Navigator.pushNamed(context, '/careers');
-                }
-                // Navigation for property listing types
-                else if (link == 'Buy') {
-                  Navigator.pushNamed(context, '/property_listings', arguments: {'listingType': 'Buy'});
-                } else if (link == 'Rent') {
-                  Navigator.pushNamed(context, '/property_listings', arguments: {'listingType': 'Rent'});
-                } else if (link == 'Lease') {
-                  Navigator.pushNamed(context, '/property_listings', arguments: {'listingType': 'Lease'});
-                }
-                else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('$link functionality coming soon!')),
-                  );
-                }
-              }
-            },
-            child: Text(
-              link,
-              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-            ),
-          ),
-        )).toList(),
-      ],
-    );
-  }
-
-  // Helper method for Newsletter section in Footer (copied from home_screen.dart)
-  Widget _buildNewsletterSection() {
-    return Container(
-      width: 300,
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Subscribe to our Newsletter',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0A66C2),
-            ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _newsletterEmailController,
-            decoration: InputDecoration(
-              hintText: 'Enter your email',
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            keyboardType: TextInputType.emailAddress,
-          ),
-          const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: () {
-              if (_newsletterEmailController.text.isNotEmpty && _newsletterEmailController.text.contains('@')) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Subscribed with ${_newsletterEmailController.text}!')),
-                );
-                _newsletterEmailController.clear();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a valid email address.')),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E90FF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: const Text('Subscribe'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper method for Social Icons in Footer (copied from home_screen.dart)
-  Widget _buildSocialIcon(IconData icon, String socialMediaName, Color color) {
-    return IconButton(
-      icon: FaIcon(icon, size: 28, color: color),
-      onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Opening $socialMediaName...')),
-        );
-      },
-      tooltip: 'Visit our $socialMediaName page',
     );
   }
 }
