@@ -74,9 +74,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Removed Search Section as per request
 
-            // Categories Section (existing)
-            _buildCategoriesSection(isLargeScreen, isMediumScreen),
-
             // Popular Properties Section (Now a horizontal carousel)
             _buildPropertiesCarousel(
               context,
@@ -106,6 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Call to Action Section (existing)
             _buildCallToActionSection(isLargeScreen, isMediumScreen),
+
+            // Categories Section (MOVED HERE)
+            _buildCategoriesSection(isLargeScreen, isMediumScreen),
 
             // Testimonials Section (existing)
             _buildTestimonialsSection(isLargeScreen, isMediumScreen),
