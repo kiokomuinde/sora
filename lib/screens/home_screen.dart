@@ -546,17 +546,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Map<String, String>> testimonials = [
       {
         'quote': 'SORA made finding our dream apartment effortless! Their agents were incredibly helpful and guided us every step of the way. Highly recommend!',
-        'author': 'Alice Johnson',
+        'author': 'Grace Kwamboka',
         'location': 'Nairobi, Kenya',
       },
       {
         'quote': 'Selling our home through SORA was a breeze. The process was transparent, and we got a fantastic offer much faster than we expected. Thank you, SORA!',
-        'author': 'Bob Williams',
+        'author': 'David Mwangi',
         'location': 'Mombasa, Kenya',
       },
       {
         'quote': 'As a first-time homebuyer, I was overwhelmed. SORA\'s resources and patient team made the journey enjoyable and stress-free. I\'m so happy in my new home!',
-        'author': 'Carol Davis',
+        'author': 'Carol Ngetich',
         'location': 'Kisumu, Kenya',
       },
     ];
