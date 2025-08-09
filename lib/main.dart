@@ -3,10 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import for User type
-import 'package:sora_app/firebase_options.dart'; // Assuming this file exists and provides DefaultFirebaseOptions
-import 'package:sora_app/services/auth_service.dart'; // Import AuthService
-import 'dart:html' as html; // Import for dart:html for web paths (still needed for location.pathname)
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sora_app/firebase_options.dart';
+import 'package:sora_app/services/auth_service.dart';
+import 'dart:html' as html;
 
 // New screens
 import 'screens/splash_screen.dart';
@@ -36,12 +36,14 @@ import 'screens/list_property_screen.dart';
 import 'screens/my_favorites_screen.dart';
 import 'screens/my_listings_screen.dart';
 import 'screens/profile_settings_screen.dart';
+import 'screens/dashboard_screen.dart';
+import 'screens/recently_viewed_screen.dart';
+import 'package:sora_app/screens/add_property_screen.dart';
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase using DefaultFirebaseOptions for all platforms
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -49,13 +51,10 @@ void main() async {
     print('Firebase initialized successfully for current platform.');
   } catch (e) {
     print('Error during Firebase initialization: $e');
-    // You might want to show an error screen or dialog here
   }
 
-  // Initialize AuthService ONLY if Firebase has been successfully initialized
   AuthService? authService;
   if (Firebase.apps.isNotEmpty) {
-    // Pass FirebaseAuth.instance to AuthService constructor
     authService = AuthService(firebaseAuth: FirebaseAuth.instance);
   } else {
     print('AuthService not initialized because Firebase is not initialized.');
@@ -65,14 +64,12 @@ void main() async {
 }
 
 class SoraApp extends StatelessWidget {
-  final AuthService? authService; // Now nullable
+  final AuthService? authService;
 
   const SoraApp({super.key, required this.authService});
 
   @override
   Widget build(BuildContext context) {
-    // If authService is null, it means Firebase initialization failed.
-    // Display a loading indicator or an error message.
     if (authService == null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -91,11 +88,10 @@ class SoraApp extends StatelessWidget {
       );
     }
 
-    // Define routes with AuthService passed to each screen
     final Map<String, WidgetBuilder> appRoutes = {
       '/splash': (context) => const SplashScreen(),
       '/onboarding': (context) => const OnboardingScreen(),
-      '/home': (context) => HomeScreen(authService: authService!), // Use ! because we checked for null above
+      '/home': (context) => HomeScreen(authService: authService!),
       '/buy': (context) => PropertyListingScreen(authService: authService!, listingType: 'Buy'),
       '/rent': (context) => PropertyListingScreen(authService: authService!, listingType: 'Rent'),
       '/lease': (context) => PropertyListingScreen(authService: authService!, listingType: 'Lease'),
@@ -106,7 +102,7 @@ class SoraApp extends StatelessWidget {
       '/contact': (context) => ContactScreen(authService: authService!),
       '/careers': (context) => CareersScreen(authService: authService!),
       '/blogs': (context) => BlogsScreen(authService: authService!),
-      '/blog_view': (context) => const BlogViewScreen(), // BlogViewScreen gets blog data via arguments
+      '/blog_view': (context) => const BlogViewScreen(),
       '/testimonials': (context) => TestimonialsScreen(authService: authService!),
       '/faqs': (context) => FAQsScreen(authService: authService!),
       '/local_guides': (context) => LocalGuidesScreen(authService: authService!),
@@ -114,8 +110,6 @@ class SoraApp extends StatelessWidget {
       '/sitemap': (context) => SitemapScreen(authService: authService!),
       '/support': (context) => SupportScreen(authService: authService!),
       '/events': (context) => EventsScreen(authService: authService!),
-
-      // New placeholder routes
       '/privacy_policy': (context) => PrivacyPolicyScreen(authService: authService!),
       '/cookie_policy': (context) => CookiePolicyScreen(authService: authService!),
       '/disclaimer': (context) => DisclaimerScreen(authService: authService!),
@@ -124,19 +118,18 @@ class SoraApp extends StatelessWidget {
       '/my_favorites': (context) => MyFavoritesScreen(authService: authService!),
       '/my_listings': (context) => MyListingsScreen(authService: authService!),
       '/profile_settings': (context) => ProfileSettingsScreen(authService: authService!),
+      '/dashboard': (context) => DashboardScreen(authService: authService!),
+      '/recently_viewed': (context) => RecentlyViewedScreen(authService: authService!),
+      '/add_property': (context) => AddPropertyScreen(authService: authService!),
     };
 
-    // Determine the initial route based on platform
     String chosenInitialRoute;
     if (kIsWeb) {
-      // On web, always start at home or the requested path if provided
-      // Ensure pathname is not null before assigning
-      chosenInitialRoute = html.window.location.pathname ?? '/home'; // Added null-aware operator and fallback
+      chosenInitialRoute = html.window.location.pathname ?? '/home';
       if (!appRoutes.keys.contains(chosenInitialRoute)) {
-        chosenInitialRoute = '/home'; // Fallback to home if path is not a defined route
+        chosenInitialRoute = '/home';
       }
     } else {
-      // On mobile, use the splash screen to determine onboarding status
       chosenInitialRoute = '/splash';
     }
 
@@ -146,15 +139,12 @@ class SoraApp extends StatelessWidget {
       title: 'SORA',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light().copyWith(
-        // Set Inter as the default font for the entire app
         textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Inter'),
       ),
-      // Conditionally set the initial route based on platform
       initialRoute: chosenInitialRoute,
-      routes: appRoutes, // Use the conditionally built routes map
+      routes: appRoutes,
       onUnknownRoute: (settings) {
-        // Handle unknown routes, e.g., navigate to a 404 page or home
-        print('Unknown route attempted: ${settings.name}'); // Debug print for unknown routes
+        print('Unknown route attempted: ${settings.name}');
         return MaterialPageRoute(builder: (context) => Text('Error: Unknown route ${settings.name}'));
       },
     );

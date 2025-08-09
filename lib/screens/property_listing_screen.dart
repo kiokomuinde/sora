@@ -2,9 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:sora_app/screens/property_detail_screen.dart';
-import 'package:sora_app/widgets/common_widgets.dart';
+import 'package:sora_app/widgets/common_widgets.dart'; // Ensure this import is present
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/data/property_data.dart';
+
+// Add the StringExtension here if it's not globally available or only in common_widgets.dart
+// If common_widgets.dart is imported, and the extension is defined there, it should be accessible.
+// However, to make this file self-contained for the extension, we can re-define it or ensure it's imported.
+// For now, assuming common_widgets.dart import makes it available.
 
 class PropertyListingScreen extends StatefulWidget {
   final AuthService authService;
@@ -176,7 +181,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
                 children: [
                   Text(
                     _currentListingTypeFilter.isNotEmpty
-                        ? '${_currentListingTypeFilter.toTitleCase()} Properties'
+                        ? '${_currentListingTypeFilter.toCapitalized()} Properties' // Changed to toCapitalized()
                         : 'All Properties',
                     style: TextStyle(
                       fontSize: isLargeScreen ? 48 : (isMediumScreen ? 38 : 28),
@@ -385,26 +390,13 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
                       icon: Icon(
                         isCurrentlyFavorite ? Icons.favorite : Icons.favorite_border,
                         color: isCurrentlyFavorite ? Colors.red : Colors.white,
-                        size: 30,
                       ),
                       onPressed: () {
                         setState(() {
                           if (isCurrentlyFavorite) {
                             _favoritedPropertyTitles.remove(property['title']);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('${property['title']} removed from favorites.'),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
                           } else {
                             _favoritedPropertyTitles.add(property['title']);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('${property['title']} added to favorites!'),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
                           }
                         });
                       },
@@ -414,18 +406,14 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
                     bottom: 10,
                     left: 10,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E90FF),
-                        borderRadius: BorderRadius.circular(8),
+                        color: const Color(0xFF0A66C2),
+                        borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(
-                        property['listingType'] ?? 'N/A',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        property['listingType'],
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     ),
                   ),
@@ -435,10 +423,45 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(15.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      property['title'],
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            property['location'],
+                            style: const TextStyle(fontSize: 14, color: Colors.grey),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildFeatureIcon(Icons.bed, '${property['bedrooms']} Beds'),
+                        _buildFeatureIcon(Icons.bathtub, '${property['bathrooms']} Baths'),
+                        _buildFeatureIcon(Icons.square_foot, '${property['area']} sqft'),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
                     Text(
                       property['price'],
                       style: const TextStyle(
@@ -447,68 +470,26 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
                         color: Color(0xFF0A66C2),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      property['title'],
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[800],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.bed, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${property['bedrooms']} Beds',
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        ),
-                        const SizedBox(width: 12),
-                        Icon(Icons.bathtub, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${property['bathrooms']} Baths',
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.square_foot, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${property['area']} sqft',
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            property['location'],
-                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
             ),
-                          ],
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFeatureIcon(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[600]),
+        const SizedBox(width: 5),
+        Text(
+          text,
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+        ),
+      ],
     );
   }
 }

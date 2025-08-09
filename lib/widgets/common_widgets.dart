@@ -3,18 +3,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Keep this import for User type if needed
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sora_app/services/auth_service.dart';
-import 'package:sora_app/screens/home_screen.dart'; // Import if needed for navigation from drawer
+import 'package:sora_app/screens/home_screen.dart';
+
+// Extension for capitalizing first letter of a string
+extension StringExtension on String {
+  String toCapitalized() =>
+      length > 0 ? '${this[0].toUpperCase()}${substring(1).toLowerCase()}' : '';
+}
 
 // This class provides common widgets like AppBar and Footer for consistent UI across screens.
 class CommonWidgets {
   final BuildContext context;
-  final AuthService authService; // Now required in the constructor
+  final AuthService authService;
 
   CommonWidgets({required this.context, required this.authService});
 
-  // Helper method to show login/signup dialog (copied from your original)
+  // Helper method to show login/signup dialog
   void showLoginSignupDialog() {
     showDialog(
       context: context,
@@ -54,8 +60,8 @@ class CommonWidgets {
                 ),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); // Close dialog first
-                Navigator.pushNamed(context, '/signin'); // Navigate to sign-in
+                Navigator.of(dialogContext).pop();
+                Navigator.pushNamed(context, '/signin');
               },
             ),
             ElevatedButton(
@@ -70,8 +76,8 @@ class CommonWidgets {
                 ),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); // Close dialog first
-                Navigator.pushNamed(context, '/signup'); // Navigate to sign-up
+                Navigator.of(dialogContext).pop();
+                Navigator.pushNamed(context, '/signup');
               },
             ),
           ],
@@ -80,7 +86,12 @@ class CommonWidgets {
     );
   }
 
-  // Common AppBar for consistent navigation (re-implemented to include authService logic)
+  // Helper method to check if screen is small (for responsive design)
+  bool _isSmallScreen() {
+    return MediaQuery.of(context).size.width < 1024;
+  }
+
+  // Common AppBar for consistent navigation
   AppBar buildAppBar({String? currentListingTypeFilter}) {
     final bool isLoggedIn = authService.getCurrentUser() != null;
     final User? user = authService.getCurrentUser();
@@ -90,7 +101,7 @@ class CommonWidgets {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
-      toolbarHeight: kIsWeb ? 80 : null, // Increase toolbar height for web
+      toolbarHeight: kIsWeb ? 80 : null,
       leadingWidth: kIsWeb ? 200 : null,
       leading: Padding(
         padding: kIsWeb
@@ -100,7 +111,6 @@ class CommonWidgets {
           alignment: kIsWeb ? Alignment.centerLeft : Alignment.center,
           child: GestureDetector(
             onTap: () {
-              // Ensure navigation to home resets the state of HomeScreen if already there
               Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
             },
             child: Row(
@@ -123,11 +133,10 @@ class CommonWidgets {
           ),
         ),
       ),
-      title: kIsWeb
+      title: kIsWeb && !_isSmallScreen()
           ? Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Added Home button
                 _buildAppBarButton('Home', '/home'),
                 const SizedBox(width: 20),
                 _buildAppBarButton(
@@ -159,45 +168,79 @@ class CommonWidgets {
             )
           : null,
       actions: [
-        if (kIsWeb) // Only show on web
+        if (kIsWeb && !_isSmallScreen()) // Only show on web and large screens
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Row(
               children: [
                 if (isLoggedIn) ...[
-                  IconButton(
-                    icon: const Icon(Icons.favorite_border, color: Colors.grey),
-                    tooltip: 'Favorites',
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/my_favorites');
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add_home_work, color: Colors.grey),
-                    tooltip: 'My Listings',
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/my_listings');
-                    },
-                  ),
                   PopupMenuButton<String>(
                     offset: const Offset(0, 50),
                     onSelected: (String value) async {
-                      if (value == 'profile') {
+                      if (value == 'dashboard') {
+                        Navigator.pushNamed(context, '/dashboard');
+                      } else if (value == 'my_listings') {
+                        Navigator.pushNamed(context, '/my_listings');
+                      } else if (value == 'my_favorites') {
+                        Navigator.pushNamed(context, '/my_favorites');
+                      } else if (value == 'recently_viewed') {
+                        Navigator.pushNamed(context, '/recently_viewed');
+                      } else if (value == 'profile_settings') {
                         Navigator.pushNamed(context, '/profile_settings');
                       } else if (value == 'logout') {
                         await authService.signOut();
-                        // Navigate back to home or sign-in after logout
                         Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
                       }
                     },
                     itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                       PopupMenuItem<String>(
-                        value: 'profile',
+                        value: 'dashboard',
                         child: Row(
                           children: [
-                            const Icon(Icons.person, color: Color(0xFF0A66C2)),
+                            const Icon(Icons.dashboard, color: Color(0xFF0A66C2)),
                             const SizedBox(width: 8),
-                            Text('Profile (${displayName.toCapitalized()})'),
+                            const Text('Dashboard'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'my_listings',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add_home_work, color: Color(0xFF0A66C2)),
+                            const SizedBox(width: 8),
+                            const Text('My Listings'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'my_favorites',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.favorite_border, color: Color(0xFF0A66C2)),
+                            const SizedBox(width: 8),
+                            const Text('My Favorites'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'recently_viewed',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.history, color: Color(0xFF0A66C2)),
+                            const SizedBox(width: 8),
+                            const Text('Recently Viewed'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem<String>(
+                        value: 'profile_settings',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.settings, color: Color(0xFF0A66C2)),
+                            const SizedBox(width: 8),
+                            Text('Profile Settings (${displayName.toCapitalized()})'),
                           ],
                         ),
                       ),
@@ -207,7 +250,7 @@ class CommonWidgets {
                           children: [
                             Icon(Icons.logout, color: Colors.red),
                             SizedBox(width: 8),
-                            Text('Logout'),
+                            const Text('Logout'),
                           ],
                         ),
                       ),
@@ -251,7 +294,7 @@ class CommonWidgets {
               ],
             ),
           ),
-        if (!kIsWeb) // Show hamburger menu on mobile
+        if (!kIsWeb || _isSmallScreen()) // Show hamburger menu on mobile or small web screens
           Builder(
             builder: (context) => IconButton(
               icon: const Icon(Icons.menu, color: Color(0xFF0A66C2)),
@@ -267,7 +310,7 @@ class CommonWidgets {
   Widget _buildAppBarButton(String text, String route, [bool isSelected = false]) {
     return TextButton(
       onPressed: () {
-        // Use authService.getCurrentUser() != null for login check
+        // Only 'Sell Property' requires login check for general links
         if (text == 'Sell Property' && authService.getCurrentUser() == null) {
           showLoginSignupDialog();
         } else {
@@ -284,7 +327,7 @@ class CommonWidgets {
     );
   }
 
-  // Common Drawer for mobile navigation (re-implemented to include authService logic)
+  // Common Drawer for mobile navigation
   Drawer buildDrawer() {
     final bool isLoggedIn = authService.getCurrentUser() != null;
     final User? user = authService.getCurrentUser();
@@ -342,12 +385,14 @@ class CommonWidgets {
           _buildDrawerItem(Icons.reviews, 'Testimonials', '/testimonials'),
           _buildDrawerItem(Icons.help_outline, 'FAQs', '/faqs'),
           _buildDrawerItem(Icons.map_outlined, 'Local Guides', '/local_guides'),
-          _buildDrawerItem(Icons.event_note, 'Events', '/events'), // Added Events
+          _buildDrawerItem(Icons.event_note, 'Events', '/events'),
 
-          const Divider(), // Divider before authenticated options
+          const Divider(),
           if (isLoggedIn) ...[
+            _buildDrawerItem(Icons.dashboard, 'Dashboard', '/dashboard'),
             _buildDrawerItem(Icons.favorite_border, 'My Favorites', '/my_favorites'),
             _buildDrawerItem(Icons.add_home_work, 'My Listings', '/my_listings'),
+            _buildDrawerItem(Icons.history, 'Recently Viewed', '/recently_viewed'),
             _buildDrawerItem(Icons.settings, 'Profile Settings', '/profile_settings'),
             _buildDrawerItem(Icons.logout, 'Logout', '/logout', isLogout: true),
           ] else ...[
@@ -367,12 +412,18 @@ class CommonWidgets {
         style: TextStyle(color: isLogout ? Colors.red : Colors.black87),
       ),
       onTap: () async {
-        Navigator.pop(context); // Close the drawer
+        Navigator.pop(context);
+        // Only user-specific routes require login check
+        if (['dashboard', 'my_listings', 'my_favorites', 'recently_viewed', 'profile_settings'].any((userRoute) => route.contains(userRoute))) {
+          if (authService.getCurrentUser() == null) {
+            showLoginSignupDialog();
+            return;
+          }
+        }
+        
         if (isLogout) {
           await authService.signOut();
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false); // Go to home after logout
-        } else if (title == 'Sell Property' && authService.getCurrentUser() == null) { // Fixed isLoggedIn check
-          showLoginSignupDialog();
+          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
         } else {
           Navigator.pushNamed(context, route);
         }
@@ -380,26 +431,18 @@ class CommonWidgets {
     );
   }
 
-  // Common Footer (copied directly from your original)
+  // Common Footer for consistent bottom navigation
   Widget buildFooter() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final bool isLargeScreen = screenWidth >= 1000;
-    final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
-
     return Container(
-      color: Colors.grey[100],
-      padding: EdgeInsets.symmetric(
-        vertical: isLargeScreen ? 60 : (isMediumScreen ? 40 : 30),
-        horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
-      ),
+      color: const Color(0xFF0A66C2),
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Main footer content
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Company Info Section
+              // Company Info
               Expanded(
                 flex: 2,
                 child: Column(
@@ -407,208 +450,214 @@ class CommonWidgets {
                   children: [
                     Row(
                       children: [
-                        Image.asset('assets/images/sora_logo.png', height: 40),
+                        Image.asset('assets/images/sora_logo.png', height: 30, color: Colors.white),
                         const SizedBox(width: 8),
                         const Text(
                           'SORA',
                           style: TextStyle(
-                            fontSize: 28,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF0A66C2),
+                            color: Colors.white,
+                            fontFamily: 'Inter',
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'SORA is a leading real estate platform dedicated to connecting people with their dream properties across the globe.',
-                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Your trusted partner in finding the perfect property. We connect buyers, sellers, and renters with exceptional real estate opportunities.',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '123 Real Estate Blvd, Suite 456, Property City, PC 78901',
-                      style: TextStyle(fontSize: 15, color: Colors.grey[700]),
-                    ),
-                    Text(
-                      'Email: info@sora.com | Phone: +1 (555) 123-4567',
-                      style: TextStyle(fontSize: 15, color: Colors.grey[700]),
+                    const SizedBox(height: 16),
+                    // Social Media Icons
+                    Row(
+                      children: [
+                        _buildSocialIcon(FontAwesomeIcons.facebook),
+                        const SizedBox(width: 12),
+                        _buildSocialIcon(FontAwesomeIcons.twitter),
+                        const SizedBox(width: 12),
+                        _buildSocialIcon(FontAwesomeIcons.instagram),
+                        const SizedBox(width: 12),
+                        _buildSocialIcon(FontAwesomeIcons.linkedin),
+                      ],
                     ),
                   ],
                 ),
               ),
-              if (isLargeScreen || isMediumScreen) ...[
-                const SizedBox(width: 40),
-                // Quick Links Section
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Quick Links',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0A66C2),
-                        ),
+              const SizedBox(width: 40),
+              // Quick Links
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Quick Links',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                      const SizedBox(height: 15),
-                      _buildFooterLink('Home', () => Navigator.pushNamed(context, '/home')),
-                      _buildFooterLink('Properties', () => Navigator.pushNamed(context, '/buy')),
-                      _buildFooterLink('About Us', () => Navigator.pushNamed(context, '/about')),
-                      _buildFooterLink('Agents', () => Navigator.pushNamed(context, '/agents')),
-                      _buildFooterLink('Contact Us', () => Navigator.pushNamed(context, '/contact')),
-                      _buildFooterLink('Blog', () => Navigator.pushNamed(context, '/blogs')),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildFooterLink('Home', '/home'),
+                    _buildFooterLink('Buy', '/buy'),
+                    _buildFooterLink('Rent', '/rent'),
+                    _buildFooterLink('Lease', '/lease'),
+                    _buildFooterLink('About Us', '/about'),
+                    _buildFooterLink('Agents', '/agents'),
+                  ],
                 ),
-                const SizedBox(width: 40),
-                // Support & Resources Section
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Support & Resources',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0A66C2),
-                        ),
+              ),
+              const SizedBox(width: 40),
+              // Services
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Services',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                      const SizedBox(height: 15),
-                      _buildFooterLink('FAQs', () => Navigator.pushNamed(context, '/faqs')),
-                      _buildFooterLink('Support', () => Navigator.pushNamed(context, '/support')),
-                      _buildFooterLink('Careers', () => Navigator.pushNamed(context, '/careers')),
-                      _buildFooterLink('Terms of Service', () => Navigator.pushNamed(context, '/terms_of_service')),
-                      _buildFooterLink('Privacy Policy', () => Navigator.pushNamed(context, '/privacy_policy')),
-                      _buildFooterLink('Cookie Policy', () => Navigator.pushNamed(context, '/cookie_policy')),
-                      _buildFooterLink('Disclaimer', () => Navigator.pushNamed(context, '/disclaimer')),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildFooterLink('Property Valuation', '/valuation'),
+                    _buildFooterLink('Market Analysis', '/market_analysis'),
+                    _buildFooterLink('Investment Consulting', '/investment'),
+                    _buildFooterLink('Property Management', '/management'),
+                    _buildFooterLink('Legal Services', '/legal'),
+                    _buildFooterLink('Mortgage Assistance', '/mortgage'),
+                  ],
                 ),
-              ],
+              ),
+              const SizedBox(width: 40),
+              // Contact Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Contact Info',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildContactInfo(Icons.phone, '+1 (555) 123-4567'),
+                    _buildContactInfo(Icons.email, 'info@sora.com'),
+                    _buildContactInfo(Icons.location_on, '123 Real Estate Ave\nCity, State 12345'),
+                    _buildContactInfo(Icons.access_time, 'Mon-Fri: 9AM-6PM\nSat-Sun: 10AM-4PM'),
+                  ],
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 30),
-          // Newsletter Signup Section (visible on all screen sizes)
-          Align(
-            alignment: isLargeScreen ? Alignment.centerRight : Alignment.center,
-            child: SizedBox(
-              width: isLargeScreen ? 300 : (isMediumScreen ? 250 : double.infinity),
-              child: Column(
-                crossAxisAlignment: isLargeScreen ? CrossAxisAlignment.end : CrossAxisAlignment.center,
-                children: [
-                  Text( // Removed const here
-                    'Subscribe to our Newsletter',
-                    style: const TextStyle( // Kept const here as style is constant
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
-                    ),
-                    textAlign: isLargeScreen ? TextAlign.right : TextAlign.center,
-                  ),
-                  const SizedBox(height: 15),
-                  TextField(
-                    controller: TextEditingController(), // Use a local controller if not managing state here
-                    decoration: InputDecoration(
-                      hintText: 'Enter your email',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Handle newsletter subscription (e.g., show a snackbar)
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Subscription feature coming soon!')),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E90FF),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    ),
-                    child: const Text('Subscribe'),
-                  ),
-                ],
+          const SizedBox(height: 40),
+          // Bottom bar
+          Container(
+            padding: const EdgeInsets.only(top: 20),
+            decoration: const BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Colors.white24, width: 1),
               ),
             ),
-          ),
-          const SizedBox(height: 30),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildSocialIcon(FontAwesomeIcons.facebookF, 'Facebook', const Color(0xFF1877F2)),
-              const SizedBox(width: 20),
-              _buildSocialIcon(FontAwesomeIcons.discord, 'Discord', const Color(0xFF5865F2)),
-              const SizedBox(width: 20),
-              _buildSocialIcon(FontAwesomeIcons.linkedinIn, 'LinkedIn', const Color(0xFF0A66C2)),
-              const SizedBox(width: 20),
-              _buildSocialIcon(FontAwesomeIcons.instagram, 'Instagram', const Color(0xFFE1306C)),
-              const SizedBox(width: 20),
-              _buildSocialIcon(FontAwesomeIcons.tiktok, 'TikTok', Colors.black),
-              const SizedBox(width: 20),
-              _buildSocialIcon(FontAwesomeIcons.xTwitter, 'X (Twitter)', Colors.black),
-            ],
-          ),
-          const SizedBox(height: 30),
-          Divider(color: Colors.grey[300]),
-          const SizedBox(height: 20),
-          Text(
-            '© 2025 SORA Properties. All rights reserved.',
-            style: TextStyle(color: Colors.grey[600], fontSize: 13),
-            textAlign: TextAlign.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '© 2024 SORA Real Estate. All rights reserved.',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                Row(
+                  children: [
+                    _buildFooterLink('Privacy Policy', '/privacy', isBottomLink: true),
+                    const Text(' | ', style: TextStyle(color: Colors.white70)),
+                    _buildFooterLink('Terms of Service', '/terms', isBottomLink: true),
+                    const Text(' | ', style: TextStyle(color: Colors.white70)),
+                    _buildFooterLink('Cookie Policy', '/cookies', isBottomLink: true),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Helper method for Social Icons in Footer
-  Widget _buildSocialIcon(IconData icon, String socialMediaName, Color color) {
-    return IconButton(
-      icon: FaIcon(icon, size: 28, color: color),
-      onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Opening $socialMediaName...')),
-        );
-      },
-      tooltip: 'Visit our $socialMediaName page',
+  Widget _buildSocialIcon(IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, color: Colors.white, size: 20),
     );
   }
 
-  // Helper for footer links
-  Widget _buildFooterLink(String text, VoidCallback onPressed) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+  Widget _buildFooterLink(String text, String route, {bool isBottomLink = false}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isBottomLink ? 0 : 8),
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, route),
         child: Text(
           text,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.black54, // Changed color to better suit light footer
-            decoration: TextDecoration.underline,
+          style: TextStyle(
+            color: isBottomLink ? Colors.white70 : Colors.white,
+            fontSize: isBottomLink ? 14 : 14,
+            decoration: TextDecoration.none,
           ),
         ),
       ),
     );
   }
-}
 
-// Moved to common_widgets.dart as a shared utility (copied directly from your original)
-extension StringExtension on String {
-  String toCapitalized() => length > 0 ? '${this[0].toUpperCase()}${substring(1).toLowerCase()}' : '';
-  String toTitleCase() => replaceAll(RegExp(' +'), ' ').split(' ').map((str) => str.toCapitalized()).join(' ');
+  Widget _buildContactInfo(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.white70, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Moved this method inside the class definition to fix the compilation error
+  Widget buildCallToActionButton({
+    required String text,
+    required VoidCallback onPressed,
+    Color? color,
+    IconData? icon,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: icon != null ? Icon(icon, color: Colors.white) : Container(),
+      label: Text(
+        text,
+        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color ?? const Color(0xFF0A66C2),
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        elevation: 5,
+      ),
+    );
+  }
 }
