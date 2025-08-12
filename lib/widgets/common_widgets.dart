@@ -90,7 +90,7 @@ class CommonWidgets {
   bool _isSmallScreen() {
     return MediaQuery.of(context).size.width < 1024;
   }
-
+  
   // Common AppBar for consistent navigation
   AppBar buildAppBar({String? currentListingTypeFilter}) {
     final bool isLoggedIn = authService.getCurrentUser() != null;
@@ -156,6 +156,8 @@ class CommonWidgets {
                   '/lease',
                   currentListingTypeFilter == 'Lease',
                 ),
+                const SizedBox(width: 20),
+                _buildAppBarButton('Airbnb', '/airbnb'),
                 const SizedBox(width: 20),
                 _buildAppBarButton('About Us', '/about'),
                 const SizedBox(width: 20),
@@ -377,6 +379,7 @@ class CommonWidgets {
           _buildDrawerItem(Icons.search, 'Buy', '/buy'),
           _buildDrawerItem(Icons.key, 'Rent', '/rent'),
           _buildDrawerItem(Icons.handshake, 'Lease', '/lease'),
+          _buildDrawerItem(Icons.bed, 'Airbnb', '/airbnb'),
           _buildDrawerItem(Icons.info_outline, 'About Us', '/about'),
           _buildDrawerItem(Icons.people_outline, 'Agents', '/agents'),
           _buildDrawerItem(Icons.phone, 'Contact Us', '/contact'),
@@ -439,122 +442,192 @@ class CommonWidgets {
       child: Column(
         children: [
           // Main footer content
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Company Info
-              Expanded(
-                flex: 2,
-                child: Column(
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              if (constraints.maxWidth > 800) {
+                // Desktop layout
+                return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Image.asset('assets/images/sora_logo.png', height: 30, color: Colors.white),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'SORA',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: 'Inter',
+                    // Company Info
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Image.asset('assets/images/sora_logo.png', height: 30, color: Colors.white),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'SORA',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Your trusted partner in finding the perfect property. We connect buyers, sellers, and renters with exceptional real estate opportunities.',
+                            style: TextStyle(color: Colors.white70, fontSize: 14),
+                          ),
+                          const SizedBox(height: 16),
+                          // Social Media Icons
+                          Row(
+                            children: [
+                              _buildSocialIcon(FontAwesomeIcons.facebook),
+                              const SizedBox(width: 12),
+                              _buildSocialIcon(FontAwesomeIcons.twitter),
+                              const SizedBox(width: 12),
+                              _buildSocialIcon(FontAwesomeIcons.instagram),
+                              const SizedBox(width: 12),
+                              _buildSocialIcon(FontAwesomeIcons.linkedin),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 40),
+                    // Quick Links
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Quick Links',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildFooterLink('Home', '/home'),
+                          _buildFooterLink('Buy', '/buy'),
+                          _buildFooterLink('Rent', '/rent'),
+                          _buildFooterLink('Lease', '/lease'),
+                          _buildFooterLink('About Us', '/about'),
+                          _buildFooterLink('Agents', '/agents'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 40),
+                    // Contact Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Contact Info',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildContactInfo(Icons.phone, '+1 (555) 123-4567'),
+                          _buildContactInfo(Icons.email, 'info@sora.com'),
+                          _buildContactInfo(Icons.location_on, '123 Real Estate Ave\nCity, State 12345'),
+                          _buildContactInfo(Icons.access_time, 'Mon-Fri: 9AM-6PM\nSat-Sun: 10AM-4PM'),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                // Mobile layout
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Company Info
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Image.asset('assets/images/sora_logo.png', height: 30, color: Colors.white),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'SORA',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Your trusted partner in finding the perfect property. We connect buyers, sellers, and renters with exceptional real estate opportunities.',
+                          style: TextStyle(color: Colors.white70, fontSize: 14),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            _buildSocialIcon(FontAwesomeIcons.facebook),
+                            const SizedBox(width: 12),
+                            _buildSocialIcon(FontAwesomeIcons.twitter),
+                            const SizedBox(width: 12),
+                            _buildSocialIcon(FontAwesomeIcons.instagram),
+                            const SizedBox(width: 12),
+                            _buildSocialIcon(FontAwesomeIcons.linkedin),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Your trusted partner in finding the perfect property. We connect buyers, sellers, and renters with exceptional real estate opportunities.',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(height: 16),
-                    // Social Media Icons
-                    Row(
+                    const SizedBox(height: 40),
+                    // Quick Links
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSocialIcon(FontAwesomeIcons.facebook),
-                        const SizedBox(width: 12),
-                        _buildSocialIcon(FontAwesomeIcons.twitter),
-                        const SizedBox(width: 12),
-                        _buildSocialIcon(FontAwesomeIcons.instagram),
-                        const SizedBox(width: 12),
-                        _buildSocialIcon(FontAwesomeIcons.linkedin),
+                        const Text(
+                          'Quick Links',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildFooterLink('Home', '/home'),
+                        _buildFooterLink('Buy', '/buy'),
+                        _buildFooterLink('Rent', '/rent'),
+                        _buildFooterLink('Lease', '/lease'),
+                        _buildFooterLink('About Us', '/about'),
+                        _buildFooterLink('Agents', '/agents'),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                    // Contact Info
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Contact Info',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildContactInfo(Icons.phone, '+1 (555) 123-4567'),
+                        _buildContactInfo(Icons.email, 'info@sora.com'),
+                        _buildContactInfo(Icons.location_on, '123 Real Estate Ave\nCity, State 12345'),
+                        _buildContactInfo(Icons.access_time, 'Mon-Fri: 9AM-6PM\nSat-Sun: 10AM-4PM'),
                       ],
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 40),
-              // Quick Links
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Quick Links',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildFooterLink('Home', '/home'),
-                    _buildFooterLink('Buy', '/buy'),
-                    _buildFooterLink('Rent', '/rent'),
-                    _buildFooterLink('Lease', '/lease'),
-                    _buildFooterLink('About Us', '/about'),
-                    _buildFooterLink('Agents', '/agents'),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 40),
-              // Services
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Services',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildFooterLink('Property Valuation', '/valuation'),
-                    _buildFooterLink('Market Analysis', '/market_analysis'),
-                    _buildFooterLink('Investment Consulting', '/investment'),
-                    _buildFooterLink('Property Management', '/management'),
-                    _buildFooterLink('Legal Services', '/legal'),
-                    _buildFooterLink('Mortgage Assistance', '/mortgage'),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 40),
-              // Contact Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Contact Info',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildContactInfo(Icons.phone, '+1 (555) 123-4567'),
-                    _buildContactInfo(Icons.email, 'info@sora.com'),
-                    _buildContactInfo(Icons.location_on, '123 Real Estate Ave\nCity, State 12345'),
-                    _buildContactInfo(Icons.access_time, 'Mon-Fri: 9AM-6PM\nSat-Sun: 10AM-4PM'),
-                  ],
-                ),
-              ),
-            ],
+                );
+              }
+            },
           ),
           const SizedBox(height: 40),
           // Bottom bar

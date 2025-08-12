@@ -38,7 +38,9 @@ import 'screens/my_listings_screen.dart';
 import 'screens/profile_settings_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/recently_viewed_screen.dart';
-import 'package:sora_app/screens/add_property_screen.dart';
+import 'screens/add_property_screen.dart';
+// New screen for Airbnb
+import 'screens/airbnb_screen.dart';
 
 
 void main() async {
@@ -73,7 +75,7 @@ class SoraApp extends StatelessWidget {
     if (authService == null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: Scaffold(
+        home: const Scaffold(
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -95,6 +97,7 @@ class SoraApp extends StatelessWidget {
       '/buy': (context) => PropertyListingScreen(authService: authService!, listingType: 'Buy'),
       '/rent': (context) => PropertyListingScreen(authService: authService!, listingType: 'Rent'),
       '/lease': (context) => PropertyListingScreen(authService: authService!, listingType: 'Lease'),
+      '/airbnb': (context) => AirbnbScreen(authService: authService!), // New Airbnb route
       '/about': (context) => AboutScreen(authService: authService!),
       '/signin': (context) => SignInScreen(authService: authService!),
       '/signup': (context) => SignUpScreen(authService: authService!),

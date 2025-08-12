@@ -67,13 +67,17 @@ class AddPropertyScreen extends StatefulWidget {
   State<AddPropertyScreen> createState() => _AddPropertyScreenState();
 }
 
-class _AddPropertyScreenState extends State<AddPropertyScreen> {
+class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTickerProviderStateMixin {
   late CommonWidgets commonWidgets;
   int _currentStep = 0;
   bool _isSubmitting = false; // NEW: State variable for submission status
 
+  late AnimationController _scrollController;
+  late Animation<double> _scrollAnimation;
+  final ScrollController _propertyTypeScrollController = ScrollController();
+
   // Form fields data
-  String _propertyType = ''; // Residential, Commercial, Industrial, Land
+  String _propertyType = ''; // Residential, Commercial, Industrial, Land, Vocational
   String _listingType = ''; // For Sale, For Rent, For Lease
   String _selectedCounty = '';
 
@@ -103,6 +107,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     'Commercial': ['Office Space', 'Retail Space', 'Restaurant', 'Hotel', 'Warehouse', 'Other'],
     'Industrial': ['Factory', 'Warehouse', 'Plant', 'Godown', 'Other'],
     'Land': ['Agricultural', 'Commercial', 'Residential', 'Industrial', 'Mixed-use', 'Other'],
+    'Vocational': ['Airbnb'],
   };
 
   // Residential Specific Fields
@@ -294,6 +299,30 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   void initState() {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
+
+    _scrollController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20), // Adjust duration for desired speed
+    );
+
+    _scrollAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_scrollController)
+      ..addListener(() {
+        if (_propertyTypeScrollController.hasClients) {
+          final double currentScroll = _propertyTypeScrollController.offset;
+          final double maxScrollExtent = _propertyTypeScrollController.position.maxScrollExtent;
+          final double newScroll = maxScrollExtent * _scrollAnimation.value;
+
+          if (newScroll > currentScroll) {
+            _propertyTypeScrollController.jumpTo(newScroll);
+          } else if (currentScroll > 0 && newScroll < currentScroll) {
+            // If animation value wraps around, reset scroll to 0
+            _propertyTypeScrollController.jumpTo(0.0);
+          }
+        }
+      });
+
+    _scrollController.repeat(); // Start continuous animation
+
     // Initialize with all counties
     _filteredCounties = _kenyanCounties;
     
@@ -431,6 +460,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
+    _propertyTypeScrollController.dispose();
     _addressController.dispose();
     _priceController.dispose();
     _sizeController.dispose();
@@ -1191,14 +1222,59 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   Widget _buildPropertyTypeSelection() {
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildPropertyTypeButton('Residential', Icons.house),
-            _buildPropertyTypeButton('Commercial', Icons.business),
-            _buildPropertyTypeButton('Industrial', Icons.factory),
-            _buildPropertyTypeButton('Land', Icons.landscape),
-          ],
+        SingleChildScrollView(
+          controller: _propertyTypeScrollController,
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              MouseRegion(
+                onEnter: (_) => _scrollController.stop(),
+                onExit: (_) => _scrollController.repeat(),
+                child: GestureDetector(
+                  onTapDown: (_) => _scrollController.stop(),
+                  onTapUp: (_) => _scrollController.repeat(),
+                  child: _buildPropertyTypeButton("Residential", Icons.house),
+                ),
+              ),
+              MouseRegion(
+                onEnter: (_) => _scrollController.stop(),
+                onExit: (_) => _scrollController.repeat(),
+                child: GestureDetector(
+                  onTapDown: (_) => _scrollController.stop(),
+                  onTapUp: (_) => _scrollController.repeat(),
+                  child: _buildPropertyTypeButton("Commercial", Icons.business),
+                ),
+              ),
+              MouseRegion(
+                onEnter: (_) => _scrollController.stop(),
+                onExit: (_) => _scrollController.repeat(),
+                child: GestureDetector(
+                  onTapDown: (_) => _scrollController.stop(),
+                  onTapUp: (_) => _scrollController.repeat(),
+                  child: _buildPropertyTypeButton("Industrial", Icons.factory),
+                ),
+              ),
+              MouseRegion(
+                onEnter: (_) => _scrollController.stop(),
+                onExit: (_) => _scrollController.repeat(),
+                child: GestureDetector(
+                  onTapDown: (_) => _scrollController.stop(),
+                  onTapUp: (_) => _scrollController.repeat(),
+                  child: _buildPropertyTypeButton("Land", Icons.landscape),
+                ),
+              ),
+              MouseRegion(
+                onEnter: (_) => _scrollController.stop(),
+                onExit: (_) => _scrollController.repeat(),
+                child: GestureDetector(
+                  onTapDown: (_) => _scrollController.stop(),
+                  onTapUp: (_) => _scrollController.repeat(),
+                  child: _buildPropertyTypeButton("Vocational", Icons.work),
+                ),
+              ),
+            ],
+          ),
         ),
         if (_propertyType.isNotEmpty)
           Padding(
@@ -1214,7 +1290,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
   Widget _buildPropertyTypeButton(String type, IconData icon) {
     bool isSelected = _propertyType == type;
-    return Expanded(
+    return SizedBox(
+      width: 120, // Fixed width for each button
       child: GestureDetector(
         onTap: () {
           setState(() {
