@@ -242,419 +242,346 @@ class CommonWidgets {
                           children: [
                             const Icon(Icons.settings, color: Color(0xFF0A66C2)),
                             const SizedBox(width: 8),
-                            Text('Profile Settings (${displayName.toCapitalized()})'),
+                            const Text('Profile Settings'),
                           ],
                         ),
                       ),
-                      const PopupMenuItem<String>(
+                      PopupMenuItem<String>(
                         value: 'logout',
                         child: Row(
                           children: [
-                            Icon(Icons.logout, color: Colors.red),
-                            SizedBox(width: 8),
+                            const Icon(Icons.logout, color: Colors.redAccent),
+                            const SizedBox(width: 8),
                             const Text('Logout'),
                           ],
                         ),
                       ),
                     ],
-                    child: CircleAvatar(
-                      backgroundColor: const Color(0xFF0A66C2),
-                      child: Text(
-                        displayName.substring(0, 1).toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const Icon(Icons.person, color: Color(0xFF1E90FF)),
+                          const SizedBox(width: 8),
+                          Text(
+                            displayName.toCapitalized(),
+                            style: const TextStyle(
+                              color: Color(0xFF0A66C2),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const Icon(Icons.arrow_drop_down, color: Color(0xFF0A66C2)),
+                        ],
                       ),
                     ),
                   ),
                 ] else ...[
-                  TextButton(
+                  ElevatedButton(
                     onPressed: () => Navigator.pushNamed(context, '/signin'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF0A66C2),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0A66C2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text(
                       'Sign In',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Colors.white),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  ElevatedButton(
+                  OutlinedButton(
                     onPressed: () => Navigator.pushNamed(context, '/signup'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0A66C2),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF0A66C2)),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
                       ),
                     ),
                     child: const Text(
                       'Sign Up',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Color(0xFF0A66C2)),
                     ),
                   ),
                 ],
               ],
             ),
           ),
-        if (!kIsWeb || _isSmallScreen()) // Show hamburger menu on mobile or small web screens
+        if (!kIsWeb || _isSmallScreen()) // Mobile menu icon
           Builder(
             builder: (context) => IconButton(
-              icon: const Icon(Icons.menu, color: Color(0xFF0A66C2)),
-              onPressed: () {
-                Scaffold.of(context).openEndDrawer();
-              },
+              icon: const Icon(Icons.menu, color: Colors.black),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildAppBarButton(String text, String route, [bool isSelected = false]) {
-    return TextButton(
-      onPressed: () {
-        // Only 'Sell Property' requires login check for general links
-        if (text == 'Sell Property' && authService.getCurrentUser() == null) {
-          showLoginSignupDialog();
-        } else {
-          Navigator.pushNamed(context, route);
-        }
-      },
-      style: TextButton.styleFrom(
-        foregroundColor: isSelected ? const Color(0xFF1E90FF) : const Color(0xFF0A66C2),
-        textStyle: TextStyle(
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1.0),
+        child: Container(
+          color: Colors.grey[200],
+          height: 1.0,
         ),
       ),
-      child: Text(text),
     );
   }
 
   // Common Drawer for mobile navigation
   Drawer buildDrawer() {
     final bool isLoggedIn = authService.getCurrentUser() != null;
-    final User? user = authService.getCurrentUser();
-    final String userEmail = user?.email ?? 'Guest';
-    final String displayName = user?.displayName ?? userEmail.split('@')[0];
-
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
-        children: [
+        children: <Widget>[
           DrawerHeader(
             decoration: const BoxDecoration(
-              color: Color(0xFF0A66C2),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (isLoggedIn) ...[
-                  CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: Text(
-                      displayName.substring(0, 1).toUpperCase(),
-                      style: const TextStyle(color: Color(0xFF0A66C2), fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    displayName.toCapitalized(),
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    userEmail,
-                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
-                  ),
-                ] else ...[
-                  const Icon(Icons.person_outline, color: Colors.white, size: 48),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Welcome, Guest!',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          _buildDrawerItem(Icons.home, 'Home', '/home'),
-          _buildDrawerItem(Icons.search, 'Buy', '/buy'),
-          _buildDrawerItem(Icons.key, 'Rent', '/rent'),
-          _buildDrawerItem(Icons.handshake, 'Lease', '/lease'),
-          _buildDrawerItem(Icons.bed, 'Airbnb', '/airbnb'),
-          _buildDrawerItem(Icons.info_outline, 'About Us', '/about'),
-          _buildDrawerItem(Icons.people_outline, 'Agents', '/agents'),
-          _buildDrawerItem(Icons.phone, 'Contact Us', '/contact'),
-          _buildDrawerItem(Icons.article, 'Blog', '/blogs'),
-          _buildDrawerItem(Icons.work_outline, 'Careers', '/careers'),
-          _buildDrawerItem(Icons.reviews, 'Testimonials', '/testimonials'),
-          _buildDrawerItem(Icons.help_outline, 'FAQs', '/faqs'),
-          _buildDrawerItem(Icons.map_outlined, 'Local Guides', '/local_guides'),
-          _buildDrawerItem(Icons.event_note, 'Events', '/events'),
-
-          const Divider(),
-          if (isLoggedIn) ...[
-            _buildDrawerItem(Icons.dashboard, 'Dashboard', '/dashboard'),
-            _buildDrawerItem(Icons.favorite_border, 'My Favorites', '/my_favorites'),
-            _buildDrawerItem(Icons.add_home_work, 'My Listings', '/my_listings'),
-            _buildDrawerItem(Icons.history, 'Recently Viewed', '/recently_viewed'),
-            _buildDrawerItem(Icons.settings, 'Profile Settings', '/profile_settings'),
-            _buildDrawerItem(Icons.logout, 'Logout', '/logout', isLogout: true),
-          ] else ...[
-            _buildDrawerItem(Icons.login, 'Sign In', '/signin'),
-            _buildDrawerItem(Icons.person_add, 'Sign Up', '/signup'),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(IconData icon, String title, String route, {bool isLogout = false}) {
-    return ListTile(
-      leading: Icon(icon, color: isLogout ? Colors.red : const Color(0xFF0A66C2)),
-      title: Text(
-        title,
-        style: TextStyle(color: isLogout ? Colors.red : Colors.black87),
-      ),
-      onTap: () async {
-        Navigator.pop(context);
-        // Only user-specific routes require login check
-        if (['dashboard', 'my_listings', 'my_favorites', 'recently_viewed', 'profile_settings'].any((userRoute) => route.contains(userRoute))) {
-          if (authService.getCurrentUser() == null) {
-            showLoginSignupDialog();
-            return;
-          }
-        }
-        
-        if (isLogout) {
-          await authService.signOut();
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-        } else {
-          Navigator.pushNamed(context, route);
-        }
-      },
-    );
-  }
-
-  // Common Footer for consistent bottom navigation
-  Widget buildFooter() {
-    return Container(
-      color: const Color(0xFF0A66C2),
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-      child: Column(
-        children: [
-          // Main footer content
-          LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              if (constraints.maxWidth > 800) {
-                // Desktop layout
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Company Info
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Image.asset('assets/images/sora_logo.png', height: 30, color: Colors.white),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'SORA',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Your trusted partner in finding the perfect property. We connect buyers, sellers, and renters with exceptional real estate opportunities.',
-                            style: TextStyle(color: Colors.white70, fontSize: 14),
-                          ),
-                          const SizedBox(height: 16),
-                          // Social Media Icons
-                          Row(
-                            children: [
-                              _buildSocialIcon(FontAwesomeIcons.facebook),
-                              const SizedBox(width: 12),
-                              _buildSocialIcon(FontAwesomeIcons.twitter),
-                              const SizedBox(width: 12),
-                              _buildSocialIcon(FontAwesomeIcons.instagram),
-                              const SizedBox(width: 12),
-                              _buildSocialIcon(FontAwesomeIcons.linkedin),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 40),
-                    // Quick Links
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Quick Links',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildFooterLink('Home', '/home'),
-                          _buildFooterLink('Buy', '/buy'),
-                          _buildFooterLink('Rent', '/rent'),
-                          _buildFooterLink('Lease', '/lease'),
-                          _buildFooterLink('About Us', '/about'),
-                          _buildFooterLink('Agents', '/agents'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 40),
-                    // Contact Info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Contact Info',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildContactInfo(Icons.phone, '+1 (555) 123-4567'),
-                          _buildContactInfo(Icons.email, 'info@sora.com'),
-                          _buildContactInfo(Icons.location_on, '123 Real Estate Ave\nCity, State 12345'),
-                          _buildContactInfo(Icons.access_time, 'Mon-Fri: 9AM-6PM\nSat-Sun: 10AM-4PM'),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              } else {
-                // Mobile layout
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Company Info
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Image.asset('assets/images/sora_logo.png', height: 30, color: Colors.white),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'SORA',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Your trusted partner in finding the perfect property. We connect buyers, sellers, and renters with exceptional real estate opportunities.',
-                          style: TextStyle(color: Colors.white70, fontSize: 14),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            _buildSocialIcon(FontAwesomeIcons.facebook),
-                            const SizedBox(width: 12),
-                            _buildSocialIcon(FontAwesomeIcons.twitter),
-                            const SizedBox(width: 12),
-                            _buildSocialIcon(FontAwesomeIcons.instagram),
-                            const SizedBox(width: 12),
-                            _buildSocialIcon(FontAwesomeIcons.linkedin),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
-                    // Quick Links
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Quick Links',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildFooterLink('Home', '/home'),
-                        _buildFooterLink('Buy', '/buy'),
-                        _buildFooterLink('Rent', '/rent'),
-                        _buildFooterLink('Lease', '/lease'),
-                        _buildFooterLink('About Us', '/about'),
-                        _buildFooterLink('Agents', '/agents'),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
-                    // Contact Info
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Contact Info',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildContactInfo(Icons.phone, '+1 (555) 123-4567'),
-                        _buildContactInfo(Icons.email, 'info@sora.com'),
-                        _buildContactInfo(Icons.location_on, '123 Real Estate Ave\nCity, State 12345'),
-                        _buildContactInfo(Icons.access_time, 'Mon-Fri: 9AM-6PM\nSat-Sun: 10AM-4PM'),
-                      ],
-                    ),
-                  ],
-                );
-              }
-            },
-          ),
-          const SizedBox(height: 40),
-          // Bottom bar
-          Container(
-            padding: const EdgeInsets.only(top: 20),
-            decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Colors.white24, width: 1),
+              gradient: LinearGradient(
+                colors: [Color(0xFF0A66C2), Color(0xFF1E90FF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Image.asset('assets/images/sora_logo.png', height: 40),
+                const SizedBox(height: 8),
                 const Text(
-                  '© 2024 SORA Real Estate. All rights reserved.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                Row(
-                  children: [
-                    _buildFooterLink('Privacy Policy', '/privacy', isBottomLink: true),
-                    const Text(' | ', style: TextStyle(color: Colors.white70)),
-                    _buildFooterLink('Terms of Service', '/terms', isBottomLink: true),
-                    const Text(' | ', style: TextStyle(color: Colors.white70)),
-                    _buildFooterLink('Cookie Policy', '/cookies', isBottomLink: true),
-                  ],
+                  'SORA',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home),
+            title: const Text('Home'),
+            onTap: () {
+              Navigator.pushNamed(context, '/home');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.apartment),
+            title: const Text('Buy'),
+            onTap: () {
+              Navigator.pushNamed(context, '/buy');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.house),
+            title: const Text('Rent'),
+            onTap: () {
+              Navigator.pushNamed(context, '/rent');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.attach_money),
+            title: const Text('Lease'),
+            onTap: () {
+              Navigator.pushNamed(context, '/lease');
+            },
+          ),
+          ListTile(
+            leading: const FaIcon(FontAwesomeIcons.airbnb, size: 24),
+            title: const Text('Airbnb'),
+            onTap: () {
+              Navigator.pushNamed(context, '/airbnb');
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.info),
+            title: const Text('About Us'),
+            onTap: () {
+              Navigator.pushNamed(context, '/about');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.people),
+            title: const Text('Agents'),
+            onTap: () {
+              Navigator.pushNamed(context, '/agents');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.mail),
+            title: const Text('Contact Us'),
+            onTap: () {
+              Navigator.pushNamed(context, '/contact');
+            },
+          ),
+          const Divider(),
+          if (isLoggedIn)
+            ...[
+              ListTile(
+                leading: const Icon(Icons.add_home_work),
+                title: const Text('My Listings'),
+                onTap: () {
+                  Navigator.pushNamed(context, '/my_listings');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.favorite),
+                title: const Text('My Favorites'),
+                onTap: () {
+                  Navigator.pushNamed(context, '/my_favorites');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('Recently Viewed'),
+                onTap: () {
+                  Navigator.pushNamed(context, '/recently_viewed');
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Logout'),
+                onTap: () async {
+                  await authService.signOut();
+                  Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+                },
+              ),
+            ]
+          else
+            ListTile(
+              leading: const Icon(Icons.login),
+              title: const Text('Sign In'),
+              onTap: () {
+                Navigator.pushNamed(context, '/signin');
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  // Common Footer for consistent UI
+  Widget buildFooter() {
+    final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
+
+    return Container(
+      color: const Color(0xFF0A66C2),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        // Corrected image path to fix the asset loading error
+                        Image.asset('assets/images/sora_logo.png', height: 40),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'SORA',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Sora is a leading platform for finding, buying, renting and leasing properties. We connect you to a vast network of listings and trusted agents.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _buildSocialButton(FontAwesomeIcons.twitter, 'https://twitter.com'),
+                        _buildSocialButton(FontAwesomeIcons.facebookF, 'https://facebook.com'),
+                        _buildSocialButton(FontAwesomeIcons.instagram, 'https://instagram.com'),
+                        _buildSocialButton(FontAwesomeIcons.linkedinIn, 'https://linkedin.com'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (!isSmallScreen) ...[
+                const SizedBox(width: 40),
+                Expanded(
+                  flex: 1,
+                  child: _buildFooterColumn('Quick Links', [
+                    _buildFooterLink('Home', '/home'),
+                    _buildFooterLink('Properties', '/properties'),
+                    _buildFooterLink('Agents', '/agents'),
+                    _buildFooterLink('Blog', '/blogs'),
+                    _buildFooterLink('Contact Us', '/contact'),
+                  ]),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _buildFooterColumn('Legal', [
+                    _buildFooterLink('Terms of Service', '/terms'),
+                    _buildFooterLink('Privacy Policy', '/privacy'),
+                    _buildFooterLink('Cookie Policy', '/cookies'),
+                  ]),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _buildFooterColumn('Contact Us', [
+                    _buildContactInfo(Icons.location_on, '123 Real Estate Avenue, Nairobi, Kenya'),
+                    _buildContactInfo(Icons.phone, '+254 712 345 678'),
+                    _buildContactInfo(Icons.email, 'info@sora.co.ke'),
+                  ]),
+                ),
+              ],
+            ],
+          ),
+          // Restructured the footer for small screens to use a Column to prevent overflow
+          if (isSmallScreen) ...[
+            const SizedBox(height: 20),
+            _buildFooterColumn('Quick Links', [
+              _buildFooterLink('Home', '/home'),
+              _buildFooterLink('Properties', '/properties'),
+              _buildFooterLink('Agents', '/agents'),
+              _buildFooterLink('Blog', '/blogs'),
+              _buildFooterLink('Contact Us', '/contact'),
+            ]),
+            const SizedBox(height: 20),
+            _buildFooterColumn('Legal', [
+              _buildFooterLink('Terms of Service', '/terms'),
+              _buildFooterLink('Privacy Policy', '/privacy'),
+              _buildFooterLink('Cookie Policy', '/cookies'),
+            ]),
+            const SizedBox(height: 20),
+            _buildFooterColumn('Contact Us', [
+              _buildContactInfo(Icons.location_on, '123 Real Estate Avenue, Nairobi, Kenya'),
+              _buildContactInfo(Icons.phone, '+254 712 345 678'),
+              _buildContactInfo(Icons.email, 'info@sora.co.ke'),
+            ]),
+          ],
+          const Divider(color: Colors.white24, height: 40),
+          Center(
+            child: Text(
+              '© ${DateTime.now().year} Sora. All rights reserved.',
+              style: const TextStyle(color: Colors.white70),
             ),
           ),
         ],
@@ -662,30 +589,80 @@ class CommonWidgets {
     );
   }
 
-  Widget _buildSocialIcon(IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+  Widget _buildSocialButton(IconData icon, String url) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 16.0),
+      child: IconButton(
+        icon: FaIcon(icon, color: Colors.white),
+        onPressed: () {
+          // Launch URL
+        },
       ),
-      child: Icon(icon, color: Colors.white, size: 20),
     );
   }
 
-  Widget _buildFooterLink(String text, String route, {bool isBottomLink = false}) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: isBottomLink ? 0 : 8),
-      child: InkWell(
-        onTap: () => Navigator.pushNamed(context, route),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: isBottomLink ? Colors.white70 : Colors.white,
-            fontSize: isBottomLink ? 14 : 14,
-            decoration: TextDecoration.none,
+  Widget _buildFooterColumn(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: Colors.white,
           ),
         ),
+        const SizedBox(height: 16),
+        ...children,
+      ],
+    );
+  }
+
+  Widget _buildFooterLink(String text, String route) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: InkWell(
+        onTap: () {
+          Navigator.pushNamed(context, route);
+        },
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBarButton(String text, String route, [bool isSelected = false]) {
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(context, route);
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              text,
+              style: TextStyle(
+                color: isSelected ? const Color(0xFF0A66C2) : const Color(0xFF0A66C2),
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          if (isSelected)
+            Container(
+              height: 2,
+              width: 50,
+              color: const Color(0xFF0A66C2),
+            ),
+        ],
       ),
     );
   }
@@ -727,9 +704,95 @@ class CommonWidgets {
         backgroundColor: color ?? const Color(0xFF0A66C2),
         padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(30),
         ),
-        elevation: 5,
+      ),
+    );
+  }
+
+  // ADDED: Method to display a sign-in prompt screen
+  Widget buildSignInPromptScreen(String destination) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.lock_outline,
+              size: 80,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Please sign in to view your listings',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You need to be logged in to access your listings.',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.login),
+              label: const Text('Sign In Now'),
+              onPressed: () {
+                Navigator.pushNamed(context, '/signin');
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ADDED: Method to display a message when there is no data
+  Widget buildEmptyState(String title, String subtitle, VoidCallback onAction, String actionLabel) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.info_outline,
+              size: 80,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: onAction,
+              child: Text(actionLabel),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
