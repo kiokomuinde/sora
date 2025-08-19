@@ -1,8 +1,9 @@
-// lib/screens/my_listings_screen.dart
-
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
+import 'package:sora_app/services/firestore_service.dart';
+import 'package:intl/intl.dart';
 
 class MyListingsScreen extends StatefulWidget {
   final AuthService authService;
@@ -15,55 +16,7 @@ class MyListingsScreen extends StatefulWidget {
 
 class _MyListingsScreenState extends State<MyListingsScreen> {
   late CommonWidgets commonWidgets;
-
-  // Sample user listings data
-  final List<Map<String, dynamic>> _userListings = [
-    {
-      'id': '1',
-      'title': '3BR House in Karen',
-      'location': 'Karen, Nairobi',
-      'price': 'KSH 25,000,000',
-      'bedrooms': 3,
-      'bathrooms': 2,
-      'area': '2500',
-      'listingType': 'Buy',
-      'status': 'Active',
-      'datePosted': '2024-01-15',
-      'views': 45,
-      'inquiries': 8,
-      'image': 'assets/images/property1.jpg',
-    },
-    {
-      'id': '2',
-      'title': 'Modern Apartment in Westlands',
-      'location': 'Westlands, Nairobi',
-      'price': 'KSH 80,000/month',
-      'bedrooms': 2,
-      'bathrooms': 2,
-      'area': '1200',
-      'listingType': 'Rent',
-      'status': 'Active',
-      'datePosted': '2024-01-10',
-      'views': 32,
-      'inquiries': 5,
-      'image': 'assets/images/property2.jpg',
-    },
-    {
-      'id': '3',
-      'title': 'Office Space in CBD',
-      'location': 'CBD, Nairobi',
-      'price': 'KSH 150,000/month',
-      'bedrooms': 0,
-      'bathrooms': 2,
-      'area': '800',
-      'listingType': 'Lease',
-      'status': 'Pending',
-      'datePosted': '2024-01-05',
-      'views': 28,
-      'inquiries': 3,
-      'image': 'assets/images/property3.jpg',
-    },
-  ];
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -71,11 +24,59 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
   }
 
+  String _formatPrice(String? price) {
+    if (price == null || price.isEmpty) {
+      return 'Price not listed';
+    }
+    try {
+      final formatter = NumberFormat('#,###', 'en_US');
+      final doublePrice = double.tryParse(price);
+      if (doublePrice != null) {
+        return 'KSH ${formatter.format(doublePrice)}';
+      }
+      return 'KSH $price';
+    } catch (e) {
+      return 'KSH $price';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = widget.authService.getCurrentUser();
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth >= 1000;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
+
+    if (user == null) {
+      return Scaffold(
+        appBar: commonWidgets.buildAppBar(),
+        endDrawer: commonWidgets.buildDrawer(),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.person_off, size: 80, color: Colors.grey),
+                const SizedBox(height: 24),
+                const Text(
+                  'You must be logged in to view your listings.',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black54),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                commonWidgets.buildCallToActionButton(
+                  text: 'Login',
+                  onPressed: () => Navigator.pushNamed(context, '/signin'),
+                  icon: Icons.login,
+                ),
+              ],
+            ),
+          ),
+        ),
+        bottomNavigationBar: (isLargeScreen || isMediumScreen) ? null : commonWidgets.buildFooter(),
+      );
+    }
 
     return Scaffold(
       appBar: commonWidgets.buildAppBar(),
@@ -83,16 +84,15 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header Section
             Container(
               width: double.infinity,
               padding: EdgeInsets.symmetric(
                 vertical: isLargeScreen ? 80 : (isMediumScreen ? 60 : 40),
                 horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
               ),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF1E90FF).withOpacity(0.8), Color(0xFF0A66C2).withOpacity(0.8)],
+                  colors: [Color(0xFF0A66C2), Color(0xFF1E90FF)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -116,300 +116,263 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                       color: Colors.white70,
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            // Action Buttons
-            Padding(
-              padding: EdgeInsets.symmetric(
-                vertical: isLargeScreen ? 30 : 20,
-                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${_userListings.length} Properties Listed',
-                    style: TextStyle(
-                      fontSize: isLargeScreen ? 20 : 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                   onPressed: () {
+                  const SizedBox(height: 24),
+                  commonWidgets.buildCallToActionButton(
+                    text: 'Add a Property',
+                    onPressed: () {
                       Navigator.pushNamed(context, '/add_property');
-                    },                    icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text('Add New Listing', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0A66C2),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+                    },
+                    icon: Icons.add_home_work,
+                    color: Colors.green,
                   ),
                 ],
               ),
             ),
-
-            // Listings Grid
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
                 vertical: isLargeScreen ? 30 : 20,
               ),
-              child: _userListings.isEmpty
-                  ? Column(
-                      children: [
-                        SizedBox(height: isLargeScreen ? 50 : 30),
-                        Icon(Icons.home_work_outlined, size: isLargeScreen ? 100 : 70, color: Colors.grey[400]),
-                        SizedBox(height: 20),
-                        Text(
-                          'No listings found.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: isLargeScreen ? 22 : (isMediumScreen ? 18 : 16),
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        Text(
-                          'Start by adding your first property listing.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: isLargeScreen ? 16 : 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        SizedBox(height: isLargeScreen ? 50 : 30),
-                      ],
-                    )
-                  : GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: isLargeScreen ? 2 : 1,
-                        crossAxisSpacing: isLargeScreen ? 30 : 20,
-                        mainAxisSpacing: isLargeScreen ? 30 : 20,
-                        childAspectRatio: isLargeScreen ? 1.5 : 1.2,
-                      ),
-                      itemCount: _userListings.length,
-                      itemBuilder: (context, index) {
-                        final listing = _userListings[index];
-                        return _buildListingCard(listing);
-                      },
-                    ),
-            ),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _firestoreService.getPropertiesForUser(user.uid),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-            // Footer
-            commonWidgets.buildFooter(),
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Something went wrong: ${snapshot.error}'));
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 50.0),
+                        child: Text(
+                          'You have no listings yet.',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final listings = snapshot.data!.docs;
+                  final listingsCount = listings.length;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 20.0),
+                        child: Text(
+                          'Your Properties ($listingsCount)',
+                          style: TextStyle(
+                            fontSize: isLargeScreen ? 24 : (isMediumScreen ? 20 : 18),
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
+                          crossAxisSpacing: 20,
+                          mainAxisSpacing: 20,
+                          childAspectRatio: 0.8,
+                        ),
+                        itemCount: listings.length,
+                        itemBuilder: (context, index) {
+                          final listing = listings[index].data() as Map<String, dynamic>;
+                          final listingId = listings[index].id;
+                          final String imageUrl = listing['coverImageUrl'] ?? '';
+                          return _buildListingCard(listing, listingId, imageUrl);
+                        },
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            if (isLargeScreen || isMediumScreen) commonWidgets.buildFooter(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildListingCard(Map<String, dynamic> listing) {
+  Widget _buildListingCard(Map<String, dynamic> listing, String listingId, String imageUrl) {
     return Card(
-      elevation: 5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Stack(
-              children: [
-                Image.asset(
-                  listing['image'],
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-                      ),
-                    );
-                  },
-                ),
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: listing['status'] == 'Active' ? Colors.green : Colors.orange,
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Text(
-                      listing['status'],
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0A66C2),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Text(
-                      listing['listingType'],
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Padding(
-              padding: const EdgeInsets.all(15.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 8,
+      shadowColor: Colors.black.withOpacity(0.1),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Stack(
                 children: [
-                  Text(
-                    listing['title'],
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  Positioned.fill(
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Center(child: Icon(Icons.broken_image, size: 50, color: Colors.grey)),
+                          )
+                        : Container(
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: Icon(Icons.house_siding, size: 50, color: Colors.grey),
+                            ),
+                          ),
                   ),
-                  const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          listing['location'],
-                          style: const TextStyle(fontSize: 14, color: Colors.grey),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  if (listing['bedrooms'] > 0)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Row(
                       children: [
-                        _buildFeatureIcon(Icons.bed, '${listing['bedrooms']} Beds'),
-                        _buildFeatureIcon(Icons.bathtub, '${listing['bathrooms']} Baths'),
-                        _buildFeatureIcon(Icons.square_foot, '${listing['area']} sqft'),
-                      ],
-                    ),
-                  const SizedBox(height: 10),
-                  Text(
-                    listing['price'],
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${listing['views']} Views',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.8),
+                            shape: BoxShape.circle,
                           ),
-                          Text(
-                            '${listing['inquiries']} Inquiries',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Color(0xFF0A66C2)),
+                          child: IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.white, size: 20),
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Edit listing feature coming soon!')),
+                              Navigator.pushNamed(
+                                context,
+                                '/add_property',
+                                arguments: {
+                                  'listing': listing,
+                                  'listingId': listingId,
+                                },
                               );
                             },
-                            tooltip: 'Edit Listing',
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              _showDeleteConfirmation(listing);
-                            },
-                            tooltip: 'Delete Listing',
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.8),
+                            shape: BoxShape.circle,
                           ),
-                        ],
-                      ),
-                    ],
+                          child: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.white, size: 20),
+                            onPressed: () => _showDeleteConfirmation(listing, listingId),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      listing['title'] ?? 'No Title',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Inter',
+                        color: Color(0xFF0A66C2),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${listing['location']?['town'] ?? 'N/A'}, ${listing['location']?['county'] ?? 'N/A'}',
+                            style: const TextStyle(fontSize: 14, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatPrice(listing['price']),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildFeatureIcon(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
-        const SizedBox(width: 5),
-        Text(
-          text,
-          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-        ),
-      ],
-    );
-  }
-
-  void _showDeleteConfirmation(Map<String, dynamic> listing) {
+  void _showDeleteConfirmation(Map<String, dynamic> listing, String listingId) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Listing'),
-          content: Text('Are you sure you want to delete "${listing['title']}"?'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: const Text('Delete Listing', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Text('Are you sure you want to delete "${listing['title']}"? This action cannot be undone.'),
           actions: [
             TextButton(
-              child: const Text('Cancel'),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
               child: const Text('Delete', style: TextStyle(color: Colors.white)),
-              onPressed: () {
-                setState(() {
-                  _userListings.removeWhere((item) => item['id'] == listing['id']);
-                });
+              onPressed: () async {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${listing['title']} has been deleted.')),
-                );
+                bool success = await _firestoreService.deleteProperty(listingId);
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${listing['title']} has been deleted successfully.'),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Failed to delete listing. Please try again.'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  );
+                }
               },
             ),
           ],
         );
-      },  );
+      },
+    );
   }
 }

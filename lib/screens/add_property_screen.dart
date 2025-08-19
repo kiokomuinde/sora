@@ -10,6 +10,8 @@ import 'package:sora_app/widgets/common_widgets.dart';
 // NEW: Import the services
 import 'package:sora_app/services/cloudinary_service.dart';
 import 'package:sora_app/services/firestore_service.dart';
+// NEW: Import the MyListingsScreen
+import 'package:sora_app/screens/my_listings_screen.dart';
 
 // New: Custom Input Formatter for number with commas
 class ThousandsSeparatorInputFormatter extends TextInputFormatter {
@@ -27,7 +29,7 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
     if (newText.length > 1 && newText.startsWith('0')) {
       newText = newText.substring(1);
     }
-    
+
     final int selectionIndex = newValue.selection.end;
     if (newText.length < 4) {
       return newValue.copyWith(
@@ -49,7 +51,58 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
     final newString = buffer.toString();
     final newSelectionOffset = newValue.text.length > newString.length ?
         selectionIndex - (newValue.text.length - newString.length) :
-        selectionIndex + (newString.length - newValue.text.length);
+        selectionIndex + (newString.length - newString.length);
+
+    return newValue.copyWith(
+      text: newString,
+      selection: TextSelection.collapsed(offset: newSelectionOffset),
+    );
+  }
+}
+
+// NEW: Custom Input Formatter for phone numbers
+class PhoneNumberInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final text = newValue.text;
+
+    // Remove all non-digits and existing spaces
+    String cleanedText = text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // Ensure the cleaned text doesn't exceed 9 digits
+    if (cleanedText.length > 9) {
+      cleanedText = cleanedText.substring(0, 9);
+    }
+
+    // Build the new string with the spaces
+    final buffer = StringBuffer();
+    int newSelectionOffset = newValue.selection.end;
+
+    for (int i = 0; i < cleanedText.length; i++) {
+      if (i > 0 && (i == 3 || i == 6)) {
+        buffer.write(' ');
+      }
+      buffer.write(cleanedText[i]);
+    }
+
+    final newString = buffer.toString();
+
+    // Calculate the new cursor position to handle both typing and deleting
+    if (newString.length > oldValue.text.length) {
+      // A character was added, possibly a space
+      if (newSelectionOffset == 4 || newSelectionOffset == 8) {
+        newSelectionOffset++;
+      }
+    } else if (newString.length < oldValue.text.length) {
+      // A character was deleted, possibly a space
+      if (newSelectionOffset == 4 || newSelectionOffset == 8) {
+        newSelectionOffset--;
+      }
+    }
+
+    // Ensure the new cursor offset is within the bounds of the new string
+    newSelectionOffset = newSelectionOffset.clamp(0, newString.length);
 
     return newValue.copyWith(
       text: newString,
@@ -69,17 +122,16 @@ class AddPropertyScreen extends StatefulWidget {
 
 class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTickerProviderStateMixin {
   late CommonWidgets commonWidgets;
-  int _currentStep = 0;
   bool _isSubmitting = false; // NEW: State variable for submission status
+  int _currentStep = 0;
+  final _formKey = GlobalKey<FormState>();
 
-  late AnimationController _scrollController;
-  late Animation<double> _scrollAnimation;
+  // Removed animation controllers and related variables
   final ScrollController _propertyTypeScrollController = ScrollController();
 
   // Form fields data
   String _propertyType = ''; // Residential, Commercial, Industrial, Land, Vocational
   String _listingType = ''; // For Sale, For Rent, For Lease
-  String _selectedCounty = '';
 
   // New controllers for the editable dropdown fields
   final TextEditingController _townController = TextEditingController();
@@ -89,6 +141,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
   final TextEditingController _countyController = TextEditingController();
   final FocusNode _countyFocusNode = FocusNode();
   List<String> _filteredCounties = [];
+  String _selectedCounty = '';
 
   // General Property Details
   final TextEditingController _addressController = TextEditingController();
@@ -149,6 +202,28 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
   final TextEditingController _zoningController = TextEditingController();
   final TextEditingController _utilitiesController = TextEditingController();
   final TextEditingController _landFeaturesController = TextEditingController();
+
+  // NEW: Airbnb Specific Fields
+  final TextEditingController _guestsController = TextEditingController();
+  final Map<String, bool> _airbnbAmenities = {
+    'Wifi': false,
+    'Kitchen': false,
+    'Dedicated workspace': false,
+    'TV': false,
+    'Washer': false,
+    'Air Conditioning': false,
+    'Essentials (towel, soap, toilet paper)': false,
+    'Hot Water': false,
+    'Security Cameras': false,
+    'Smoke alarm': false,
+    'Carbon monoxide alarm': false,
+  };
+  final Map<String, bool> _airbnbParking = {
+    'Free street parking': false,
+    'On-site parking': false,
+    'Paid parking off premises': false,
+  };
+
 
   // Checkbox states for features and amenities
   // Separate maps for features based on property type
@@ -300,35 +375,12 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
 
-    _scrollController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 20), // Adjust duration for desired speed
-    );
-
-    _scrollAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_scrollController)
-      ..addListener(() {
-        if (_propertyTypeScrollController.hasClients) {
-          final double currentScroll = _propertyTypeScrollController.offset;
-          final double maxScrollExtent = _propertyTypeScrollController.position.maxScrollExtent;
-          final double newScroll = maxScrollExtent * _scrollAnimation.value;
-
-          if (newScroll > currentScroll) {
-            _propertyTypeScrollController.jumpTo(newScroll);
-          } else if (currentScroll > 0 && newScroll < currentScroll) {
-            // If animation value wraps around, reset scroll to 0
-            _propertyTypeScrollController.jumpTo(0.0);
-          }
-        }
-      });
-
-    _scrollController.repeat(); // Start continuous animation
-
     // Initialize with all counties
     _filteredCounties = _kenyanCounties;
-    
+
     // Add listener to the county text field to filter suggestions
     _countyController.addListener(_filterCounties);
-    
+
     // Listen for focus changes to hide suggestions when field is unfocused
     _countyFocusNode.addListener(() {
       if (!_countyFocusNode.hasFocus) {
@@ -451,6 +503,12 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     _utilitiesController.clear();
     _landFeaturesController.clear();
 
+    // NEW: Clear Airbnb fields
+    _guestsController.clear();
+    _airbnbAmenities.updateAll((key, value) => false);
+    _airbnbParking.updateAll((key, value) => false);
+
+
     // Reset feature and amenity selections
     _residentialFeatures.updateAll((key, value) => false);
     _commercialFeatures.updateAll((key, value) => false);
@@ -460,7 +518,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    // Removed animation controller disposal
     _propertyTypeScrollController.dispose();
     _addressController.dispose();
     _priceController.dispose();
@@ -492,12 +550,18 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     _localityMtaaController.dispose();
     _countyController.dispose();
     _countyFocusNode.dispose();
+    // NEW: Dispose new Airbnb controller
+    _guestsController.dispose();
     super.dispose();
   }
 
   // NEW: Updated submit form logic
   void _submitForm() async {
     if (_isSubmitting) return; // Prevent double submission
+
+    if (!_validateStep()) {
+      return;
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -515,7 +579,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
       if (coverImageUrl == null && _coverImages.isNotEmpty) {
         throw Exception('Failed to upload cover image.');
       }
-      
+
       // 2. Prepare data for Firestore
       final Map<String, dynamic> propertyData = {
         'propertyType': _propertyType,
@@ -537,9 +601,9 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
         'additionalImageUrls': additionalImageUrls,
         'contactInfo': {
           'contactPerson': _contactPersonController.text,
-          'phone': _contactPhoneController.text,
+          'phone': '+254' + _contactPhoneController.text.replaceAll(' ', ''),
           'email': _contactEmailController.text,
-          'whatsapp': _contactWhatsappController.text,
+          'whatsapp': '+254' + _contactWhatsappController.text.replaceAll(' ', ''),
         },
       };
 
@@ -585,8 +649,17 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
             'landFeatures': _landFeaturesController.text,
           };
           break;
+        case 'Vocational':
+          if (_selectedPropertyDetail == 'Airbnb') {
+            propertyData['airbnbDetails'] = {
+              'guests': _guestsController.text,
+              'amenities': _airbnbAmenities.entries.where((e) => e.value).map((e) => e.key).toList(),
+              'parking': _airbnbParking.entries.where((e) => e.value).map((e) => e.key).toList(),
+            };
+          }
+          break;
       }
-      
+
       // 3. Store data in Firestore
       final success = await _firestoreService.addProperty(propertyData);
 
@@ -599,7 +672,13 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        // NEW: Navigate to MyListingsScreen and replace the current route
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MyListingsScreen(authService: widget.authService),
+          ),
+        );
       } else {
         throw Exception('Failed to add property to Firestore.');
       }
@@ -619,6 +698,58 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     }
   }
 
+  // NEW: Updated validation function for each step
+  bool _validateStep() {
+    String? errorMessage;
+    if (_currentStep == 0) {
+      if (_propertyType.isEmpty) {
+        errorMessage = 'Please select a property type.';
+      } else if (_listingType.isEmpty) {
+        errorMessage = 'Please select a listing type.';
+      } else if (_selectedCounty.isEmpty) {
+        errorMessage = 'Please select a county.';
+      } else if (_townController.text.isEmpty) {
+        errorMessage = 'Please enter a town.';
+      } else if (_localityMtaaController.text.isEmpty) {
+        errorMessage = 'Please enter a locality or Mtaa.';
+      }
+    } else if (_currentStep == 1) {
+      if (_addressController.text.isEmpty) {
+        errorMessage = 'Please enter a property title.';
+      } else if (_priceController.text.isEmpty) {
+        errorMessage = 'Please enter a price.';
+      } else if (_sizeController.text.isEmpty) {
+        errorMessage = 'Please enter the size.';
+      } else if (_descriptionController.text.isEmpty) {
+        errorMessage = 'Please enter a description.';
+      }
+    } else if (_currentStep == 3) {
+      if (_contactPersonController.text.isEmpty) {
+        errorMessage = 'Contact person\'s name is required.';
+      } else if (_contactPhoneController.text.isEmpty) {
+        errorMessage = 'Phone number is required.';
+      } else if (_contactWhatsappController.text.isEmpty) {
+        errorMessage = 'WhatsApp number is required.';
+      } else if (_contactEmailController.text.isEmpty) {
+        errorMessage = 'Email address is required.';
+      } else if (_coverImages.isEmpty) {
+        errorMessage = 'Please upload a cover image.';
+      }
+    }
+
+    if (errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
   // --- Widgets for each step ---
   Widget _buildStep1() {
     return Column(
@@ -628,12 +759,12 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           'Property & Listing Type',
           Icons.home,
           [
-            _buildSubSectionTitle('Property Type'),
+            _buildSubSectionTitle('Property Type *'),
             _buildPropertyTypeSelection(),
             const SizedBox(height: 10),
             if (_propertyType.isNotEmpty) _buildPropertyDetailDropdown(),
             const SizedBox(height: 20),
-            _buildSubSectionTitle('Listing Type'),
+            _buildSubSectionTitle('Listing Type *'),
             _buildListingTypeSelection(),
           ],
         ),
@@ -647,7 +778,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
               children: [
                 Expanded(
                   child: _buildDropdownField(
-                    'Town',
+                    'Town *',
                     _townController.text,
                     _countyTowns[_selectedCounty] ?? [],
                     (String? newValue) {
@@ -663,7 +794,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
                 Expanded(
                   child: _buildTextField(
                     _localityMtaaController, // Now a text field controller
-                    'Locality/Mtaa',
+                    'Locality/Mtaa *',
                     'e.g., Upper Hill',
                     icon: Icons.place,
                   ),
@@ -677,6 +808,19 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
   }
 
   Widget _buildStep2() {
+    String titleLabel = 'Property Title *';
+    String titleHint = 'e.g., 5 bedroom mansion in Karen, Nairobi';
+    String descriptionLabel = 'Property Description *';
+    String descriptionHint = 'Provide a detailed description of the property';
+
+    // Check if the property type is Vocational and the detail is Airbnb
+    if (_propertyType == 'Vocational' && _selectedPropertyDetail == 'Airbnb') {
+      titleLabel = 'Airbnb Title *';
+      titleHint = 'e.g., Cozy loft near city center';
+      descriptionLabel = 'Airbnb Description *';
+      descriptionHint = 'Describe the space, amenities, and guest access';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -686,8 +830,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           [
             _buildTextField(
               _addressController,
-              'Property Title',
-              'e.g., 5 bedroom mansion in Karen, Nairobi',
+              titleLabel,
+              titleHint,
               maxLines: 3,
               icon: Icons.location_city,
               widthFactor: 1.0,
@@ -696,7 +840,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
             Row(
               children: [
                 Expanded(
-                  child: _buildTextField(_priceController, 'Price (KSH)', 'e.g., 25,000,000', keyboardType: TextInputType.number, icon: Icons.attach_money, inputFormatters: [FilteringTextInputFormatter.digitsOnly, ThousandsSeparatorInputFormatter()]),
+                  child: _buildTextField(_priceController, 'Price (KSH) *', 'e.g., 25,000,000', keyboardType: TextInputType.number, icon: Icons.attach_money, inputFormatters: [FilteringTextInputFormatter.digitsOnly, ThousandsSeparatorInputFormatter()]),
                 ),
                 // NEW: Conditional Price Label
                 if (_listingType == 'For Rent')
@@ -721,6 +865,17 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
                       ),
                     ),
                   ),
+                if (_listingType == 'Staycation') // Added condition for "Staycation"
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0, top: 18.0),
+                    child: Text(
+                      '/day',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: _buildSizeField(),
@@ -729,15 +884,15 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
             ),
             _buildTextField(
               _descriptionController,
-              'Property Description',
-              'Provide a detailed description of the property',
+              descriptionLabel,
+              descriptionHint,
               maxLines: 4,
               icon: Icons.description,
               widthFactor: 1.0,
               maxLength: 1000, // Character limit for description
             ),
             // Replaced the text field with a year picker
-            if (_propertyType != 'Land')
+            if (_propertyType != 'Land' && !(_propertyType == 'Vocational' && _selectedPropertyDetail == 'Airbnb'))
               _buildYearPickerField(),
           ],
         ),
@@ -753,9 +908,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
         if (_propertyType == 'Commercial') _buildCommercialDetails(),
         if (_propertyType == 'Industrial') _buildIndustrialDetails(),
         if (_propertyType == 'Land') _buildLandDetails(),
+        if (_propertyType == 'Vocational' && _selectedPropertyDetail == 'Airbnb') _buildAirbnbDetails(),
 
-        // Features & Amenities are hidden for land
-        if (_propertyType != 'Land' && _propertyType.isNotEmpty)
+        // Features & Amenities are hidden for land and now Airbnb
+        if (_propertyType != 'Land' && _propertyType.isNotEmpty && !(_propertyType == 'Vocational' && _selectedPropertyDetail == 'Airbnb'))
           _buildFormSection(
             'Features & Amenities',
             Icons.star,
@@ -779,27 +935,80 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           'Contact Information',
           Icons.contact_phone,
           [
-            _buildTextField(_contactPersonController, 'Contact Person Name', 'e.g., John Doe', icon: Icons.person, widthFactor: 1.0),
+            _buildTextField(_contactPersonController, 'Contact Person Name *', 'e.g., John Doe', icon: Icons.person, widthFactor: 1.0),
             Row(
               children: [
                 Expanded(
-                  child: _buildTextField(_contactPhoneController, 'Phone Number', 'e.g., +254712345678', keyboardType: TextInputType.phone, icon: Icons.phone),
+                  child: _buildTextField(
+                    _contactPhoneController,
+                    'Phone Number *',
+                    'e.g., 712 345 678',
+                    keyboardType: TextInputType.phone,
+                    icon: Icons.phone,
+                    inputFormatters: [PhoneNumberInputFormatter()],
+                    prefix: Text(
+                      '+254 ',
+                      style: TextStyle(
+                        color: Color(0xFF0A66C2),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    maxLength: 11, // Adjusted from 12 to 11
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildTextField(_contactWhatsappController, 'WhatsApp Number', 'e.g., +254712345678', keyboardType: TextInputType.phone, icon: Icons.chat),
+                  child: _buildTextField(
+                    _contactWhatsappController,
+                    'WhatsApp Number *',
+                    'e.g., 712 345 678',
+                    keyboardType: TextInputType.phone,
+                    icon: Icons.chat,
+                    inputFormatters: [PhoneNumberInputFormatter()],
+                    prefix: Text(
+                      '+254 ',
+                      style: TextStyle(
+                        color: Color(0xFF0A66C2),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    maxLength: 11, // Adjusted from 12 to 11
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            _buildTextField(_contactEmailController, 'Email Address', 'e.g., john@example.com', keyboardType: TextInputType.emailAddress, icon: Icons.email, widthFactor: 1.0),
+            _buildTextField(
+              _contactEmailController,
+              'Email Address *',
+              'e.g., john@example.com',
+              keyboardType: TextInputType.emailAddress,
+              icon: Icons.email,
+              widthFactor: 1.0,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Email address is required.';
+                }
+                // A more robust email validation regex
+                final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                if (!emailRegex.hasMatch(value)) {
+                  return 'Please enter a valid email address.';
+                }
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+            ),
           ],
         ),
         _buildFormSection(
           'Property Images',
           Icons.image,
           [
-            _buildImageUploadSection(),
+            _buildSubSectionTitle('Cover Image (Required)'),
+            _buildImageUploadContainer(isCoverPhoto: true),
+            const SizedBox(height: 20),
+            _buildSubSectionTitle('Additional Images (Optional)'),
+            _buildImageUploadContainer(isCoverPhoto: false),
           ],
         ),
       ],
@@ -820,128 +1029,133 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header Section (now scrolls with content)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24.0),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [const Color(0xFF0A66C2), const Color(0xFF1E90FF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Section (now scrolls with content)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24.0),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [const Color(0xFF0A66C2), const Color(0xFF1E90FF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0A66C2).withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0A66C2).withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Add New Property Listing',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Fill in the details to list your property.',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 32),
+
+                    // Main Content Area based on step
+                    if (_currentStep == 0) _buildStep1(),
+                    if (_currentStep == 1) _buildStep2(),
+                    if (_currentStep == 2) _buildStep3(),
+                    if (_currentStep == 3) _buildStep4(),
+
+                    const SizedBox(height: 32),
+
+                    // Navigation Buttons (now scrollable with content)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Add New Property Listing',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                        if (_currentStep > 0)
+                          SizedBox(
+                            width: 150,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF0A66C2),
+                                side: const BorderSide(color: Color(0xFF0A66C2), width: 1.5),
+                                padding: const EdgeInsets.symmetric(vertical: 24),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: _isSubmitting ? null : () {
+                                setState(() {
+                                  _currentStep--;
+                                });
+                              },
+                              child: const Text('Back', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Fill in the details to list your property.',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Main Content Area based on step
-                  if (_currentStep == 0) _buildStep1(),
-                  if (_currentStep == 1) _buildStep2(),
-                  if (_currentStep == 2) _buildStep3(),
-                  if (_currentStep == 3) _buildStep4(),
-
-                  const SizedBox(height: 32),
-
-                  // Navigation Buttons (now scrollable with content)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (_currentStep > 0)
+                        const Spacer(),
                         SizedBox(
                           width: 150,
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF0A66C2),
-                              side: const BorderSide(color: Color(0xFF0A66C2), width: 1.5),
+                          child: ElevatedButton(
+                            onPressed: _isSubmitting ? null : () {
+                              if (_validateStep()) {
+                                if (_currentStep < 3) {
+                                  setState(() {
+                                    _currentStep++;
+                                  });
+                                } else {
+                                  _submitForm();
+                                }
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor: const Color(0xFF0A66C2),
                               padding: const EdgeInsets.symmetric(vertical: 24),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
+                              elevation: 3,
                             ),
-                            onPressed: _isSubmitting ? null : () {
-                              setState(() {
-                                _currentStep--;
-                              });
-                            },
-                            child: const Text('Back', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                    ),
+                                  )
+                                : Text(
+                                    _currentStep < 3 ? 'Next' : 'Submit Listing',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
-                      const Spacer(),
-                      SizedBox(
-                        width: 150,
-                        child: ElevatedButton(
-                          onPressed: _isSubmitting ? null : () {
-                            if (_currentStep < 3) {
-                              setState(() {
-                                _currentStep++;
-                              });
-                            } else {
-                              _submitForm();
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: const Color(0xFF0A66C2),
-                            padding: const EdgeInsets.symmetric(vertical: 24),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 3,
-                          ),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 3,
-                                  ),
-                                )
-                              : Text(
-                                  _currentStep < 3 ? 'Next' : 'Submit Listing',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1069,7 +1283,13 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     Widget? suffixIcon,
     FocusNode? focusNode,
     int? maxLength, // NEW: Added maxLength parameter
+    Widget? prefix, // NEW: Changed from prefixText to prefix
+    String? Function(String?)? validator, // NEW: Added validator parameter
+    AutovalidateMode autovalidateMode = AutovalidateMode.disabled, // NEW: Added autovalidateMode
   }) {
+    // Determine if the field is required based on its label
+    final bool isRequired = label.contains('*');
+
     return Container(
       width: widthFactor != null ? MediaQuery.of(context).size.width * widthFactor : null,
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -1085,7 +1305,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           labelText: label,
           hintText: hint,
           prefixIcon: icon != null ? Icon(icon, color: Colors.grey[600]) : null,
-          suffixIcon: suffixIcon,
+          prefix: prefix, // NEW: Applied prefix widget
+          suffixIcon: suffixIcon, // NEW: Applied suffixIcon
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(color: Colors.grey[400]!),
@@ -1107,10 +1328,19 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
             setState(() {}); // Rebuild to update the counter
           }
         },
+        validator: validator ?? (isRequired
+            ? (value) {
+                if (value == null || value.isEmpty) {
+                  return '$label is required.';
+                }
+                return null;
+              }
+            : null),
+        autovalidateMode: autovalidateMode,
       ),
     );
   }
-  
+
   // New method for searchable county dropdown
   Widget _buildSearchableCountyDropdown() {
     return Column(
@@ -1118,7 +1348,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
       children: [
         _buildTextField(
           _countyController,
-          'County',
+          'County *',
           'Search for a county',
           icon: Icons.location_city,
           focusNode: _countyFocusNode,
@@ -1139,6 +1369,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
             ),
             child: ListView.builder(
               shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: _filteredCounties.length,
               itemBuilder: (context, index) {
                 final county = _filteredCounties[index];
@@ -1163,6 +1394,9 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
   }
 
   Widget _buildDropdownField(String label, String currentValue, List<String> items, Function(String?) onChanged, {IconData? icon, double? widthFactor}) {
+    // Determine if the field is required based on its label
+    final bool isRequired = label.contains('*');
+
     return Container(
       width: widthFactor != null ? MediaQuery.of(context).size.width * widthFactor : null,
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -1186,7 +1420,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           filled: true,
           fillColor: Colors.grey[50],
         ),
-        hint: Text('Select $label'),
+        hint: Text('Select ${label.replaceAll('*', '').trim()}'),
         items: items.map((String item) {
           return DropdownMenuItem<String>(
             value: item,
@@ -1194,6 +1428,14 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           );
         }).toList(),
         onChanged: onChanged,
+        validator: isRequired
+            ? (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select a ${label.replaceAll('*', '').trim()}.';
+                }
+                return null;
+              }
+            : null,
       ),
     );
   }
@@ -1212,6 +1454,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
       (String? newValue) {
         setState(() {
           _selectedPropertyDetail = newValue!;
+           // Set 'Staycation' as default when 'Airbnb' is selected
+          if (_propertyType == 'Vocational' && _selectedPropertyDetail == 'Airbnb') {
+            _listingType = 'Staycation';
+          }
         });
       },
       icon: Icons.category,
@@ -1228,51 +1474,11 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              MouseRegion(
-                onEnter: (_) => _scrollController.stop(),
-                onExit: (_) => _scrollController.repeat(),
-                child: GestureDetector(
-                  onTapDown: (_) => _scrollController.stop(),
-                  onTapUp: (_) => _scrollController.repeat(),
-                  child: _buildPropertyTypeButton("Residential", Icons.house),
-                ),
-              ),
-              MouseRegion(
-                onEnter: (_) => _scrollController.stop(),
-                onExit: (_) => _scrollController.repeat(),
-                child: GestureDetector(
-                  onTapDown: (_) => _scrollController.stop(),
-                  onTapUp: (_) => _scrollController.repeat(),
-                  child: _buildPropertyTypeButton("Commercial", Icons.business),
-                ),
-              ),
-              MouseRegion(
-                onEnter: (_) => _scrollController.stop(),
-                onExit: (_) => _scrollController.repeat(),
-                child: GestureDetector(
-                  onTapDown: (_) => _scrollController.stop(),
-                  onTapUp: (_) => _scrollController.repeat(),
-                  child: _buildPropertyTypeButton("Industrial", Icons.factory),
-                ),
-              ),
-              MouseRegion(
-                onEnter: (_) => _scrollController.stop(),
-                onExit: (_) => _scrollController.repeat(),
-                child: GestureDetector(
-                  onTapDown: (_) => _scrollController.stop(),
-                  onTapUp: (_) => _scrollController.repeat(),
-                  child: _buildPropertyTypeButton("Land", Icons.landscape),
-                ),
-              ),
-              MouseRegion(
-                onEnter: (_) => _scrollController.stop(),
-                onExit: (_) => _scrollController.repeat(),
-                child: GestureDetector(
-                  onTapDown: (_) => _scrollController.stop(),
-                  onTapUp: (_) => _scrollController.repeat(),
-                  child: _buildPropertyTypeButton("Vocational", Icons.work),
-                ),
-              ),
+              _buildPropertyTypeButton("Residential", Icons.house),
+              _buildPropertyTypeButton("Commercial", Icons.business),
+              _buildPropertyTypeButton("Industrial", Icons.factory),
+              _buildPropertyTypeButton("Land", Icons.landscape),
+              _buildPropertyTypeButton("Vocational", Icons.work),
             ],
           ),
         ),
@@ -1300,6 +1506,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
             }
             _propertyType = type;
             _selectedPropertyDetail = ''; // Reset property detail when type changes
+            // Reset listing type as it may not be applicable to the new type
+            _listingType = '';
           });
         },
         child: Container(
@@ -1332,44 +1540,67 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
   }
 
   Widget _buildListingTypeSelection() {
+    List<Widget> buttons = [];
+    final bool staycationSelected = _listingType == 'Staycation';
+
+    buttons.addAll([
+      _buildListingTypeButton('For Sale', Icons.attach_money, isEnabled: !staycationSelected),
+      _buildListingTypeButton('For Rent', Icons.house_siding, isEnabled: !staycationSelected),
+      _buildListingTypeButton('For Lease', Icons.handshake, isEnabled: !staycationSelected),
+    ]);
+
+    // Conditionally add the 'Staycation' button
+    if (_propertyType == 'Vocational' && _selectedPropertyDetail == 'Airbnb') {
+      buttons.add(_buildListingTypeButton('Staycation', Icons.calendar_month, isEnabled: true));
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildListingTypeButton('For Sale', Icons.attach_money),
-        _buildListingTypeButton('For Rent', Icons.house_siding),
-        _buildListingTypeButton('For Lease', Icons.handshake),
-      ],
+      children: buttons,
     );
   }
 
-  Widget _buildListingTypeButton(String type, IconData icon) {
+  Widget _buildListingTypeButton(String type, IconData icon, {required bool isEnabled}) {
     bool isSelected = _listingType == type;
+    Color? buttonColor = isSelected ? const Color(0xFF0A66C2) : Colors.grey[200];
+    Color? iconColor = isSelected ? Colors.white : const Color(0xFF0A66C2);
+    Color? textColor = isSelected ? Colors.white : Colors.grey[800];
+    Color? borderColor = isSelected ? const Color(0xFF0A66C2) : Colors.grey[400];
+
+    // If disabled, override the colors
+    if (!isEnabled) {
+      buttonColor = Colors.grey[200];
+      iconColor = Colors.grey[400];
+      textColor = Colors.grey[400];
+      borderColor = Colors.grey[300];
+    }
+
     return Expanded(
       child: GestureDetector(
-        onTap: () {
+        onTap: isEnabled ? () {
           setState(() {
             _listingType = type;
           });
-        },
+        } : null, // Set onTap to null to disable
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 4.0),
           padding: const EdgeInsets.all(12.0),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF0A66C2) : Colors.grey[200],
+            color: buttonColor,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected ? const Color(0xFF0A66C2) : Colors.grey[400]!,
+              color: borderColor!,
               width: 1.5,
             ),
           ),
           child: Column(
             children: [
-              Icon(icon, color: isSelected ? Colors.white : const Color(0xFF0A66C2)),
+              Icon(icon, color: iconColor),
               const SizedBox(height: 8),
               Text(
                 type,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey[800],
+                  color: textColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1383,7 +1614,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
   Widget _buildSizeField() {
     return _buildTextField(
       _sizeController,
-      'Size',
+      'Size *',
       'e.g., 1500',
       keyboardType: TextInputType.number,
       icon: Icons.square_foot,
@@ -1454,6 +1685,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
             width: MediaQuery.of(context).size.width * 0.5, // Reduced width
             child: GridView.builder(
               shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 childAspectRatio: 2.0,
@@ -1575,7 +1807,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
       [
         _buildTextField(_occupancyController, 'Occupancy', 'e.g., 80%', keyboardType: TextInputType.number, icon: Icons.people, inputFormatters: [FilteringTextInputFormatter.digitsOnly], widthFactor: 1.0),
         _buildTextField(_leaseTermsController, 'Lease Terms', 'e.g., 5 years', icon: Icons.calendar_today, widthFactor: 1.0),
-        _buildTextField(_businessTypeController, 'Business Type', 'e.g., Retail, Office', icon: Icons.work, widthFactor: 1.0),
+        _buildTextField(_businessTypeController, 'BusinessType', 'e.g., Retail, Office', icon: Icons.work, widthFactor: 1.0),
       ],
     );
   }
@@ -1602,6 +1834,32 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
       ],
     );
   }
+
+  // NEW: Airbnb specific section
+  Widget _buildAirbnbDetails() {
+    return _buildFormSection(
+      'Airbnb Specifics',
+      Icons.hotel,
+      [
+        _buildTextField(
+          _guestsController,
+          'Number of Guests',
+          'e.g., 4',
+          keyboardType: TextInputType.number,
+          icon: Icons.group,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          widthFactor: 1.0,
+        ),
+        const SizedBox(height: 16),
+        _buildSubSectionTitle('Amenities'),
+        _buildCheckboxGrid(_airbnbAmenities),
+        const SizedBox(height: 16),
+        _buildSubSectionTitle('Parking'),
+        _buildCheckboxGrid(_airbnbParking),
+      ],
+    );
+  }
+
 
   Widget _buildFeaturesSection() {
     Map<String, bool> featuresMap;
