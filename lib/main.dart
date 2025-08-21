@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sora_app/firebase_options.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'dart:html' as html;
+// Add the flutter_dotenv import
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // New screens
 import 'screens/splash_screen.dart';
@@ -45,6 +47,8 @@ import 'screens/airbnb_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Load the .env file
+  await dotenv.load(fileName: ".env");
 
   try {
     await Firebase.initializeApp(

@@ -5,6 +5,9 @@ import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 
+// Import the new MpesaService class
+import 'package:sora_app/services/mpesa_service.dart';
+
 class MyListingsScreen extends StatefulWidget {
   final AuthService authService;
 
@@ -17,6 +20,7 @@ class MyListingsScreen extends StatefulWidget {
 class _MyListingsScreenState extends State<MyListingsScreen> {
   late CommonWidgets commonWidgets;
   final FirestoreService _firestoreService = FirestoreService();
+  final MpesaService _mpesaService = MpesaService();
   String _selectedStatusFilter = 'All';
 
   // A set to hold the IDs of the selected listings
@@ -34,6 +38,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         'Direct inquiries'
       ],
       'color': Colors.blue,
+      'amount': 2500,
     },
     {
       'name': 'Featured Listing',
@@ -45,6 +50,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         'Enhanced property details'
       ],
       'color': Colors.orange,
+      'amount': 5000,
     },
     {
       'name': 'Premium Listing',
@@ -57,6 +63,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         'Professional photography'
       ],
       'color': Colors.purple,
+      'amount': 10000,
     },
   ];
 
@@ -97,6 +104,68 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       return 'KSH $price';
     } catch (e) {
       return 'KSH $price';
+    }
+  }
+
+  // NEW: Method to handle M-Pesa payment
+  void _initiateMpesaPayment(Map<String, dynamic> plan) async {
+    // Show a loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text("Initiating M-Pesa payment..."),
+            ],
+          ),
+        );
+      },
+    );
+
+    // Get the current user's phone number. You might need to store this in your user profile.
+    // For this example, we'll use a placeholder.
+    final userPhoneNumber = widget.authService.getCurrentUser()?.phoneNumber ?? '254700000000';
+    final amount = plan['amount'] as int;
+
+    try {
+      final success = await _mpesaService.initiateStkPush(
+        phoneNumber: userPhoneNumber,
+        amount: amount,
+        description: 'Payment for ${plan['name']}',
+      );
+
+      // Close the loading dialog
+      Navigator.of(context).pop();
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('STK Push for ${plan['name']} initiated successfully. Please enter your M-Pesa PIN.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _clearSelection(); // Clear selections after payment is initiated
+        Navigator.of(context).pop(); // Close the pricing dialog
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to initiate STK Push. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.of(context).pop(); // Close the loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -204,7 +273,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                     final listingData = listing['data'] as Map<String, dynamic>;
                     return _selectedStatusFilter == 'All' || listingData['status'] == _selectedStatusFilter;
                   }).toList();
-                  
+
                   final listingsCount = filteredListings.length;
 
                   final hasPendingOrInactiveSelected = allListings.any((listing) {
@@ -327,7 +396,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   void _showPricingDialog(Set<String> listingIds) {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth >= 1000;
-    
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -465,10 +534,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    // TODO: Implement payment logic for the selected plan
-                    print('Selected plan: ${plan['name']}');
-                    Navigator.of(context).pop(); // Close the dialog
-                    _showPaymentConfirmationDialog(plan['name'] as String);
+                    // NEW: Call the M-Pesa payment method
+                    _initiateMpesaPayment(plan);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
