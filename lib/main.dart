@@ -48,7 +48,7 @@ import 'screens/airbnb_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Load the .env file
-  await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: "env.txt");
 
   try {
     await Firebase.initializeApp(
