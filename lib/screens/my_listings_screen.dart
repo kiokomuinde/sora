@@ -4,8 +4,10 @@ import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/services/firestore_service.dart';
 import 'package:intl/intl.dart';
-
-// Import the new MpesaService class
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:sora_app/services/mpesa_service.dart';
 
 class MyListingsScreen extends StatefulWidget {
@@ -604,8 +606,17 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
     String imageUrl = listing['coverImageUrl'] ?? '';
 
+    // Safely access nested data
+    final residentialDetails = listing['residentialDetails'] as Map<String, dynamic>?;
+
+    final isActive = listing['status'] == 'Active';
+
     return GestureDetector(
-      onTap: () => _toggleSelection(listingId),
+      onTap: () {
+        if (!isActive) {
+          _toggleSelection(listingId);
+        }
+      },
       child: Card(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -715,33 +726,34 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                         ],
                       ),
                     ),
-                    // NEW: Checkbox for selection
-                    Positioned(
-                      bottom: 8,
-                      left: 8,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.7),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Checkbox(
-                          value: isSelected,
-                          onChanged: (bool? value) {
-                            _toggleSelection(listingId);
-                          },
-                          fillColor: MaterialStateProperty.resolveWith<Color>(
-                            (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.selected)) {
-                                return Colors.blue;
-                              }
-                              return Colors.transparent;
-                            },
+                    // Checkbox for selection, only visible if not active
+                    if (!isActive)
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.7),
+                            shape: BoxShape.circle,
                           ),
-                          checkColor: Colors.white,
-                          shape: const CircleBorder(),
+                          child: Checkbox(
+                            value: isSelected,
+                            onChanged: (bool? value) {
+                              _toggleSelection(listingId);
+                            },
+                            fillColor: MaterialStateProperty.resolveWith<Color>(
+                              (Set<MaterialState> states) {
+                                if (states.contains(MaterialState.selected)) {
+                                  return Colors.blue;
+                                }
+                                return Colors.transparent;
+                              },
+                            ),
+                            checkColor: Colors.white,
+                            shape: const CircleBorder(),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -790,9 +802,15 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                           Row(
                             children: [
                               if (listing['propertyType'] != 'Land') ...[
-                                _buildDetailRow(Icons.king_bed, listing['beds']?.toString() ?? 'N/A'),
+                                _buildDetailRow(
+                                  Icons.king_bed,
+                                  residentialDetails?['bedrooms']?.toString() ?? 'N/A',
+                                ),
                                 const SizedBox(width: 16),
-                                _buildDetailRow(Icons.bathtub, listing['baths']?.toString() ?? 'N/A'),
+                                _buildDetailRow(
+                                  Icons.bathtub,
+                                  residentialDetails?['bathrooms']?.toString() ?? 'N/A',
+                                ),
                                 const SizedBox(width: 16),
                               ],
                               _buildDetailRow(Icons.home_work, listing['propertyType'] ?? 'N/A'),
