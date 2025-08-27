@@ -3,8 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// This screen displays a list of sample Airbnb-style short-term rentals.
+// This screen displays a list of Airbnb-style short-term rentals fetched from Firestore.
 class AirbnbScreen extends StatefulWidget {
   final AuthService authService;
 
@@ -16,55 +17,32 @@ class AirbnbScreen extends StatefulWidget {
 
 class _AirbnbScreenState extends State<AirbnbScreen> {
   late CommonWidgets commonWidgets;
-
-  // Sample Airbnb-style listings data
-  final List<Map<String, dynamic>> _airbnbListings = [
-    {
-      'id': '1',
-      'title': 'Cozy Lakeside Cabin',
-      'location': 'Lake Naivasha, Kenya',
-      'price': 'KSH 15,000 / night',
-      'bedrooms': 2,
-      'guests': 4,
-      'rating': 4.8,
-      'image': 'assets/images/property_airbnb1.jpg',
-    },
-    {
-      'id': '2',
-      'title': 'Modern Loft in Downtown',
-      'location': 'CBD, Nairobi',
-      'price': 'KSH 10,000 / night',
-      'bedrooms': 1,
-      'guests': 2,
-      'rating': 4.5,
-      'image': 'assets/images/property_airbnb2.jpg',
-    },
-    {
-      'id': '3',
-      'title': 'Beachfront Villa with Pool',
-      'location': 'Diani Beach, Mombasa',
-      'price': 'KSH 30,000 / night',
-      'bedrooms': 3,
-      'guests': 6,
-      'rating': 4.9,
-      'image': 'assets/images/property_airbnb3.jpg',
-    },
-    {
-      'id': '4',
-      'title': 'Safari Tent in Maasai Mara',
-      'location': 'Maasai Mara, Kenya',
-      'price': 'KSH 20,000 / night',
-      'bedrooms': 1,
-      'guests': 2,
-      'rating': 5.0,
-      'image': 'assets/images/property_airbnb4.jpg',
-    },
-  ];
+  late Future<List<Map<String, dynamic>>> _propertiesFuture;
 
   @override
   void initState() {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
+    // Start fetching Airbnb properties from Firestore when the screen initializes
+    _propertiesFuture = _fetchAirbnbProperties();
+  }
+
+  // Method to fetch all properties from the 'properties' collection where propertyType is 'Vocational'
+  Future<List<Map<String, dynamic>>> _fetchAirbnbProperties() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('properties')
+          .where('propertyType', isEqualTo: 'Vocational')
+          .get();
+
+      return querySnapshot.docs.map((doc) => {
+            ...doc.data() as Map<String, dynamic>,
+            'id': doc.id, // Add the document ID to the data map
+          }).toList();
+    } catch (e) {
+      print('Error fetching Airbnb properties: $e');
+      return [];
+    }
   }
 
   @override
@@ -72,100 +50,83 @@ class _AirbnbScreenState extends State<AirbnbScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth >= 1000;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
+    
+    // Set column count based on screen size
+    int crossAxisCount = 1;
+    if (isLargeScreen) {
+      crossAxisCount = 3;
+    } else if (isMediumScreen) {
+      crossAxisCount = 2;
+    }
 
     return Scaffold(
+      // The `buildAppBar` method in `common_widgets.dart` does not have a `title` parameter.
+      // Removed the title parameter to resolve the compilation error.
       appBar: commonWidgets.buildAppBar(),
       endDrawer: commonWidgets.buildDrawer(),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header Section
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(
-                vertical: isLargeScreen ? 80 : (isMediumScreen ? 60 : 40),
-                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [const Color(0xFF1E90FF).withOpacity(0.8), const Color(0xFF0A66C2).withOpacity(0.8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Find Your Perfect Getaway',
-                    style: TextStyle(
-                      fontSize: isLargeScreen ? 48 : (isMediumScreen ? 38 : 28),
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _propertiesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return commonWidgets.buildEmptyState(
+                    'Oops!',
+                    'Something went wrong. Please try again later.',
+                    () {
+                      setState(() {
+                        _propertiesFuture = _fetchAirbnbProperties();
+                      });
+                    },
+                    'Retry',
+                  );
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return commonWidgets.buildEmptyState(
+                    'No Listings Found',
+                    'There are no short-term rentals available at the moment.',
+                    () {
+                      setState(() {
+                        _propertiesFuture = _fetchAirbnbProperties();
+                      });
+                    },
+                    'Refresh',
+                  );
+                } else {
+                  final properties = snapshot.data!;
+                  return Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
+                      vertical: 20,
                     ),
-                  ),
-                  SizedBox(height: isLargeScreen ? 20 : 10),
-                  Text(
-                    'Browse unique homes and experiences for your next trip.',
-                    style: TextStyle(
-                      fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Listings Grid
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
-                vertical: isLargeScreen ? 30 : 20,
-              ),
-              child: _airbnbListings.isEmpty
-                  ? Column(
+                    color: const Color(0xFFF0F2F5),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(height: isLargeScreen ? 50 : 30),
-                        Icon(Icons.bed_outlined, size: isLargeScreen ? 100 : 70, color: Colors.grey[400]),
-                        SizedBox(height: 20),
-                        Text(
-                          'No listings found.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: isLargeScreen ? 22 : (isMediumScreen ? 18 : 16),
-                            color: Colors.grey[600],
+                        const SizedBox(height: 20),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            childAspectRatio: 0.7,
+                            crossAxisSpacing: 20,
+                            mainAxisSpacing: 20,
                           ),
+                          itemCount: properties.length,
+                          itemBuilder: (context, index) {
+                            final listing = properties[index];
+                            return _buildListingCard(listing);
+                          },
                         ),
-                        SizedBox(height: 10),
-                        Text(
-                          'Check back later for new short-term rental listings.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: isLargeScreen ? 16 : 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        SizedBox(height: isLargeScreen ? 50 : 30),
                       ],
-                    )
-                  : GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
-                        crossAxisSpacing: isLargeScreen ? 30 : 20,
-                        mainAxisSpacing: isLargeScreen ? 30 : 20,
-                        childAspectRatio: 0.8, // Adjusted aspect ratio for the new card design
-                      ),
-                      itemCount: _airbnbListings.length,
-                      itemBuilder: (context, index) {
-                        final listing = _airbnbListings[index];
-                        return _buildListingCard(listing);
-                      },
                     ),
+                  );
+                }
+              },
             ),
-
-            // Footer
             commonWidgets.buildFooter(),
           ],
         ),
@@ -174,121 +135,118 @@ class _AirbnbScreenState extends State<AirbnbScreen> {
   }
 
   Widget _buildListingCard(Map<String, dynamic> listing) {
-    return Card(
-      elevation: 5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 3,
-            child: Stack(
-              children: [
-                Image.asset(
-                  listing['image'],
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-                      ),
-                    );
-                  },
-                ),
-                Positioned(
-                  top: 10,
-                  left: 10, // Moved star icon to the top left
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        const SizedBox(width: 5),
-                        Text(
-                          '${listing['rating']}',
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+    final Map<String, dynamic> location = listing['location'] ?? {};
+    final Map<String, dynamic> airbnbDetails = listing['airbnbDetails'] ?? {};
+    final String guests = (airbnbDetails['guests'] ?? 'N/A').toString();
+
+    // Wrap the Card with an InkWell to make it clickable
+    return InkWell(
+      onTap: () {
+        // Navigate to the view property screen and pass the listing data
+        Navigator.pushNamed(
+          context,
+          '/view_property',
+          arguments: listing,
+        );
+      },
+      child: Card(
+        elevation: 5,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  Image.network(
+                    listing['coverImageUrl'],
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                              : null,
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 5, // Adjusted position to give it some space
-                  right: 5, // Placed favorites icon in the top right
-                  child: IconButton(
-                    icon: const Icon(Icons.favorite_border, color: Colors.white),
-                    onPressed: () {
-                      // TODO: Implement favorite functionality
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Favorite added for ${listing['title']}')),
                       );
                     },
+                    errorBuilder: (BuildContext context, Object exception, StackTrace? stackTrace) {
+                      return const Center(child: Text('Image Failed to Load'));
+                    },
                   ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(15.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    listing['title'],
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          listing['location'],
-                          style: const TextStyle(fontSize: 14, color: Colors.grey),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _buildFeatureIcon(Icons.bed, '${listing['bedrooms']} Bed'),
-                      const SizedBox(width: 15),
-                      _buildFeatureIcon(Icons.person, '${listing['guests']} Guests'),
-                    ],
-                  ),
-                  const Spacer(),
-                  Text(
-                    listing['price'],
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: IconButton(
+                      icon: const Icon(Icons.favorite_border, color: Colors.white),
+                      onPressed: () {
+                        // Handle favorite logic
+                      },
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(15.0),
+              child: SizedBox(
+                height: 120, // Fixed height to prevent layout shifts
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      listing['title'],
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0A66C2),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            '${location['locality']}, ${location['town']}',
+                            style: const TextStyle(fontSize: 14, color: Colors.grey),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        _buildFeatureIcon(Icons.bed, '${airbnbDetails['bedrooms']} Bed'),
+                        const SizedBox(width: 15),
+                        _buildFeatureIcon(Icons.person, '$guests Guests'),
+                      ],
+                    ),
+                    const Spacer(),
+                    Text(
+                      'KSH ${listing['price']} / night',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0A66C2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,15 +1,9 @@
 // /lib/screens/property_listing_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:sora_app/screens/property_detail_screen.dart';
-import 'package:sora_app/widgets/common_widgets.dart'; // Ensure this import is present
+import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
-import 'package:sora_app/data/property_data.dart';
-
-// Add the StringExtension here if it's not globally available or only in common_widgets.dart
-// If common_widgets.dart is imported, and the extension is defined there, it should be accessible.
-// However, to make this file self-contained for the extension, we can re-define it or ensure it's imported.
-// For now, assuming common_widgets.dart import makes it available.
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PropertyListingScreen extends StatefulWidget {
   final AuthService authService;
@@ -23,12 +17,10 @@ class PropertyListingScreen extends StatefulWidget {
 
 class _PropertyListingScreenState extends State<PropertyListingScreen> {
   late CommonWidgets commonWidgets;
-  late List<Map<String, dynamic>> _filteredAndSortedProperties;
-  String _currentSortOption = 'price_low_to_high';
-  String _currentListingTypeFilter = '';
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  final Set<String> _favoritedPropertyTitles = {}; // Set to store titles of favorited properties
+  String _currentSortOption = 'price_low_to_high';
+  String _currentListingTypeFilter = '';
 
   @override
   void initState() {
@@ -36,32 +28,15 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
     _currentListingTypeFilter = widget.listingType;
     _searchController.addListener(_onSearchChanged);
-    print('PropertyListingScreen: initState - Received listingType: "${widget.listingType}"');
-    _applyFiltersAndSort();
-    print('PropertyListingScreen: initState - Initial properties count: ${_filteredAndSortedProperties.length}');
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Retrieve search query from arguments if available
-    final Map<String, dynamic>? args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final String? newSearchQuery = args?['searchQuery'] as String?;
-    final String? newListingType = args?['listingType'] as String?;
-
-    bool needsUpdate = false;
-    if (newSearchQuery != null && newSearchQuery != _searchQuery) {
-      _searchQuery = newSearchQuery;
-      _searchController.text = _searchQuery; // Update controller text
-      needsUpdate = true;
-    }
-    if (newListingType != null && newListingType != _currentListingTypeFilter) {
-      _currentListingTypeFilter = newListingType;
-      needsUpdate = true;
-    }
-
-    if (needsUpdate) {
-      _applyFiltersAndSort();
+  void didUpdateWidget(covariant PropertyListingScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.listingType != oldWidget.listingType) {
+      setState(() {
+        _currentListingTypeFilter = widget.listingType;
+      });
     }
   }
 
@@ -75,77 +50,78 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
   void _onSearchChanged() {
     setState(() {
       _searchQuery = _searchController.text;
-      _applyFiltersAndSort();
     });
   }
 
-  void _applyFiltersAndSort() {
-    List<Map<String, dynamic>> properties = List<Map<String, dynamic>>.from(PropertyData.allProperties);
+  Future<List<Map<String, dynamic>>> _fetchProperties() async {
+    try {
+      Query query = FirebaseFirestore.instance.collection('properties');
 
-    // Apply listing type filter
-    if (_currentListingTypeFilter.isNotEmpty) {
-      properties = properties.where((p) => p['listingType'] == _currentListingTypeFilter).toList();
+      // Correctly map listing type to the string stored in Firestore
+      String? queryValue;
+      switch (_currentListingTypeFilter.toLowerCase()) {
+        case 'buy':
+          queryValue = 'For Sale';
+          break;
+        case 'rent':
+          queryValue = 'For Rent';
+          break;
+        case 'lease':
+          queryValue = 'For Lease';
+          break;
+      }
+
+      if (queryValue != null) {
+        query = query.where('listingType', isEqualTo: queryValue);
+      }
+
+      final querySnapshot = await query.get();
+      return querySnapshot.docs.map((doc) => {
+            ...doc.data() as Map<String, dynamic>,
+            'id': doc.id,
+          }).toList();
+    } catch (e) {
+      print('Error fetching properties: $e');
+      return [];
     }
+  }
+
+  List<Map<String, dynamic>> _applyFiltersAndSort(List<Map<String, dynamic>> properties) {
+    List<Map<String, dynamic>> filteredList = properties;
 
     // Apply search query filter
     if (_searchQuery.isNotEmpty) {
       final queryLower = _searchQuery.toLowerCase();
-      properties = properties.where((p) {
-        return (p['title'] as String).toLowerCase().contains(queryLower) ||
-            (p['location'] as String).toLowerCase().contains(queryLower) ||
-            (p['description'] as String).toLowerCase().contains(queryLower) ||
-            (p['type'] as String).toLowerCase().contains(queryLower);
+      filteredList = filteredList.where((p) {
+        final title = p['title'] as String? ?? '';
+        final town = (p['location'] as Map<String, dynamic>?)?['town'] as String? ?? '';
+        return title.toLowerCase().contains(queryLower) ||
+            town.toLowerCase().contains(queryLower);
       }).toList();
     }
 
     // Apply sorting
-    properties.sort((a, b) {
-      // Extract numeric price for comparison
-      double? priceA = _parsePrice(a['price']);
-      double? priceB = _parsePrice(b['price']);
-
-      if (priceA == null || priceB == null) {
-        // Handle cases where price parsing fails, e.g., by keeping original order or putting them last
-        return 0;
+    filteredList.sort((a, b) {
+      final double? priceA = double.tryParse(a['price']?.toString() ?? '0') ?? 0;
+      final double? priceB = double.tryParse(b['price']?.toString() ?? '0') ?? 0;
+      
+      // Safely parse bedrooms from string to int
+      final bedroomsA = int.tryParse((a['residentialDetails'] as Map<String, dynamic>?)?['bedrooms']?.toString() ?? '0') ?? 0;
+      final bedroomsB = int.tryParse((b['residentialDetails'] as Map<String, dynamic>?)?['bedrooms']?.toString() ?? '0') ?? 0;
+      
+      if (_currentSortOption == 'price_low_to_high') {
+        return priceA!.compareTo(priceB!);
+      } else if (_currentSortOption == 'price_high_to_low') {
+        return priceB!.compareTo(priceA!);
+      } else if (_currentSortOption == 'bedrooms_asc') {
+        return bedroomsA.compareTo(bedroomsB);
+      } else if (_currentSortOption == 'bedrooms_desc') {
+        return bedroomsB.compareTo(bedroomsA);
       }
-
-      switch (_currentSortOption) {
-        case 'price_low_to_high':
-          return priceA.compareTo(priceB);
-        case 'price_high_to_low':
-          return priceB.compareTo(priceA);
-        case 'bedrooms_asc':
-          return (a['bedrooms'] as int).compareTo(b['bedrooms'] as int);
-        case 'bedrooms_desc':
-          return (b['bedrooms'] as int).compareTo(a['bedrooms'] as int);
-        case 'area_asc':
-          return (double.tryParse(a['area'] ?? '0') ?? 0).compareTo(double.tryParse(b['area'] ?? '0') ?? 0);
-        case 'area_desc':
-          return (double.tryParse(b['area'] ?? '0') ?? 0).compareTo(double.tryParse(a['area'] ?? '0') ?? 0);
-        default:
-          return 0;
-      }
+      return 0;
     });
 
-    setState(() {
-      _filteredAndSortedProperties = properties;
-    });
-  }
-
-  // Helper to parse price strings (e.g., "KSH 20,000,000" or "KSH 20,000/month")
-  double? _parsePrice(String priceString) {
-    try {
-      // Remove currency symbols, commas, and "/month"
-      String cleanedPrice = priceString
-          .replaceAll('KSH', '')
-          .replaceAll(',', '')
-          .replaceAll('/month', '')
-          .trim();
-      return double.parse(cleanedPrice);
-    } catch (e) {
-      print('Error parsing price: $priceString - $e');
-      return null;
-    }
+    return filteredList;
   }
 
   @override
@@ -161,194 +137,46 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       endDrawer: commonWidgets.buildDrawer(),
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Section
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(
-                vertical: isLargeScreen ? 80 : (isMediumScreen ? 60 : 40),
-                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF1E90FF).withOpacity(0.8), Color(0xFF0A66C2).withOpacity(0.8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _currentListingTypeFilter.isNotEmpty
-                        ? '${_currentListingTypeFilter.toCapitalized()} Properties' // Changed to toCapitalized()
-                        : 'All Properties',
-                    style: TextStyle(
-                      fontSize: isLargeScreen ? 48 : (isMediumScreen ? 38 : 28),
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: isLargeScreen ? 20 : 10),
-                  Text(
-                    _searchQuery.isNotEmpty
-                        ? 'Showing results for "$_searchQuery"'
-                        : 'Browse our extensive collection of properties.',
-                    style: TextStyle(
-                      fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Filters and Sort Section
-            Padding(
-              padding: EdgeInsets.symmetric(
-                vertical: isLargeScreen ? 30 : 20,
-                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    constraints: BoxConstraints(maxWidth: isLargeScreen ? 800 : double.infinity),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search properties...',
-                        prefixIcon: const Icon(Icons.search, color: Color(0xFF0A66C2)),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, color: Colors.grey),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _onSearchChanged();
-                                },
-                              )
-                            : null,
-                      ),
-                      onSubmitted: (query) {
-                        _onSearchChanged();
+            _buildHeader(),
+            _buildFilterAndSortSection(),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _fetchProperties(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return commonWidgets.buildEmptyState(
+                    'No Properties Found',
+                    'There are no properties matching your search criteria.',
+                    () {
+                      setState(() {
+                        _searchController.clear();
+                      });
+                    },
+                    'Reset Filters',
+                  );
+                } else {
+                  final properties = _applyFiltersAndSort(snapshot.data!);
+                  if (properties.isEmpty) {
+                    return commonWidgets.buildEmptyState(
+                      'No Matching Properties',
+                      'No properties match your current search and filter settings.',
+                      () {
+                        setState(() {
+                          _searchController.clear();
+                          _currentSortOption = 'price_low_to_high';
+                        });
                       },
-                    ),
-                  ),
-                  SizedBox(height: isLargeScreen ? 20 : 15),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Listing Type Filter (if not already set by route)
-                      if (widget.listingType.isEmpty)
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _currentListingTypeFilter.isEmpty ? null : _currentListingTypeFilter,
-                            hint: const Text('Filter by Type'),
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey[100],
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                            ),
-                            items: const [
-                              DropdownMenuItem(value: '', child: Text('All Types')),
-                              DropdownMenuItem(value: 'Buy', child: Text('For Sale')),
-                              DropdownMenuItem(value: 'Rent', child: Text('For Rent')),
-                              DropdownMenuItem(value: 'Lease', child: Text('For Lease')),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _currentListingTypeFilter = value ?? '';
-                                _applyFiltersAndSort();
-                              });
-                            },
-                          ),
-                        ),
-                      SizedBox(width: widget.listingType.isEmpty ? (isLargeScreen ? 20 : 10) : 0),
-                      // Sort By Dropdown
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _currentSortOption,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 'price_low_to_high', child: Text('Price: Low to High')),
-                            DropdownMenuItem(value: 'price_high_to_low', child: Text('Price: High to Low')),
-                            DropdownMenuItem(value: 'bedrooms_asc', child: Text('Bedrooms: Low to High')),
-                            DropdownMenuItem(value: 'bedrooms_desc', child: Text('Bedrooms: High to Low')),
-                            DropdownMenuItem(value: 'area_asc', child: Text('Area: Small to Large')),
-                            DropdownMenuItem(value: 'area_desc', child: Text('Area: Large to Small')),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _currentSortOption = value!;
-                              _applyFiltersAndSort();
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Property Grid
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
-                vertical: isLargeScreen ? 30 : 20,
-              ),
-              child: _filteredAndSortedProperties.isEmpty
-                  ? Column(
-                      children: [
-                        SizedBox(height: isLargeScreen ? 50 : 30),
-                        Icon(Icons.sentiment_dissatisfied, size: isLargeScreen ? 100 : 70, color: Colors.grey[400]),
-                        SizedBox(height: 20),
-                        Text(
-                          'No properties found matching your criteria.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: isLargeScreen ? 22 : (isMediumScreen ? 18 : 16),
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        SizedBox(height: isLargeScreen ? 50 : 30),
-                      ],
-                    )
-                  : GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
-                        crossAxisSpacing: isLargeScreen ? 30 : 20,
-                        mainAxisSpacing: isLargeScreen ? 30 : 20,
-                        childAspectRatio: isLargeScreen ? 0.8 : (isMediumScreen ? 0.75 : 0.9),
-                      ),
-                      itemCount: _filteredAndSortedProperties.length,
-                      itemBuilder: (context, index) {
-                        final property = _filteredAndSortedProperties[index];
-                        // Ensure the isFavorite status is reflected from the set
-                        final bool isCurrentlyFavorite = _favoritedPropertyTitles.contains(property['title']);
-                        return _buildPropertyCard(property, isCurrentlyFavorite);
-                      },
-                    ),
+                      'Clear Filters',
+                    );
+                  }
+                  return _buildPropertiesGrid(properties, isLargeScreen, isMediumScreen);
+                }
+              },
             ),
             commonWidgets.buildFooter(),
           ],
@@ -357,121 +185,210 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     );
   }
 
-  Widget _buildPropertyCard(Map<String, dynamic> property, bool isCurrentlyFavorite) {
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      color: Colors.grey[100],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _currentListingTypeFilter.isNotEmpty ? '${_currentListingTypeFilter.toCapitalized()} Properties' : 'Property Listings',
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0A66C2),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Explore the perfect properties for your needs.',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterAndSortSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by location, title...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey[200],
+                contentPadding: const EdgeInsets.symmetric(vertical: 15.0),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          DropdownButton<String>(
+            value: _currentSortOption,
+            icon: const Icon(Icons.sort),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                setState(() {
+                  _currentSortOption = newValue;
+                });
+              }
+            },
+            items: <String>[
+              'price_low_to_high',
+              'price_high_to_low',
+              'bedrooms_asc',
+              'bedrooms_desc'
+            ].map<DropdownMenuItem<String>>((String value) {
+              String displayText;
+              switch (value) {
+                case 'price_low_to_high':
+                  displayText = 'Price: Low to High';
+                  break;
+                case 'price_high_to_low':
+                  displayText = 'Price: High to Low';
+                  break;
+                case 'bedrooms_asc':
+                  displayText = 'Bedrooms: Ascending';
+                  break;
+                case 'bedrooms_desc':
+                  displayText = 'Bedrooms: Descending';
+                  break;
+                default:
+                  displayText = '';
+              }
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(displayText),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPropertiesGrid(List<Map<String, dynamic>> properties, bool isLargeScreen, bool isMediumScreen) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 100 : 20, vertical: 20),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
+          crossAxisSpacing: 20,
+          mainAxisSpacing: 20,
+          childAspectRatio: isLargeScreen ? 0.75 : (isMediumScreen ? 0.7 : 0.8),
+        ),
+        itemCount: properties.length,
+        itemBuilder: (context, index) {
+          final property = properties[index];
+          return _buildPropertyCard(property);
+        },
+      ),
+    );
+  }
+
+  Widget _buildPropertyCard(Map<String, dynamic> property) {
+    // Safely parse residentialDetails
+    final residentialDetails = property['residentialDetails'] as Map<String, dynamic>? ?? {};
+
     return GestureDetector(
       onTap: () {
-        Navigator.push(
+        Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (context) => PropertyDetailScreen(property: property),
-          ),
+          '/view_property',
+          arguments: property,
         );
       },
       child: Card(
-        elevation: 5,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        clipBehavior: Clip.antiAlias,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              flex: 3,
-              child: Stack(
-                children: [
-                  Image.asset(
-                    property['images'][0],
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: IconButton(
-                      icon: Icon(
-                        isCurrentlyFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: isCurrentlyFavorite ? Colors.red : Colors.white,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          if (isCurrentlyFavorite) {
-                            _favoritedPropertyTitles.remove(property['title']);
-                          } else {
-                            _favoritedPropertyTitles.add(property['title']);
-                          }
-                        });
-                      },
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              child: Image.network(
+                property['coverImageUrl'] ?? 'https://via.placeholder.com/400x300',
+                fit: BoxFit.cover,
+                height: 200,
+                width: double.infinity,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: 200,
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: Icon(
+                      Icons.image_not_supported,
+                      size: 50,
+                      color: Colors.grey,
                     ),
                   ),
-                  Positioned(
-                    bottom: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0A66C2),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Text(
-                        property['listingType'],
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      property['title'],
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'KSh ${property['price']}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0A66C2),
                     ),
-                    const SizedBox(height: 5),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
-                            property['location'],
-                            style: const TextStyle(fontSize: 14, color: Colors.grey),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    property['title'],
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          (property['location'] as Map<String, dynamic>)['town'],
+                          style: const TextStyle(fontSize: 14, color: Colors.grey),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildFeatureIcon(Icons.bed, '${property['bedrooms']} Beds'),
-                        _buildFeatureIcon(Icons.bathtub, '${property['bathrooms']} Baths'),
-                        _buildFeatureIcon(Icons.square_foot, '${property['area']} sqft'),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      property['price'],
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0A66C2),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildFeatureIcon(Icons.bed, '${residentialDetails['bedrooms'] ?? 0} Beds'),
+                      _buildFeatureIcon(Icons.bathtub, '${residentialDetails['bathrooms'] ?? 0} Baths'),
+                      _buildFeatureIcon(Icons.square_foot, '${property['area'] ?? 0} sqft'),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

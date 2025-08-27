@@ -32,113 +32,38 @@ import 'screens/support_screen.dart';
 import 'screens/events_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'screens/cookie_policy_screen.dart';
-import 'screens/disclaimer_screen.dart';
-import 'screens/sell_property_screen.dart';
-import 'screens/list_property_screen.dart';
+import 'screens/add_property_screen.dart';
+import 'screens/view_property_screen.dart';
 import 'screens/my_favorites_screen.dart';
 import 'screens/my_listings_screen.dart';
 import 'screens/profile_settings_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/recently_viewed_screen.dart';
-import 'screens/add_property_screen.dart';
-// New screen for Airbnb
 import 'screens/airbnb_screen.dart';
-// New screen to view single property details
-import 'screens/view_property_screen.dart';
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Load the .env file
   await dotenv.load(fileName: "env.txt");
 
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    print('Firebase initialized successfully for current platform.');
-  } catch (e) {
-    print('Error during Firebase initialization: $e');
-  }
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  AuthService? authService;
-  if (Firebase.apps.isNotEmpty) {
-    authService = AuthService(firebaseAuth: FirebaseAuth.instance);
-  } else {
-    print('AuthService not initialized because Firebase is not initialized.');
-  }
-
-  runApp(SoraApp(authService: authService));
+  final AuthService authService = AuthService(firebaseAuth: FirebaseAuth.instance);
+  runApp(MyApp(authService: authService));
 }
 
-class SoraApp extends StatelessWidget {
-  final AuthService? authService;
+class MyApp extends StatelessWidget {
+  final AuthService authService;
 
-  const SoraApp({super.key, required this.authService});
+  const MyApp({Key? key, required this.authService}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    if (authService == null) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: const Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 20),
-                Text('Initializing app... Please ensure Firebase is configured correctly.'),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    final Map<String, WidgetBuilder> appRoutes = {
-      '/splash': (context) => const SplashScreen(),
-      '/onboarding': (context) => const OnboardingScreen(),
-      '/home': (context) => HomeScreen(authService: authService!),
-      '/buy': (context) => PropertyListingScreen(authService: authService!, listingType: 'Buy'),
-      '/rent': (context) => PropertyListingScreen(authService: authService!, listingType: 'Rent'),
-      '/lease': (context) => PropertyListingScreen(authService: authService!, listingType: 'Lease'),
-      '/airbnb': (context) => AirbnbScreen(authService: authService!), // New Airbnb route
-      '/about': (context) => AboutScreen(authService: authService!),
-      '/signin': (context) => SignInScreen(authService: authService!),
-      '/signup': (context) => SignUpScreen(authService: authService!),
-      '/agents': (context) => AgentsScreen(authService: authService!),
-      '/contact': (context) => ContactScreen(authService: authService!),
-      '/careers': (context) => CareersScreen(authService: authService!),
-      '/blogs': (context) => BlogsScreen(authService: authService!),
-      '/blog_view': (context) => const BlogViewScreen(),
-      '/testimonials': (context) => TestimonialsScreen(authService: authService!),
-      '/faqs': (context) => FAQsScreen(authService: authService!),
-      '/local_guides': (context) => LocalGuidesScreen(authService: authService!),
-      '/terms_of_service': (context) => TermsOfServiceScreen(authService: authService!),
-      '/sitemap': (context) => SitemapScreen(authService: authService!),
-      '/support': (context) => SupportScreen(authService: authService!),
-      '/events': (context) => EventsScreen(authService: authService!),
-      '/privacy_policy': (context) => PrivacyPolicyScreen(authService: authService!),
-      '/cookie_policy': (context) => CookiePolicyScreen(authService: authService!),
-      '/disclaimer': (context) => DisclaimerScreen(authService: authService!),
-      '/sell_property': (context) => SellPropertyScreen(authService: authService!),
-      '/list_property': (context) => ListPropertyScreen(authService: authService!),
-      '/my_favorites': (context) => MyFavoritesScreen(authService: authService!),
-      '/my_listings': (context) => MyListingsScreen(authService: authService!),
-      '/profile_settings': (context) => ProfileSettingsScreen(authService: authService!),
-      '/dashboard': (context) => DashboardScreen(authService: authService!),
-      '/recently_viewed': (context) => RecentlyViewedScreen(authService: authService!),
-      '/add_property': (context) => AddPropertyScreen(authService: authService!),
-      '/view_property': (context) => ViewPropertyScreen(authService: authService!, propertyData: ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>),
-    };
-
     String chosenInitialRoute;
     if (kIsWeb) {
       chosenInitialRoute = html.window.location.pathname ?? '/home';
-      if (!appRoutes.keys.contains(chosenInitialRoute)) {
-        chosenInitialRoute = '/home';
-      }
     } else {
       chosenInitialRoute = '/splash';
     }
@@ -152,10 +77,98 @@ class SoraApp extends StatelessWidget {
         textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Inter'),
       ),
       initialRoute: chosenInitialRoute,
-      routes: appRoutes,
-      onUnknownRoute: (settings) {
-        print('Unknown route attempted: ${settings.name}');
-        return MaterialPageRoute(builder: (context) => Text('Error: Unknown route ${settings.name}'));
+      onGenerateRoute: (settings) {
+        final uri = Uri.parse(settings.name!);
+        final pathSegments = uri.pathSegments;
+
+        String routeName;
+        if (pathSegments.isEmpty) {
+          routeName = '/home';
+        } else {
+          routeName = '/${pathSegments.first}';
+        }
+
+        String? parameter;
+        if (pathSegments.length > 1) {
+          parameter = pathSegments[1];
+        }
+
+        switch (routeName) {
+          case '/splash':
+            return MaterialPageRoute(builder: (_) => const SplashScreen());
+          case '/onboarding':
+            return MaterialPageRoute(builder: (_) => const OnboardingScreen());
+          case '/home':
+            return MaterialPageRoute(builder: (_) => HomeScreen(authService: authService));
+          case '/property_listing':
+            return MaterialPageRoute(builder: (_) => PropertyListingScreen(
+              authService: authService,
+              listingType: parameter ?? '',
+            ));
+          case '/buy':
+          case '/rent':
+          case '/lease':
+            return MaterialPageRoute(builder: (_) => PropertyListingScreen(
+              authService: authService,
+              listingType: routeName.substring(1), // Remove the leading '/'
+            ));
+          case '/airbnb':
+            return MaterialPageRoute(builder: (_) => AirbnbScreen(authService: authService));
+          case '/view_property':
+            final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(builder: (_) => ViewPropertyScreen(authService: authService, propertyData: args));
+          case '/add_property':
+            return MaterialPageRoute(builder: (_) => AddPropertyScreen(authService: authService));
+          case '/about':
+            return MaterialPageRoute(builder: (_) => AboutScreen(authService: authService));
+          case '/signin':
+            return MaterialPageRoute(builder: (_) => SignInScreen(authService: authService));
+          case '/signup':
+            return MaterialPageRoute(builder: (_) => SignUpScreen(authService: authService));
+          case '/agents':
+            return MaterialPageRoute(builder: (_) => AgentsScreen(authService: authService));
+          case '/contact':
+            return MaterialPageRoute(builder: (_) => ContactScreen(authService: authService));
+          case '/careers':
+            return MaterialPageRoute(builder: (_) => CareersScreen(authService: authService));
+          case '/blogs':
+            return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
+          case '/blog_view':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(builder: (_) => BlogViewScreen(blogPost: args, authService: authService));
+          case '/testimonials':
+            return MaterialPageRoute(builder: (_) => TestimonialsScreen(authService: authService));
+          case '/faqs':
+            return MaterialPageRoute(builder: (_) => FAQsScreen(authService: authService));
+          case '/local_guides':
+            return MaterialPageRoute(builder: (_) => LocalGuidesScreen(authService: authService));
+          case '/terms_of_service':
+            return MaterialPageRoute(builder: (_) => TermsOfServiceScreen(authService: authService));
+          case '/sitemap':
+            return MaterialPageRoute(builder: (_) => SitemapScreen(authService: authService));
+          case '/support':
+            return MaterialPageRoute(builder: (_) => SupportScreen(authService: authService));
+          case '/events':
+            return MaterialPageRoute(builder: (_) => EventsScreen(authService: authService));
+          case '/privacy_policy':
+            return MaterialPageRoute(builder: (_) => PrivacyPolicyScreen(authService: authService));
+          case '/cookie_policy':
+            return MaterialPageRoute(builder: (_) => CookiePolicyScreen(authService: authService));
+          case '/my_favorites':
+            return MaterialPageRoute(builder: (_) => MyFavoritesScreen(authService: authService));
+          case '/my_listings':
+            return MaterialPageRoute(builder: (_) => MyListingsScreen(authService: authService));
+          case '/profile_settings':
+            return MaterialPageRoute(builder: (_) => ProfileSettingsScreen(authService: authService));
+          case '/dashboard':
+            return MaterialPageRoute(builder: (_) => DashboardScreen(authService: authService));
+          case '/recently_viewed':
+            return MaterialPageRoute(builder: (_) => RecentlyViewedScreen(authService: authService));
+          default:
+            return MaterialPageRoute(builder: (context) {
+              return HomeScreen(authService: authService);
+            });
+        }
       },
     );
   }
