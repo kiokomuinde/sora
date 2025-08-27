@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:sora_app/screens/property_detail_screen.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/widgets/common_widgets.dart'; // Import CommonWidgets
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // Import for FaIcon
+import 'package:cloud_firestore/cloud_firestore.dart'; // Required for direct Firestore access
 import 'package:sora_app/data/property_data.dart'; // Import the centralized property data
 
 class HomeScreen extends StatefulWidget {
@@ -19,30 +19,27 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late CommonWidgets commonWidgets;
-
-  String _currentListingTypeFilter = '';
-
-  late List<Map<String, dynamic>> _popularPropertiesList;
-  late List<Map<String, dynamic>> _hottestPropertiesList;
-  late List<Map<String, dynamic>> _newPropertiesList;
+  late Future<List<Map<String, dynamic>>> _propertiesFuture;
 
   @override
   void initState() {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
+    // Start fetching all properties from Firestore when the screen initializes
+    _propertiesFuture = _fetchAllProperties();
+  }
 
-    final List<Map<String, dynamic>> mutableAllProperties = List<Map<String, dynamic>>.from(PropertyData.allProperties);
-
-    if (mutableAllProperties.isEmpty) {
-      _popularPropertiesList = [];
-      _hottestPropertiesList = [];
-      _newPropertiesList = [];
-    } else {
-      // Initialize property lists with sample data.
-      // For a real app, this would come from a backend or more complex filtering.
-      _popularPropertiesList = List.from(mutableAllProperties.where((p) => p['listingType'] == 'Rent').take(5));
-      _hottestPropertiesList = List.from(mutableAllProperties.where((p) => p['listingType'] == 'Buy').take(5));
-      _newPropertiesList = List.from(mutableAllProperties.where((p) => p['listingType'] == 'Lease').take(5));
+  // Method to fetch all properties from the 'properties' collection
+  Future<List<Map<String, dynamic>>> _fetchAllProperties() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance.collection('properties').get();
+      return querySnapshot.docs.map((doc) => {
+            ...doc.data() as Map<String, dynamic>,
+            'id': doc.id,
+          }).toList();
+    } catch (e) {
+      print('Error fetching properties: $e');
+      return [];
     }
   }
 
@@ -58,56 +55,88 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
 
     return Scaffold(
-      appBar: commonWidgets.buildAppBar(
-        // Pass the currentListingTypeFilter to AppBar if it uses it for highlighting
-        currentListingTypeFilter: _currentListingTypeFilter,
-        // No need to pass onSearchChanged, onListingTypeFilterChanged, showLoginSignupDialog, authService
-        // as common_widgets.buildAppBar doesn't accept them directly in its current signature.
-        // authService is already part of the CommonWidgets instance.
-      ),
-      endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null, // Use drawer for mobile/tablet
+      appBar: commonWidgets.buildAppBar(),
+      endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
       body: SingleChildScrollView(
         child: Column(
           children: [
             // Hero Section
             _buildHeroSection(isLargeScreen, isMediumScreen),
 
-            // Removed Search Section as per request
+            // Use FutureBuilder to handle the asynchronous data fetching
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _propertiesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(30.0),
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0A66C2)),
+                      ),
+                    ),
+                  );
+                } else if (snapshot.hasError) {
+                  print('Error in FutureBuilder: ${snapshot.error}');
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(30.0),
+                      child: Text('Error: ${snapshot.error}'),
+                    ),
+                  );
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(30.0),
+                      child: Text('No properties found.'),
+                    ),
+                  );
+                } else {
+                  final properties = snapshot.data!;
+                  // Show the first 10 properties in each carousel, as requested by the user.
+                  final firstTenProperties = properties.take(10).toList();
 
-            // Popular Properties Section (Now a horizontal carousel)
-            _buildPropertiesCarousel(
-              context,
-              'Popular Properties',
-              _popularPropertiesList,
-              isLargeScreen,
-              isMediumScreen,
+                  return Column(
+                    children: [
+                      // Popular Properties Section
+                      _buildPropertiesCarousel(
+                        context,
+                        'Popular Properties',
+                        firstTenProperties,
+                        isLargeScreen,
+                        isMediumScreen,
+                      ),
+
+                      // Hottest Deals Section
+                      _buildPropertiesCarousel(
+                        context,
+                        'Hottest Deals',
+                        firstTenProperties,
+                        isLargeScreen,
+                        isMediumScreen,
+                      ),
+
+                      // New in Market Section
+                      _buildPropertiesCarousel(
+                        context,
+                        'New in Market',
+                        firstTenProperties,
+                        isLargeScreen,
+                        isMediumScreen,
+                      ),
+                    ],
+                  );
+                }
+              },
             ),
 
-            // Hottest Deals Section (Now a horizontal carousel)
-            _buildPropertiesCarousel(
-              context,
-              'Hottest Deals',
-              _hottestPropertiesList,
-              isLargeScreen,
-              isMediumScreen,
-            ),
-
-            // New in Market Section (Now a horizontal carousel)
-            _buildPropertiesCarousel(
-              context,
-              'New in Market',
-              _newPropertiesList,
-              isLargeScreen,
-              isMediumScreen,
-            ),
-
-            // Call to Action Section (existing)
+            // Call to Action Section
             _buildCallToActionSection(isLargeScreen, isMediumScreen),
 
-            // Categories Section (MOVED HERE)
+            // Categories Section
             _buildCategoriesSection(isLargeScreen, isMediumScreen),
 
-            // Testimonials Section (existing)
+            // Testimonials Section
             _buildTestimonialsSection(isLargeScreen, isMediumScreen),
 
             // Footer
@@ -136,34 +165,21 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            BlinkingGradientText(
+            FadingColorText(
               text: 'Find Your Dream Home',
               style: TextStyle(
                 fontSize: isLargeScreen ? 60 : (isMediumScreen ? 45 : 30),
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
-              colors: const [Colors.white, Color(0xFF4B0082)], // White to Dark Purple
             ),
             SizedBox(height: isLargeScreen ? 20 : 10),
-            Text(
-              'Explore thousands of properties for sale, rent, and lease.',
-              textAlign: TextAlign.center,
+            GlidingBlueFlash(
+              text: 'Explore thousands of properties for sale, rent, and lease.',
               style: TextStyle(
                 fontSize: isLargeScreen ? 20 : (isMediumScreen ? 16 : 14),
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white,
               ),
-            ),
-            SizedBox(height: isLargeScreen ? 40 : 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildHeroButton('Buy', () => Navigator.pushNamed(context, '/buy')),
-                SizedBox(width: isLargeScreen ? 20 : 10),
-                _buildHeroButton('Rent', () => Navigator.pushNamed(context, '/rent')),
-                SizedBox(width: isLargeScreen ? 20 : 10),
-                _buildHeroButton('Lease', () => Navigator.pushNamed(context, '/lease')),
-              ],
             ),
           ],
         ),
@@ -175,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF1E90FF), // Dodger Blue
+        backgroundColor: const Color(0xFF1E90FF),
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
         textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -187,8 +203,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Text(text),
     );
   }
-
-  // Removed _buildSearchBarSection entirely.
 
   Widget _buildCategoriesSection(bool isLargeScreen, bool isMediumScreen) {
     return Container(
@@ -230,16 +244,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisSpacing: isLargeScreen ? 30 : 20,
                 children: [
                   _buildCategoryCard(Icons.house, 'Buy Property', 'Find your dream home to own.', () {
-                    Navigator.pushNamed(context, '/buy'); // Changed to /buy
+                    Navigator.pushNamed(context, '/buy');
                   }),
                   _buildCategoryCard(Icons.apartment, 'Rent Property', 'Discover perfect apartments and houses for rent.', () {
-                    Navigator.pushNamed(context, '/rent'); // Changed to /rent
+                    Navigator.pushNamed(context, '/rent');
                   }),
                   _buildCategoryCard(Icons.store, 'Commercial Lease', 'Browse commercial spaces for your business.', () {
-                    Navigator.pushNamed(context, '/lease'); // Changed to /lease
+                    Navigator.pushNamed(context, '/lease');
                   }),
                   _buildCategoryCard(Icons.agriculture, 'Land & Plots', 'Invest in land for future development.', () {
-                    // This will navigate to a generic property listing, might need a specific '/plots' route
                     Navigator.pushNamed(context, '/buy', arguments: {'listingType': 'Plot'});
                   }),
                 ],
@@ -258,12 +271,12 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 50, color: const Color(0xFF1E90FF)),
-              const SizedBox(height: 15),
+              const SizedBox(height: 10),
               Text(
                 title,
                 textAlign: TextAlign.center,
@@ -272,8 +285,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0A66C2),
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 5),
               Text(
                 description,
                 textAlign: TextAlign.center,
@@ -281,6 +295,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontSize: 14,
                   color: Colors.grey[700],
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -291,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPropertiesCarousel(BuildContext context, String title, List<Map<String, dynamic>> properties, bool isLargeScreen, bool isMediumScreen) {
     if (properties.isEmpty) {
-      return const SizedBox.shrink(); // Don't show section if no properties
+      return const SizedBox.shrink();
     }
     return Container(
       padding: EdgeInsets.symmetric(
@@ -315,14 +331,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  // Navigate to the full property listing page based on title
                   String listingType = '';
                   if (title == 'Popular Properties') {
-                    listingType = 'Rent'; // Example: Popular shows Rent
+                    listingType = 'Rent';
                   } else if (title == 'Hottest Deals') {
-                    listingType = 'Buy'; // Example: Hottest shows Buy
+                    listingType = 'Buy';
                   } else if (title == 'New in Market') {
-                    listingType = 'Lease'; // Example: New shows Lease
+                    listingType = 'Lease';
                   }
                   Navigator.pushNamed(context, '/property_listing', arguments: {'listingType': listingType});
                 },
@@ -339,7 +354,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: isLargeScreen ? 40 : 20),
           SizedBox(
-            height: isLargeScreen ? 380 : (isMediumScreen ? 320 : 280), // Adjust height for carousel
+            height: isLargeScreen ? 380 : (isMediumScreen ? 320 : 280),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: properties.length,
@@ -358,14 +373,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPropertyCard(BuildContext context, Map<String, dynamic> property, bool isLargeScreen, bool isMediumScreen) {
+    final String imageUrl = property['coverImageUrl']?.toString() ?? 'https://via.placeholder.com/150';
+
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PropertyDetailScreen(property: property),
-          ),
-        );
+        // Updated to use the named route '/view_property'
+        Navigator.pushNamed(context, '/view_property', arguments: property);
       },
       child: Container(
         width: isLargeScreen ? 300 : (isMediumScreen ? 250 : 220),
@@ -386,11 +399,35 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-              child: Image.asset(
-                property['images']![0],
+              child: Image.network(
+                imageUrl,
                 height: isLargeScreen ? 200 : (isMediumScreen ? 160 : 140),
                 width: double.infinity,
                 fit: BoxFit.cover,
+                loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                  if (loadingProgress == null) {
+                    return child;
+                  }
+                  return Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: isLargeScreen ? 200 : (isMediumScreen ? 160 : 140),
+                    width: double.infinity,
+                    color: Colors.grey[200],
+                    child: Icon(
+                      Icons.image_not_supported,
+                      size: 50,
+                      color: Colors.grey[400],
+                    ),
+                  );
+                },
               ),
             ),
             Padding(
@@ -399,7 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    property['price']!,
+                    'KSh ${property['price']?.toString() ?? 'N/A'}',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -408,7 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    property['title']!,
+                    property['title']?.toString() ?? 'No Title',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -417,51 +454,52 @@ class _HomeScreenState extends State<HomeScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          property['location']!,
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  if (property['location'] != null && property['location']['town'] != null)
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            property['location']['town'].toString(),
+                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
+                      ],
+                    ),
+                  if (property['residentialDetails'] != null) ...[
+                    if (property['residentialDetails']['bedrooms'] != null)
+                      Row(
+                        children: [
+                          Icon(Icons.bed, size: 16, color: Colors.grey[600]),
+                          const SizedBox(height: 4),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${property['residentialDetails']['bedrooms']} Beds',
+                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  if (property['bedrooms'] > 0) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.bed, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${property['bedrooms']} Beds',
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
+                    if (property['residentialDetails']['bathrooms'] != null)
+                      Row(
+                        children: [
+                          Icon(Icons.bathtub, size: 16, color: Colors.grey[600]),
+                          const SizedBox(height: 4),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${property['residentialDetails']['bathrooms']} Baths',
+                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
                   ],
-                  if (property['bathrooms'] > 0) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.bathtub, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${property['bathrooms']} Baths',
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (property['area'] != null && property['area'] != "0") ...[
-                    const SizedBox(height: 4),
+                  if (property['area'] != null && property['area'] != "0")
                     Row(
                       children: [
                         Icon(Icons.square_foot, size: 16, color: Colors.grey[600]),
+                        const SizedBox(height: 4),
                         const SizedBox(width: 4),
                         Text(
                           '${property['area']} sqft',
@@ -469,8 +507,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                  ],
-                ],
+                ].whereType<Widget>().toList(),
               ),
             ),
           ],
@@ -662,35 +699,46 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class BlinkingGradientText extends StatefulWidget {
+class FadingColorText extends StatefulWidget {
   final String text;
   final TextStyle style;
-  final List<Color> colors;
 
-  const BlinkingGradientText({
+  const FadingColorText({
     super.key,
     required this.text,
     required this.style,
-    required this.colors,
   });
 
   @override
-  State<BlinkingGradientText> createState() => _BlinkingGradientTextState();
+  State<FadingColorText> createState() => _FadingColorTextState();
 }
 
-class _BlinkingGradientTextState extends State<BlinkingGradientText> with SingleTickerProviderStateMixin {
+class _FadingColorTextState extends State<FadingColorText> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _animation;
+  late Animation<Color?> _colorAnimation;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: false);
 
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
+    _colorAnimation = TweenSequence<Color?>([
+      TweenSequenceItem(
+        tween: ColorTween(begin: const Color(0xFF4B0082), end: const Color(0xFF1E90FF)),
+        weight: 1.0,
+      ),
+      TweenSequenceItem(
+        tween: ColorTween(begin: const Color(0xFF1E90FF), end: Colors.white),
+        weight: 1.0,
+      ),
+      TweenSequenceItem(
+        tween: ColorTween(begin: Colors.white, end: const Color(0xFF4B0082)),
+        weight: 1.0,
+      ),
+    ]).animate(_animationController);
   }
 
   @override
@@ -701,44 +749,82 @@ class _BlinkingGradientTextState extends State<BlinkingGradientText> with Single
 
   @override
   Widget build(BuildContext context) {
-    const Color darkPurple = Color(0xFF4B0082);
-
     return AnimatedBuilder(
-      animation: _animation,
+      animation: _colorAnimation,
       builder: (context, child) {
-        final Color interpolatedColor = Color.lerp(Colors.white, darkPurple, _animation.value)!;
-
-        return GradientTextWidget(
-          text: widget.text,
-          style: widget.style.copyWith(color: interpolatedColor), // Apply interpolated color to style
-          colors: widget.colors, // Still pass original colors for the gradient effect
+        return Text(
+          widget.text,
+          textAlign: TextAlign.center,
+          style: widget.style.copyWith(color: _colorAnimation.value),
         );
       },
     );
   }
 }
 
-class GradientTextWidget extends StatelessWidget {
-  const GradientTextWidget({
+class GlidingBlueFlash extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+
+  const GlidingBlueFlash({
     super.key,
     required this.text,
     required this.style,
-    required this.colors,
   });
 
-  final String text;
-  final TextStyle style;
-  final List<Color> colors;
+  @override
+  State<GlidingBlueFlash> createState() => _GlidingBlueFlashState();
+}
+
+class _GlidingBlueFlashState extends State<GlidingBlueFlash> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4), // Changed from 2 to 4 seconds
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ShaderMask(
-      shaderCallback: (bounds) => LinearGradient(
-        colors: colors,
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(bounds),
-      child: Text(text, style: style),
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        final double gradientPosition = _animationController.value;
+
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              colors: const [
+                Colors.white,
+                Colors.blue,
+                Colors.white,
+              ],
+              stops: [
+                gradientPosition - 0.1,
+                gradientPosition,
+                gradientPosition + 0.1,
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ).createShader(bounds);
+          },
+          child: Text(
+            widget.text,
+            textAlign: TextAlign.center,
+            style: widget.style.copyWith(color: Colors.white),
+          ),
+        );
+      },
     );
   }
 }

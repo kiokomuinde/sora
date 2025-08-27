@@ -43,6 +43,8 @@ import 'screens/recently_viewed_screen.dart';
 import 'screens/add_property_screen.dart';
 // New screen for Airbnb
 import 'screens/airbnb_screen.dart';
+// New screen to view single property details
+import 'screens/view_property_screen.dart';
 
 
 void main() async {
@@ -128,6 +130,7 @@ class SoraApp extends StatelessWidget {
       '/dashboard': (context) => DashboardScreen(authService: authService!),
       '/recently_viewed': (context) => RecentlyViewedScreen(authService: authService!),
       '/add_property': (context) => AddPropertyScreen(authService: authService!),
+      '/view_property': (context) => ViewPropertyScreen(authService: authService!, propertyData: ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>),
     };
 
     String chosenInitialRoute;

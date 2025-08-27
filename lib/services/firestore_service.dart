@@ -17,6 +17,8 @@ class FirestoreService {
     // Add the user's ID and a timestamp to the property data
     propertyData['userId'] = user.uid;
     propertyData['timestamp'] = FieldValue.serverTimestamp();
+    // NEW: Add a default status of 'Pending' for new properties
+    propertyData['status'] = 'Pending';
 
     try {
       await _firestore.collection('properties').add(propertyData);
@@ -45,6 +47,21 @@ class FirestoreService {
       return true;
     } catch (e) {
       print('Error updating property in Firestore: $e');
+      return false;
+    }
+  }
+
+  // NEW: Method to update a single property field
+  Future<bool> updatePropertyStatus(String propertyId, String newStatus) async {
+    try {
+      await _firestore.collection('properties').doc(propertyId).update({
+        'status': newStatus,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      print('Property status updated to $newStatus successfully!');
+      return true;
+    } catch (e) {
+      print('Error updating property status: $e');
       return false;
     }
   }

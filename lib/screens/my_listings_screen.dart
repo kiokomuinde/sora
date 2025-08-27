@@ -1,3 +1,5 @@
+// lib/screens/my_listings_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
@@ -93,25 +95,50 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     });
   }
 
-  String _formatPrice(String? price) {
-    if (price == null || price.isEmpty) {
+  // UPDATED: This method now handles dynamic price data types, including maps.
+  String _formatPrice(dynamic price) {
+    if (price == null) {
       return 'Price not listed';
     }
-    try {
-      final formatter = NumberFormat('#,###', 'en_US');
-      final doublePrice = double.tryParse(price);
-      if (doublePrice != null) {
-        return 'KSH ${formatter.format(doublePrice)}';
+
+    if (price is String) {
+      try {
+        final formatter = NumberFormat('#,###', 'en_US');
+        final doublePrice = double.tryParse(price);
+        if (doublePrice != null) {
+          return 'KSH ${formatter.format(doublePrice)}';
+        }
+      } catch (e) {
+        // Fall through to return the raw string
       }
       return 'KSH $price';
-    } catch (e) {
-      return 'KSH $price';
     }
+
+    if (price is num) {
+      final formatter = NumberFormat('#,###', 'en_US');
+      return 'KSH ${formatter.format(price)}';
+    }
+
+    // Handle the case where price is a map (LinkedMap)
+    if (price is Map) {
+      // Assuming the value is stored under a key like 'amount' or 'value'
+      final dynamic priceValue = price['amount'] ?? price['value'];
+      if (priceValue is num) {
+        final formatter = NumberFormat('#,###', 'en_US');
+        return 'KSH ${formatter.format(priceValue)}';
+      }
+    }
+
+    // Fallback for any other type
+    return 'KSH ${price.toString()}';
   }
 
-  // NEW: Method to handle M-Pesa payment
-  void _initiateMpesaPayment(Map<String, dynamic> plan) async {
-    // Show a loading dialog
+  // NEW: Method to activate selected listings by updating their status in Firestore
+  void _activateSelectedListings() async {
+    if (_selectedListingIds.isEmpty) {
+      return;
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -121,50 +148,35 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(width: 20),
-              Text("Initiating M-Pesa payment..."),
+              Text("Activating properties..."),
             ],
           ),
         );
       },
     );
 
-    // Get the current user's phone number. You might need to store this in your user profile.
-    // For this example, we'll use a placeholder.
-    final userPhoneNumber = widget.authService.getCurrentUser()?.phoneNumber ?? '254700000000';
-    final amount = plan['amount'] as int;
-
-    try {
-      final success = await _mpesaService.initiateStkPush(
-        phoneNumber: userPhoneNumber,
-        amount: amount,
-        description: 'Payment for ${plan['name']}',
-      );
-
-      // Close the loading dialog
-      Navigator.of(context).pop();
-
+    int successfulActivations = 0;
+    for (String listingId in _selectedListingIds) {
+      bool success = await _firestoreService.updatePropertyStatus(listingId, 'Active');
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('STK Push for ${plan['name']} initiated successfully. Please enter your M-Pesa PIN.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _clearSelection(); // Clear selections after payment is initiated
-        Navigator.of(context).pop(); // Close the pricing dialog
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to initiate STK Push. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        successfulActivations++;
       }
-    } catch (e) {
-      Navigator.of(context).pop(); // Close the loading dialog
+    }
+
+    Navigator.of(context).pop();
+
+    if (successfulActivations > 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString()}'),
+          content: Text('$successfulActivations properties activated successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _clearSelection();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to activate properties. Please try again.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -266,13 +278,13 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
                   final allListings = snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
-                    // Hardcode all properties to 'Pending' as requested, then apply filtering
-                    data['status'] = 'Pending';
+                    // FIX: Removed the hardcoded 'Pending' status
                     return {'data': data, 'id': doc.id};
                   }).toList();
 
                   final filteredListings = allListings.where((listing) {
                     final listingData = listing['data'] as Map<String, dynamic>;
+                    // Use the status directly from the Firestore data
                     return _selectedStatusFilter == 'All' || listingData['status'] == _selectedStatusFilter;
                   }).toList();
 
@@ -536,8 +548,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    // NEW: Call the M-Pesa payment method
-                    _initiateMpesaPayment(plan);
+                    Navigator.of(context).pop(); // Close the pricing dialog
+                    _activateSelectedListings();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
@@ -559,32 +571,6 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  // Placeholder for payment confirmation
-  void _showPaymentConfirmationDialog(String planName) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          title: const Text('Payment Initiated', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: Text(
-            'You have successfully selected the $planName. This is a placeholder for the payment process.',
-          ),
-          actions: [
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Clear selection after "payment" is initiated
-                _clearSelection();
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -693,6 +679,24 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                       right: 12,
                       child: Row(
                         children: [
+                          // NEW: "View Property" button
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.visibility, color: Colors.green, size: 20),
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/view_property',
+                                  arguments: listing,
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.9),
