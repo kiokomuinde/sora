@@ -38,7 +38,7 @@ class FirestoreService {
       return false;
     }
 
-    // Add updated timestamp to the property data
+    // NEW: Add a timestamp to the property data
     propertyData['updatedAt'] = FieldValue.serverTimestamp();
 
     try {
@@ -81,7 +81,53 @@ class FirestoreService {
       print('Property deleted from Firestore successfully!');
       return true;
     } catch (e) {
-      print('Error deleting property from Firestore: $e');
+      print('Error deleting property: $e');
+      return false;
+    }
+  }
+
+  /// Adds a property to a user's favorites list.
+  Future<void> addFavorite(String userId, String propertyId) async {
+    try {
+      await _firestore
+          .collection('favorites')
+          .doc(userId)
+          .collection('userFavorites')
+          .doc(propertyId)
+          .set({'addedAt': FieldValue.serverTimestamp()});
+      print('Property $propertyId added to favorites for user $userId');
+    } catch (e) {
+      print('Error adding favorite: $e');
+    }
+  }
+
+  /// Removes a property from a user's favorites list.
+  Future<void> removeFavorite(String userId, String propertyId) async {
+    try {
+      await _firestore
+          .collection('favorites')
+          .doc(userId)
+          .collection('userFavorites')
+          .doc(propertyId)
+          .delete();
+      print('Property $propertyId removed from favorites for user $userId');
+    } catch (e) {
+      print('Error removing favorite: $e');
+    }
+  }
+
+  /// Checks if a property is in a user's favorites list.
+  Future<bool> isFavorite(String userId, String propertyId) async {
+    try {
+      final docSnapshot = await _firestore
+          .collection('favorites')
+          .doc(userId)
+          .collection('userFavorites')
+          .doc(propertyId)
+          .get();
+      return docSnapshot.exists;
+    } catch (e) {
+      print('Error checking favorite status: $e');
       return false;
     }
   }
