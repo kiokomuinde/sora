@@ -137,43 +137,9 @@ class _BlogsScreenState extends State<BlogsScreen> {
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Blogs'),
-        backgroundColor: const Color(0xFF0A66C2),
-        elevation: 0,
-        actions: [
-          if (isLargeScreen)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/create_blog');
-                },
-                icon: const Icon(Icons.add, color: Color(0xFF0A66C2)),
-                label: const Text('Create Blog'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF0A66C2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 5,
-                ),
-              ),
-            ),
-        ],
-      ),
+      appBar: commonWidgets.buildAppBar(),
       endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
-      floatingActionButton: !isLargeScreen
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.pushNamed(context, '/create_blog');
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create Blog'),
-              backgroundColor: const Color(0xFF1E90FF),
-            )
-          : null,
+      // Removed the FloatingActionButton
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -191,27 +157,88 @@ class _BlogsScreenState extends State<BlogsScreen> {
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Our Latest Blogs',
-                    style: TextStyle(
-                      fontSize: isLargeScreen ? 48 : (isMediumScreen ? 38 : 28),
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              child: isLargeScreen
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Our Latest Blogs',
+                              style: TextStyle(
+                                fontSize: 48,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            Text(
+                              'Stay informed with expert insights, market trends, and helpful tips.',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/create_blog');
+                          },
+                          icon: const Icon(Icons.add, color: Color(0xFF0A66C2)),
+                          label: const Text('Create Blog'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF0A66C2),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 5,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Our Latest Blogs',
+                          style: TextStyle(
+                            fontSize: isMediumScreen ? 38 : 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: isMediumScreen ? 10 : 5),
+                        Text(
+                          'Stay informed with expert insights, market trends, and helpful tips.',
+                          style: TextStyle(
+                            fontSize: isMediumScreen ? 16 : 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        SizedBox(height: isMediumScreen ? 20 : 15),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/create_blog');
+                          },
+                          icon: const Icon(Icons.add, color: Color(0xFF0A66C2)),
+                          label: const Text('Create Blog'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF0A66C2),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 5,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  SizedBox(height: isLargeScreen ? 20 : 10),
-                  Text(
-                    'Stay informed with expert insights, market trends, and helpful tips.',
-                    style: TextStyle(
-                      fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
             ),
 
             // Blog Posts Grid

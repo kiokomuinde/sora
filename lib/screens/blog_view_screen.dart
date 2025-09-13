@@ -17,88 +17,115 @@ class BlogViewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final commonWidgets = CommonWidgets(context: context, authService: authService);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final bool isLargeScreen = screenWidth >= 1000;
-
+    
     return Scaffold(
-      appBar: AppBar(
-        title: Text(blogPost['title']),
-        actions: [
-          if (isLargeScreen)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/create_blog');
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Create Blog'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF0A66C2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 5,
-                ),
-              ),
+      // The AppBar has been removed as per your request.
+      
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFF1E90FF), // A beautiful blue
+              Color(0xFF8A2BE2), // A beautiful purple
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: const Offset(0, 3),
             ),
-        ],
-      ),
-      floatingActionButton: !isLargeScreen
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.pushNamed(context, '/create_blog');
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create Blog'),
-              backgroundColor: const Color(0xFF1E90FF),
-            )
-          : null,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            if (blogPost['imageUrl'] != null)
-              Image.network(
-                blogPost['imageUrl'],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: 250,
-              ),
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              // Navigate to the create blog screen
+              Navigator.pushNamed(context, '/create_blog');
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.add, color: Colors.white),
+                  SizedBox(width: 8),
                   Text(
-                    blogPost['title'],
-                    style: const TextStyle(
-                      fontSize: 28,
+                    'Create Blog',
+                    style: TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'By ${blogPost['author']} on ${blogPost['date']}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    blogPost['content'],
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height: 1.5,
                     ),
                   ),
                 ],
               ),
             ),
-            commonWidgets.buildFooter(),
-          ],
+          ),
         ),
+      ),
+      
+      body: Column(
+        children: [
+          // This Expanded widget ensures the content takes up the available space,
+          // pushing the footer to the bottom.
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  if (blogPost['imageUrl'] != null)
+                    Image.network(
+                      blogPost['imageUrl'],
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: 250,
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          blogPost['title'],
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0A66C2),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'By ${blogPost['author']} on ${blogPost['date']}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          blogPost['content'],
+                          style: const TextStyle(
+                            fontSize: 16,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // The footer is now placed outside the scrollable area,
+          // so it stays at the bottom of the screen.
+          commonWidgets.buildFooter(),
+        ],
       ),
     );
   }
