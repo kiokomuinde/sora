@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sora_app/widgets/property_card.dart'; // Import the new, reusable property card widget
+import 'package:sora_app/services/firestore_service.dart'; // Import FirestoreService
 
 class PropertyListingScreen extends StatefulWidget {
   final AuthService authService;
@@ -69,6 +71,9 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
         case 'lease':
           queryValue = 'For Lease';
           break;
+        case 'airbnb':
+          queryValue = 'Staycation';
+          break;
       }
 
       if (queryValue != null) {
@@ -122,6 +127,39 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     });
 
     return filteredList;
+  }
+
+  // A new method to show the login/signup popup
+  void _showAuthDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Log In to Save Favorites'),
+          content: const Text('You must be logged in to save properties to your favorites.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+                Navigator.pushNamed(context, '/signup'); // Navigate to sign up
+              },
+              child: const Text('Sign Up'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+                Navigator.pushNamed(context, '/signin'); // Navigate to sign in
+              },
+              child: const Text('Sign In'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -186,6 +224,21 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
   }
 
   Widget _buildHeader() {
+    String headerText = 'Property Listings';
+    switch (_currentListingTypeFilter.toLowerCase()) {
+      case 'buy':
+        headerText = 'For Sale Properties';
+        break;
+      case 'rent':
+        headerText = 'For Rent Properties';
+        break;
+      case 'lease':
+        headerText = 'For Lease Properties';
+        break;
+      case 'airbnb':
+        headerText = 'Staycation';
+        break;
+    }
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
@@ -194,7 +247,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _currentListingTypeFilter.isNotEmpty ? '${_currentListingTypeFilter.toCapitalized()} Properties' : 'Property Listings',
+            headerText,
             style: const TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -287,126 +340,24 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
-          childAspectRatio: isLargeScreen ? 0.75 : (isMediumScreen ? 0.7 : 0.8),
+          crossAxisCount: isLargeScreen ? 5 : (isMediumScreen ? 3 : 2),
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: isLargeScreen ? 0.7 : (isMediumScreen ? 0.75 : 0.8), // Adjusted for height
         ),
         itemCount: properties.length,
         itemBuilder: (context, index) {
           final property = properties[index];
-          return _buildPropertyCard(property);
+          // Use the new PropertyCard widget
+          return PropertyCard(
+            property: property,
+            isLargeScreen: isLargeScreen,
+            isMediumScreen: isMediumScreen,
+            authService: widget.authService,
+            onAuthRequired: _showAuthDialog,
+          );
         },
       ),
-    );
-  }
-
-  Widget _buildPropertyCard(Map<String, dynamic> property) {
-    // Safely parse residentialDetails
-    final residentialDetails = property['residentialDetails'] as Map<String, dynamic>? ?? {};
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          '/view_property',
-          arguments: property,
-        );
-      },
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-              child: Image.network(
-                property['coverImageUrl'] ?? 'https://via.placeholder.com/400x300',
-                fit: BoxFit.cover,
-                height: 200,
-                width: double.infinity,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 200,
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: Icon(
-                      Icons.image_not_supported,
-                      size: 50,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'KSh ${property['price']}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A66C2),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    property['title'],
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          (property['location'] as Map<String, dynamic>)['town'],
-                          style: const TextStyle(fontSize: 14, color: Colors.grey),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildFeatureIcon(Icons.bed, '${residentialDetails['bedrooms'] ?? 0} Beds'),
-                      _buildFeatureIcon(Icons.bathtub, '${residentialDetails['bathrooms'] ?? 0} Baths'),
-                      _buildFeatureIcon(Icons.square_foot, '${property['area'] ?? 0} sqft'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeatureIcon(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
-        const SizedBox(width: 5),
-        Text(
-          text,
-          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-        ),
-      ],
     );
   }
 }

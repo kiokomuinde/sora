@@ -529,7 +529,12 @@ class CommonWidgets {
                   flex: 1,
                   child: _buildFooterColumn('Quick Links', [
                     _buildFooterLink('Home', '/home'),
-                    _buildFooterLink('Properties', '/properties'),
+                    // Add Airbnb after Home
+                    _buildFooterLink('Airbnb', '/airbnb'),
+                    // Add Buy, Rent, and Lease in place of Properties
+                    _buildFooterLink('Buy', '/buy'),
+                    _buildFooterLink('Rent', '/rent'),
+                    _buildFooterLink('Lease', '/lease'),
                     _buildFooterLink('Agents', '/agents'),
                     _buildFooterLink('Blog', '/blogs'),
                     _buildFooterLink('Contact Us', '/contact'),
@@ -559,7 +564,12 @@ class CommonWidgets {
             const SizedBox(height: 20),
             _buildFooterColumn('Quick Links', [
               _buildFooterLink('Home', '/home'),
-              _buildFooterLink('Properties', '/properties'),
+              // Add Airbnb after Home
+              _buildFooterLink('Airbnb', '/airbnb'),
+              // Add Buy, Rent, and Lease in place of Properties
+              _buildFooterLink('Buy', '/buy'),
+              _buildFooterLink('Rent', '/rent'),
+              _buildFooterLink('Lease', '/lease'),
               _buildFooterLink('Agents', '/agents'),
               _buildFooterLink('Blog', '/blogs'),
               _buildFooterLink('Contact Us', '/contact'),

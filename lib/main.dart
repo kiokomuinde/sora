@@ -39,7 +39,8 @@ import 'screens/my_listings_screen.dart';
 import 'screens/profile_settings_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/recently_viewed_screen.dart';
-import 'screens/airbnb_screen.dart';
+// Note: airbnb_screen.dart is no longer imported as the route is now handled by PropertyListingScreen
+// import 'screens/airbnb_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -108,12 +109,14 @@ class MyApp extends StatelessWidget {
           case '/buy':
           case '/rent':
           case '/lease':
+          case '/airbnb': // Added case for airbnb
             return MaterialPageRoute(builder: (_) => PropertyListingScreen(
               authService: authService,
               listingType: routeName.substring(1), // Remove the leading '/'
             ));
-          case '/airbnb':
-            return MaterialPageRoute(builder: (_) => AirbnbScreen(authService: authService));
+          // Note: The /airbnb case is now handled by PropertyListingScreen, so we remove the old entry
+          // case '/airbnb':
+          //   return MaterialPageRoute(builder: (_) => AirbnbScreen(authService: authService));
           case '/view_property':
             final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(builder: (_) => ViewPropertyScreen(authService: authService, propertyData: args));
