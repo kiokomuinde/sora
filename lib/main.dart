@@ -39,6 +39,7 @@ import 'screens/my_listings_screen.dart';
 import 'screens/profile_settings_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/recently_viewed_screen.dart';
+import 'screens/create_blog_screen.dart'; // Import the new screen
 // Note: airbnb_screen.dart is no longer imported as the route is now handled by PropertyListingScreen
 // import 'screens/airbnb_screen.dart';
 
@@ -139,6 +140,8 @@ class MyApp extends StatelessWidget {
           case '/blog_view':
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(builder: (_) => BlogViewScreen(blogPost: args, authService: authService));
+          case '/create_blog': // New route for the create blog screen
+            return MaterialPageRoute(builder: (_) => CreateBlogScreen(authService: authService));
           case '/testimonials':
             return MaterialPageRoute(builder: (_) => TestimonialsScreen(authService: authService));
           case '/faqs':

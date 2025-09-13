@@ -17,12 +17,44 @@ class BlogViewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final commonWidgets = CommonWidgets(context: context, authService: authService);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isLargeScreen = screenWidth >= 1000;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(blogPost['title']),
-        // You can add an endDrawer here if you need one.
+        actions: [
+          if (isLargeScreen)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/create_blog');
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Create Blog'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF0A66C2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 5,
+                ),
+              ),
+            ),
+        ],
       ),
+      floatingActionButton: !isLargeScreen
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.pushNamed(context, '/create_blog');
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Create Blog'),
+              backgroundColor: const Color(0xFF1E90FF),
+            )
+          : null,
       body: SingleChildScrollView(
         child: Column(
           children: [

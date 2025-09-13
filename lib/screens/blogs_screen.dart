@@ -137,10 +137,43 @@ class _BlogsScreenState extends State<BlogsScreen> {
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
 
     return Scaffold(
-      appBar: commonWidgets.buildAppBar(
-        currentListingTypeFilter: _currentListingTypeFilter,
+      appBar: AppBar(
+        title: const Text('Blogs'),
+        backgroundColor: const Color(0xFF0A66C2),
+        elevation: 0,
+        actions: [
+          if (isLargeScreen)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/create_blog');
+                },
+                icon: const Icon(Icons.add, color: Color(0xFF0A66C2)),
+                label: const Text('Create Blog'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF0A66C2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 5,
+                ),
+              ),
+            ),
+        ],
       ),
       endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
+      floatingActionButton: !isLargeScreen
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.pushNamed(context, '/create_blog');
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Create Blog'),
+              backgroundColor: const Color(0xFF1E90FF),
+            )
+          : null,
       body: SingleChildScrollView(
         child: Column(
           children: [
