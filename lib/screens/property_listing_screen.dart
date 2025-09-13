@@ -343,7 +343,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
           crossAxisCount: isLargeScreen ? 5 : (isMediumScreen ? 3 : 2),
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
-          childAspectRatio: isLargeScreen ? 0.7 : (isMediumScreen ? 0.75 : 0.8), // Adjusted for height
+          childAspectRatio: 0.75, // Adjusted to make the cards slightly shorter
         ),
         itemCount: properties.length,
         itemBuilder: (context, index) {

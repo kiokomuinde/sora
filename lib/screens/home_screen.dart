@@ -252,10 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
             // Airbnb button with new rolling animation
             RollingButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AirbnbScreen(authService: widget.authService)),
-                );
+                Navigator.of(context).pushNamed('/airbnb');
               },
             ),
           ],

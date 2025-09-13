@@ -165,7 +165,7 @@ class _PropertyCardState extends State<PropertyCard> {
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
                   child: Image.network(
                     imageUrl,
-                    height: widget.isLargeScreen ? 100 : (widget.isMediumScreen ? 80 : 60), // Increased image height
+                    height: 160, // Increased image height to occupy upper half
                     width: double.infinity,
                     fit: BoxFit.cover,
                     loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
@@ -182,27 +182,27 @@ class _PropertyCardState extends State<PropertyCard> {
                     },
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
-                        height: widget.isLargeScreen ? 100 : (widget.isMediumScreen ? 80 : 60), // Increased image height
+                        height: 160, // Increased image height
                         width: double.infinity,
                         color: Colors.grey[200],
-                        child: Icon(
+                        child: const Icon(
                           Icons.image_not_supported,
-                          size: widget.isLargeScreen ? 50 : 30, // Increased icon size
-                          color: Colors.grey[400],
+                          size: 68,
+                          color: Colors.grey,
                         ),
                       );
                     },
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(8.0), // Increased padding
+                  padding: const EdgeInsets.all(8.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'KSh ${widget.property['price']?.toString() ?? 'N/A'}',
                         style: const TextStyle(
-                          fontSize: 16, // Increased font size
+                          fontSize: 21,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0A66C2),
                         ),
@@ -211,7 +211,7 @@ class _PropertyCardState extends State<PropertyCard> {
                       Text(
                         widget.property['title']?.toString() ?? 'No Title',
                         style: const TextStyle(
-                          fontSize: 14, // Increased font size
+                          fontSize: 19,
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,
@@ -221,12 +221,12 @@ class _PropertyCardState extends State<PropertyCard> {
                       if (widget.property['location'] != null && widget.property['location']['town'] != null)
                         Row(
                           children: [
-                            Icon(Icons.location_on, size: 14, color: Colors.grey[600]), // Increased icon size
+                            Icon(Icons.location_on, size: 19, color: Colors.grey[600]),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 widget.property['location']['town'].toString(),
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]), // Increased font size
+                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -237,24 +237,24 @@ class _PropertyCardState extends State<PropertyCard> {
                         if (widget.property['residentialDetails']['bedrooms'] != null)
                           Row(
                             children: [
-                              Icon(Icons.bed, size: 14, color: Colors.grey[600]), // Increased icon size
+                              Icon(Icons.bed, size: 19, color: Colors.grey[600]),
                               const SizedBox(height: 4),
                               const SizedBox(width: 4),
                               Text(
                                 '${widget.property['residentialDetails']['bedrooms']} Beds',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]), // Increased font size
+                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                               ),
                             ],
                           ),
                         if (widget.property['residentialDetails']['bathrooms'] != null)
                           Row(
                             children: [
-                              Icon(Icons.bathtub, size: 14, color: Colors.grey[600]), // Increased icon size
+                              Icon(Icons.bathtub, size: 19, color: Colors.grey[600]),
                               const SizedBox(height: 4),
                               const SizedBox(width: 4),
                               Text(
                                 '${widget.property['residentialDetails']['bathrooms']} Baths',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]), // Increased font size
+                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                               ),
                             ],
                           ),
@@ -262,12 +262,12 @@ class _PropertyCardState extends State<PropertyCard> {
                       if (widget.property['area'] != null && widget.property['area'] != "0")
                         Row(
                           children: [
-                            Icon(Icons.square_foot, size: 14, color: Colors.grey[600]), // Increased icon size
+                            Icon(Icons.square_foot, size: 19, color: Colors.grey[600]),
                             const SizedBox(height: 4),
                             const SizedBox(width: 4),
                             Text(
                               '${widget.property['area']} sqft',
-                              style: TextStyle(fontSize: 12, color: Colors.grey[600]), // Increased font size
+                              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                             ),
                           ],
                         ),
@@ -295,7 +295,7 @@ class _PropertyCardState extends State<PropertyCard> {
                 ),
                 child: Text(
                   listingTypeDisplay,
-                  style: const TextStyle(fontSize: 10), // Increased font size
+                  style: const TextStyle(fontSize: 14),
                 ),
               ),
             ),
@@ -307,7 +307,7 @@ class _PropertyCardState extends State<PropertyCard> {
                 icon: Icon(
                   _isFavorite ? Icons.favorite : Icons.favorite_border,
                   color: _isFavorite ? Colors.red : Colors.white,
-                  size: 20, // Increased icon size
+                  size: 26,
                 ),
                 onPressed: _toggleFavorite,
               ),
