@@ -3,6 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class CreateBlogScreen extends StatefulWidget {
   final AuthService authService;
@@ -14,13 +17,29 @@ class CreateBlogScreen extends StatefulWidget {
 }
 
 class _CreateBlogScreenState extends State<CreateBlogScreen> {
+  final _pageController = PageController();
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _imageUrlController = TextEditingController();
-  final TextEditingController _categoryController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+
+  // Controllers for Step 1
+  final TextEditingController _mainTopicController = TextEditingController();
   final TextEditingController _snippetController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
-  String _selectedCategory = 'Market Trends';
+  final TextEditingController _introductionController = TextEditingController();
+  final TextEditingController _subtopicsCountController = TextEditingController();
+  final TextEditingController _imagesCountController = TextEditingController();
+
+  String? _selectedCategory;
+  int _subtopicsCount = 1;
+  int _imagesCount = 1;
+
+  // Controllers for Step 2
+  List<TextEditingController> _subtopicTitleControllers = [];
+  List<TextEditingController> _subtopicBodyControllers = [];
+
+  // Controllers for Step 3
+  final TextEditingController _summaryController = TextEditingController();
+  List<XFile> _imageFiles = [];
+
   final List<String> _categories = [
     'Market Trends',
     'Selling Tips',
@@ -32,190 +51,553 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _subtopicsCountController.text = _subtopicsCount.toString();
+    _imagesCountController.text = _imagesCount.toString();
+    _updateSubtopicControllers();
+  }
+
+  void _updateSubtopicControllers() {
+    // Dispose previous controllers to prevent memory leaks
+    for (var controller in _subtopicTitleControllers) {
+      controller.dispose();
+    }
+    for (var controller in _subtopicBodyControllers) {
+      controller.dispose();
+    }
+    _subtopicTitleControllers =
+        List.generate(_subtopicsCount, (index) => TextEditingController());
+    _subtopicBodyControllers =
+        List.generate(_subtopicsCount, (index) => TextEditingController());
+    setState(() {});
+  }
+
+  @override
   void dispose() {
-    _titleController.dispose();
-    _imageUrlController.dispose();
-    _categoryController.dispose();
+    _pageController.dispose();
+    _mainTopicController.dispose();
     _snippetController.dispose();
-    _contentController.dispose();
+    _introductionController.dispose();
+    _summaryController.dispose();
+    _subtopicsCountController.dispose();
+    _imagesCountController.dispose();
+
+    for (var controller in _subtopicTitleControllers) {
+      controller.dispose();
+    }
+    for (var controller in _subtopicBodyControllers) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  void _nextPage() {
+    if (_pageController.page!.round() == 0) {
+      if (_formKey.currentState!.validate()) {
+        final subtopicCount = int.tryParse(_subtopicsCountController.text);
+        final imageCount = int.tryParse(_imagesCountController.text);
+
+        if (subtopicCount != null && imageCount != null) {
+          _subtopicsCount = subtopicCount;
+          _imagesCount = imageCount;
+          _updateSubtopicControllers();
+        }
+
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeIn,
+        );
+      }
+    } else if (_pageController.page!.round() == 1) {
+      bool allFieldsFilled = true;
+      for (var i = 0; i < _subtopicTitleControllers.length; i++) {
+        if (_subtopicTitleControllers[i].text.isEmpty ||
+            _subtopicBodyControllers[i].text.isEmpty) {
+          allFieldsFilled = false;
+          break;
+        }
+      }
+
+      if (allFieldsFilled) {
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeIn,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fill in all subtopic fields to proceed.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _previousPage() {
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeIn,
+    );
   }
 
   void _submitBlog() {
     if (_formKey.currentState!.validate()) {
-      // Logic to save the blog post to a database (e.g., Firestore)
-      // For this example, we'll just show a success message.
+      if (_imageFiles.length != _imagesCount) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please select exactly $_imagesCount images.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      print('Main Topic: ${_mainTopicController.text}');
+      print('Number of Subtopics: $_subtopicsCount');
+      print('Number of Images: $_imagesCount');
+      print('Category: $_selectedCategory');
+      print('Summary: ${_snippetController.text}');
+      print('Introduction: ${_introductionController.text}');
+      print('Summary of Blog (Step 3): ${_summaryController.text}');
+      print('Image Files: ${_imageFiles.map((xfile) => xfile.path).toList()}');
+
+      for (int i = 0; i < _subtopicTitleControllers.length; i++) {
+        print('Subtopic ${i + 1} Title: ${_subtopicTitleControllers[i].text}');
+        print('Subtopic ${i + 1} Body: ${_subtopicBodyControllers[i].text}');
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Blog post "${_titleController.text}" created successfully!'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text('Blog submitted successfully!')),
       );
-      // You would normally add the post to your database here
-      // and then navigate back.
-      // Navigator.pop(context);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final bool isLargeScreen = screenWidth >= 1000;
-    
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create New Blog Post'),
-        backgroundColor: const Color(0xFF0A66C2),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            vertical: 40.0,
-            horizontal: isLargeScreen ? 200.0 : 24.0,
+  Future<void> _pickImages() async {
+    final List<XFile>? pickedFiles = await _picker.pickMultiImage();
+    if (pickedFiles != null && pickedFiles.isNotEmpty) {
+      setState(() {
+        // Append selected images, but don't exceed the limit
+        final availableSlots = _imagesCount - _imageFiles.length;
+        _imageFiles.addAll(pickedFiles.take(availableSlots));
+
+        if (pickedFiles.length > availableSlots) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Selected images trimmed to fit the requested count of $_imagesCount.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      });
+    }
+  }
+
+  void _removeImage(XFile imageFile) {
+    setState(() {
+      _imageFiles.remove(imageFile);
+    });
+  }
+
+  Widget _buildStep1() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15)),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Step 1: General Information',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E90FF)),
+                      ),
+                      const SizedBox(height: 20),
+                      CustomTextField(
+                        controller: _mainTopicController,
+                        labelText: 'Main Topic / Title',
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a title';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CustomTextField(
+                              controller: _subtopicsCountController,
+                              labelText: 'Number of Subtopics',
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null ||
+                                    value.isEmpty ||
+                                    int.tryParse(value) == null ||
+                                    int.parse(value) <= 0) {
+                                  return 'Enter a positive number';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: CustomTextField(
+                              controller: _imagesCountController,
+                              labelText: 'Number of Images',
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null ||
+                                    value.isEmpty ||
+                                    int.tryParse(value) == null ||
+                                    int.parse(value) <= 0) {
+                                  return 'Enter a positive number';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      CustomDropdown<String>(
+                        value: _selectedCategory,
+                        hintText: 'Category',
+                        items: _categories.map((String category) {
+                          return DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(category),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedCategory = newValue;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select a category';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _snippetController,
+                        labelText: 'Summary / Snippet',
+                        maxLines: 3,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a summary';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _introductionController,
+                        labelText: 'Introduction',
+                        maxLines: 5,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter an introduction';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.5,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _nextPage,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E90FF),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                    ),
+                    child: const Text('Next'),
+                  ),
+                ),
+              ),
+            ],
           ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep2() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Step 2: Subtopics',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E90FF)),
+                    ),
+                    const SizedBox(height: 20),
+                    for (int i = 0; i < _subtopicsCount; i++)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CustomTextField(
+                              controller: _subtopicTitleControllers[i],
+                              labelText: 'Subtopic ${i + 1} Title',
+                            ),
+                            const SizedBox(height: 8),
+                            CustomTextField(
+                              controller: _subtopicBodyControllers[i],
+                              labelText: 'Subtopic ${i + 1} Body Content',
+                              maxLines: 8,
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Write Your Article',
-                  style: TextStyle(
-                    fontSize: isLargeScreen ? 40 : 28,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF0A66C2),
+                ElevatedButton(
+                  onPressed: _previousPage,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)),
                   ),
-                  textAlign: TextAlign.center,
+                  child: const Text('Back'),
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Title',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                ElevatedButton(
+                  onPressed: _nextPage,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E90FF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)),
+                  ),
+                  child: const Text('Next'),
                 ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    hintText: 'e.g., The Future of Real Estate',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8.0)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep3() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Step 3: Final Touches',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E90FF)),
                     ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a title';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Image URL',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _imageUrlController,
-                  decoration: const InputDecoration(
-                    hintText: 'e.g., https://example.com/image.jpg',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                    const SizedBox(height: 20),
+                    CustomTextField(
+                      controller: _summaryController,
+                      labelText: 'Summary of the entire blog',
+                      maxLines: 5,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a final summary';
+                        }
+                        return null;
+                      },
                     ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter an image URL';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Category',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _selectedCategory,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Blog Images',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  items: _categories.map((String category) {
-                    return DropdownMenuItem<String>(
-                      value: category,
-                      child: Text(category),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedCategory = newValue!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Snippet',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _snippetController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: 'A short summary of the blog post',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 15.0, // horizontal spacing
+                      runSpacing: 15.0, // vertical spacing
+                      children: [
+                        ..._imageFiles.map((imageFile) => _buildImagePreview(imageFile)),
+                        if (_imageFiles.length < _imagesCount)
+                          GestureDetector(
+                            onTap: _pickImages,
+                            child: Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0F8FF),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFB0C4DE)!),
+                              ),
+                              child: Icon(Icons.add_a_photo,
+                                  color: Colors.blue[300], size: 40),
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a snippet';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Content',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _contentController,
-                  maxLines: 15,
-                  decoration: const InputDecoration(
-                    hintText: 'Write the full content of your blog post here...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                    const SizedBox(height: 16),
+                    Text(
+                      '${_imageFiles.length} / $_imagesCount images uploaded',
+                      style: TextStyle(color: Colors.grey[600]),
                     ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter the content';
-                    }
-                    return null;
-                  },
+                  ],
                 ),
-                const SizedBox(height: 30),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: _previousPage,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)),
+                  ),
+                  child: const Text('Back'),
+                ),
                 ElevatedButton(
                   onPressed: _submitBlog,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E90FF),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 15),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        borderRadius: BorderRadius.circular(30)),
                   ),
-                  child: const Text('Publish Blog'),
+                  child: const Text('Submit'),
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImagePreview(XFile imageFile) {
+    return Stack(
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: kIsWeb
+                ? Image.network(
+                    imageFile.path,
+                    fit: BoxFit.cover,
+                  )
+                : Image.file(
+                    File(imageFile.path),
+                    fit: BoxFit.cover,
+                  ),
           ),
         ),
+        Positioned(
+          top: -5,
+          right: -5,
+          child: GestureDetector(
+            onTap: () => _removeImage(imageFile),
+            child: const CircleAvatar(
+              radius: 12,
+              backgroundColor: Color(0xFF1E90FF),
+              child: Icon(Icons.close, size: 16, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.blue[50],
+      appBar: AppBar(
+        title: const Text('Create New Blog'),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(30),
+          ),
+        ),
+      ),
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          _buildStep1(),
+          _buildStep2(),
+          _buildStep3(),
+        ],
       ),
     );
   }

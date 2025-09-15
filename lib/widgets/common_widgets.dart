@@ -90,7 +90,7 @@ class CommonWidgets {
   bool _isSmallScreen() {
     return MediaQuery.of(context).size.width < 1024;
   }
-  
+
   // Common AppBar for consistent navigation
   AppBar buildAppBar({String? currentListingTypeFilter}) {
     final bool isLoggedIn = authService.getCurrentUser() != null;
@@ -804,6 +804,140 @@ class CommonWidgets {
           ],
         ),
       ),
+    );
+  }
+}
+
+// A custom reusable header widget.
+class CustomHeader extends StatelessWidget {
+  final String text;
+
+  const CustomHeader({Key? key, required this.text}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF0A66C2),
+      ),
+    );
+  }
+}
+
+// A custom reusable text field widget.
+class CustomTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String labelText;
+  final String hintText;
+  final int maxLines;
+  final String? Function(String?)? validator;
+  final TextInputType keyboardType;
+
+  const CustomTextField({
+    Key? key,
+    required this.controller,
+    required this.labelText,
+    this.hintText = '',
+    this.maxLines = 1,
+    this.validator,
+    this.keyboardType = TextInputType.text,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      validator: validator,
+    );
+  }
+}
+
+// A custom reusable dropdown widget.
+class CustomDropdown<T> extends StatelessWidget {
+  final T? value;
+  final String hintText;
+  final List<DropdownMenuItem<T>>? items;
+  final Function(T?)? onChanged;
+  final String? Function(T?)? validator;
+
+  const CustomDropdown({
+    Key? key,
+    required this.value,
+    required this.hintText,
+    required this.items,
+    required this.onChanged,
+    this.validator,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: hintText,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      items: items,
+      onChanged: onChanged,
+      validator: validator,
+    );
+  }
+}
+
+// A new custom widget for number picking.
+class CustomNumberPicker extends StatelessWidget {
+  final String labelText;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  const CustomNumberPicker({
+    Key? key,
+    required this.labelText,
+    required this.value,
+    required this.onChanged,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(labelText, style: TextStyle(fontSize: 16, color: Colors.grey[700])),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.remove),
+                onPressed: value > 1 ? () => onChanged(value - 1) : null,
+              ),
+              Text(
+                '$value',
+                style: const TextStyle(fontSize: 18),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () => onChanged(value + 1),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
