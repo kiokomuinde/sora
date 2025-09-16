@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import for Timestamp
 
 class BlogViewScreen extends StatelessWidget {
   final Map<String, dynamic> blogPost;
@@ -18,7 +19,21 @@ class BlogViewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final commonWidgets = CommonWidgets(context: context, authService: authService);
     final bool isLoggedIn = authService.getCurrentUser() != null;
-    
+    final List<String> imageUrls = blogPost['imageUrls']?.cast<String>() ?? [];
+
+    // Helper method to build the full blog content
+    String _buildFullContent() {
+      final introduction = blogPost['introduction'] ?? '';
+      final subtopics = blogPost['subtopics']?.cast<Map<String, dynamic>>() ?? [];
+      String fullContent = introduction;
+      if (subtopics.isNotEmpty) {
+        for (var subtopic in subtopics) {
+          fullContent += '\n\n**${subtopic['title']}**\n${subtopic['body']}';
+        }
+      }
+      return fullContent;
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       floatingActionButton: isLoggedIn
@@ -74,18 +89,40 @@ class BlogViewScreen extends StatelessWidget {
       
       body: Column(
         children: [
-          // This Expanded widget ensures the content takes up the available space,
-          // pushing the footer to the bottom.
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  if (blogPost['imageUrl'] != null)
+                  if (imageUrls.isNotEmpty)
                     Image.network(
-                      blogPost['imageUrl'],
+                      imageUrls[0],
                       fit: BoxFit.cover,
                       width: double.infinity,
                       height: 250,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Text(
+                            'Image not found',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        );
+                      },
+                    )
+                  else
+                    Container(
+                      height: 250,
+                      width: double.infinity,
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: Text(
+                          'Image Unavailable',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ),
                     ),
                   Padding(
                     padding: const EdgeInsets.all(24.0),
@@ -93,7 +130,7 @@ class BlogViewScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          blogPost['title'],
+                          blogPost['title'] ?? 'No Title',
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -101,9 +138,8 @@ class BlogViewScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        // Corrected the key from 'author' to 'user'
                         Text(
-                          'By ${blogPost['user'] ?? 'Sora Team'} on ${blogPost['date']}',
+                          'By ${blogPost['userId'] ?? 'Sora Team'} on ${_formatDate(blogPost['timestamp'])}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -111,7 +147,7 @@ class BlogViewScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          blogPost['content'],
+                          _buildFullContent(),
                           style: const TextStyle(
                             fontSize: 16,
                             height: 1.5,
@@ -124,12 +160,17 @@ class BlogViewScreen extends StatelessWidget {
               ),
             ),
           ),
-          
-          // The footer is now placed outside the scrollable area,
-          // so it stays at the bottom of the screen.
           commonWidgets.buildFooter(),
         ],
       ),
     );
+  }
+
+  // Helper method to format the date
+  String _formatDate(dynamic timestamp) {
+    if (timestamp is Timestamp) {
+      return timestamp.toDate().toString().split(' ')[0];
+    }
+    return 'Date Unavailable';
   }
 }

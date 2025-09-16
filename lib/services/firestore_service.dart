@@ -153,4 +153,9 @@ class FirestoreService {
       return false;
     }
   }
+
+  // NEW: Method to get a real-time stream of all blog posts
+  Stream<QuerySnapshot> getBlogs() {
+    return _firestore.collection('blogs').snapshots();
+  }
 }

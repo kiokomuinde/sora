@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sora_app/services/auth_service.dart';
-import 'package:sora_app/widgets/common_widgets.dart'; // Import CommonWidgets
+import 'package:sora_app/widgets/common_widgets.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // NEW: Import Firestore classes
+import 'package:sora_app/services/firestore_service.dart'; // NEW: Import FirestoreService
 
 class BlogsScreen extends StatefulWidget {
   final AuthService authService;
@@ -19,62 +21,16 @@ class BlogsScreen extends StatefulWidget {
 class _BlogsScreenState extends State<BlogsScreen> {
   final TextEditingController _newsletterEmailController = TextEditingController();
   String _currentListingTypeFilter = '';
-  late CommonWidgets commonWidgets; // Declare commonWidgets
+  late CommonWidgets commonWidgets;
+  final FirestoreService _firestoreService = FirestoreService(); // NEW: Instantiate the FirestoreService
+
+  // Mock blog data has been removed
 
   @override
   void initState() {
     super.initState();
-    commonWidgets = CommonWidgets(context: context, authService: widget.authService); // Initialize commonWidgets
+    commonWidgets = CommonWidgets(context: context, authService: widget.authService);
   }
-
-  // Mock blog data
-  final List<Map<String, dynamic>> _blogPosts = [
-    {
-      "id": "1",
-      "title": "The Future of Real Estate in Africa: 2025 Trends",
-      "image": "", // NOTE: Removed image path to fix asset loading errors.
-      "category": "Market Trends",
-      "date": "July 10, 2025",
-      "snippet": "Explore the emerging trends shaping the African real estate market, from sustainable development to digital transformation.",
-      "content": "The African real estate market is on the cusp of a major transformation. With rapid urbanization, a growing middle class, and increased foreign investment, the demand for both residential and commercial properties is soaring. In 2025, we anticipate several key trends to dominate the landscape. Firstly, sustainable and green building practices will become more prevalent as developers and buyers become more environmentally conscious. Secondly, technology will play an even bigger role, with virtual tours, AI-powered property matching, and blockchain for secure transactions becoming standard. Thirdly, affordable housing initiatives will gain momentum, driven by government policies and private sector innovation. Finally, cross-border investments are expected to surge, as Africa continues to be seen as a frontier market with high growth potential. Understanding these trends is crucial for anyone looking to invest or participate in the African real estate sector.",
-    },
-    {
-      "id": "2",
-      "title": "Home Staging Tips to Sell Your Property Faster",
-      "image": "", // NOTE: Removed image path to fix asset loading errors.
-      "category": "Selling Tips",
-      "date": "June 28, 2025",
-      "snippet": "Discover professional home staging techniques that can significantly reduce your property's time on the market.",
-      "content": "Home staging is an art and a science that can dramatically impact how quickly your property sells and for what price. The goal is to make your home appealing to the widest possible range of potential buyers. Start by decluttering and depersonalizing; remove family photos, excessive knick-knacks, and personal items. This allows buyers to envision themselves in the space. Next, deep clean every corner of your home, paying attention to often-overlooked areas like grout and baseboards. Enhance curb appeal by tidying up the exterior, adding fresh flowers, and ensuring the entrance is inviting. Inside, focus on neutral colors for walls and decor, as this creates a sense of spaciousness and allows buyers to project their own style. Arrange furniture to highlight the room's best features and ensure good flow. Finally, consider minor repairs like leaky faucets or chipped paint, as these small fixes can make a big difference in a buyer's perception of the home's maintenance. A well-staged home not only sells faster but often fetches a higher price.",
-    },
-    {
-      "id": "3",
-      "title": "Investing in Rental Properties: A Beginner's Guide",
-      "image": "", // NOTE: Removed image path to fix asset loading errors.
-      "category": "Investment",
-      "date": "May 15, 2025",
-      "snippet": "A comprehensive guide for first-time investors looking to venture into the lucrative world of rental properties.",
-      "content": "Investing in rental properties can be a lucrative venture, offering both passive income and long-term appreciation. For beginners, it's essential to start with a solid understanding of the market and a clear strategy. First, research potential locations thoroughly. Look for areas with strong rental demand, good schools (if targeting families), low vacancy rates, and positive economic indicators. Second, understand the financials: calculate potential rental income, property taxes, insurance, maintenance costs, and potential mortgage payments. Aim for a positive cash flow. Third, consider the type of property – single-family homes, multi-family units, or apartments each have their pros and cons. Fourth, be prepared for landlord responsibilities, or budget for a property management company. This includes tenant screening, maintenance, and handling emergencies. Finally, build a strong network of professionals, including real estate agents, lenders, and contractors. By approaching rental property investment strategically, you can build a robust portfolio.",
-    },
-    {
-      "id": "4",
-      "title": "Smart Home Technology: Enhancing Property Value",
-      "image": "", // NOTE: Removed image path to fix asset loading errors.
-      "category": "Technology",
-      "date": "April 01, 2025",
-      "snippet": "Learn how integrating smart home devices can boost your property's appeal and market value.",
-      "content": "In today's tech-driven world, smart home technology is no longer a luxury but a desirable feature that can significantly enhance property value and appeal. Buyers are increasingly looking for homes that offer convenience, security, and energy efficiency. Integrating smart thermostats, lighting systems, security cameras, and smart locks can make your property stand out. Smart thermostats, for example, allow for remote temperature control, leading to energy savings that appeal to eco-conscious buyers. Smart lighting systems offer ambiance control and can be programmed for various scenarios, adding a touch of modern luxury. Advanced security systems with remote monitoring capabilities provide peace of mind. Even smart appliances can be a draw. While the initial investment might seem significant, these upgrades often yield a strong return on investment by attracting tech-savvy buyers and justifying a higher asking price. It’s about offering a lifestyle of convenience and modernity.",
-    },
-    {
-      "id": "5",
-      "title": "Understanding Mortgage Options: A Guide for Buyers",
-      "image": "", // NOTE: Removed image path to fix asset loading errors.
-      "category": "Financing",
-      "date": "March 20, 2025",
-      "snippet": "Navigate the complexities of mortgage options with this essential guide for first-time and experienced homebuyers.",
-      "content": "Securing a mortgage is a critical step in the home-buying process, and understanding your options is key to making an informed decision. There are several types of mortgages, each with different features. Fixed-rate mortgages offer a consistent interest rate for the life of the loan, providing stability in monthly payments. Adjustable-rate mortgages (ARMs) have an initial fixed rate, which then adjusts periodically based on market indices; these can offer lower initial payments but come with interest rate risk. FHA loans are government-insured and popular among first-time homebuyers due to lower down payment requirements. VA loans, for eligible veterans, offer competitive rates and no down payment. Conventional loans are not government-backed and require good credit and a stable income. It's crucial to compare interest rates, terms, closing costs, and eligibility criteria for each option. Consulting with a mortgage advisor is highly recommended to determine the best fit for your financial situation.",
-    },
-  ];
 
   @override
   void dispose() {
@@ -120,8 +76,8 @@ class _BlogsScreenState extends State<BlogsScreen> {
               ),
               child: const Text('Login / Sign Up'),
               onPressed: () {
-                Navigator.of(context).pop(); // Dismiss dialog
-                Navigator.pushNamed(context, '/signin'); // Navigate to sign-in
+                Navigator.of(context).pop();
+                Navigator.pushNamed(context, '/signin');
               },
             ),
           ],
@@ -135,12 +91,11 @@ class _BlogsScreenState extends State<BlogsScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth >= 1000;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
-    final bool isLoggedIn = widget.authService.getCurrentUser() != null; // Check login status
+    final bool isLoggedIn = widget.authService.getCurrentUser() != null;
 
     return Scaffold(
       appBar: commonWidgets.buildAppBar(),
       endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
-      // Removed the FloatingActionButton
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -184,7 +139,6 @@ class _BlogsScreenState extends State<BlogsScreen> {
                             ),
                           ],
                         ),
-                        // Conditionally render the button
                         if (isLoggedIn)
                           ElevatedButton.icon(
                             onPressed: () {
@@ -224,7 +178,6 @@ class _BlogsScreenState extends State<BlogsScreen> {
                           ),
                         ),
                         SizedBox(height: isMediumScreen ? 20 : 15),
-                        // Conditionally render the button
                         if (isLoggedIn)
                           ElevatedButton.icon(
                             onPressed: () {
@@ -246,7 +199,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
                     ),
             ),
 
-            // Blog Posts Grid
+            // Blog Posts Grid with StreamBuilder
             Padding(
               padding: EdgeInsets.symmetric(
                 vertical: isLargeScreen ? 60 : 30,
@@ -264,19 +217,47 @@ class _BlogsScreenState extends State<BlogsScreen> {
                     ),
                   ),
                   SizedBox(height: isLargeScreen ? 30 : 20),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
-                      crossAxisSpacing: isLargeScreen ? 30 : 20,
-                      mainAxisSpacing: isLargeScreen ? 30 : 20,
-                      childAspectRatio: isLargeScreen ? 0.75 : (isMediumScreen ? 0.7 : 0.85), // Adjusted for content
-                    ),
-                    itemCount: _blogPosts.length,
-                    itemBuilder: (context, index) {
-                      final blog = _blogPosts[index];
-                      return _buildBlogCard(blog);
+                  StreamBuilder<QuerySnapshot>(
+                    stream: _firestoreService.getBlogs(), // NEW: Listen to the blog stream
+                    builder: (context, snapshot) {
+                      // Handle loading state
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      // Handle error state
+                      if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}'));
+                      }
+
+                      // Handle no data state
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return const Center(child: Text('No blog posts found.'));
+                      }
+
+                      // Convert snapshots to a list of blog data maps
+                      final blogPosts = snapshot.data!.docs.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        data['id'] = doc.id; // Store the document ID
+                        return data;
+                      }).toList();
+
+                      // Display the data in a GridView
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
+                          crossAxisSpacing: isLargeScreen ? 30 : 20,
+                          mainAxisSpacing: isLargeScreen ? 30 : 20,
+                          childAspectRatio: isLargeScreen ? 0.75 : (isMediumScreen ? 0.7 : 0.85),
+                        ),
+                        itemCount: blogPosts.length,
+                        itemBuilder: (context, index) {
+                          final blog = blogPosts[index];
+                          return _buildBlogCard(blog);
+                        },
+                      );
                     },
                   ),
                 ],
@@ -320,7 +301,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
                   SizedBox(height: isLargeScreen ? 40 : 30),
                   ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/contact'); // Navigate to Contact screen
+                      Navigator.pushNamed(context, '/contact');
                     },
                     icon: const Icon(Icons.lightbulb),
                     label: const Text('Suggest a Topic'),
@@ -346,7 +327,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
                 vertical: isLargeScreen ? 60 : 30,
                 horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
               ),
-              color: const Color(0xFFF0F2F5), // Light grey background
+              color: const Color(0xFFF0F2F5),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -425,12 +406,17 @@ class _BlogsScreenState extends State<BlogsScreen> {
   }
 
   Widget _buildBlogCard(Map<String, dynamic> blog) {
+    // The blog map now contains a 'id' key and an 'imageUrls' list
+    final String imageUrl = blog['imageUrls'] != null && blog['imageUrls'].isNotEmpty
+        ? blog['imageUrls'][0] // Use the first image URL from the list
+        : '';
+
     return GestureDetector(
       onTap: () {
         Navigator.pushNamed(
           context,
           '/blog_view',
-          arguments: blog, // Pass the entire blog map as arguments
+          arguments: blog,
         );
       },
       child: Card(
@@ -444,15 +430,30 @@ class _BlogsScreenState extends State<BlogsScreen> {
               flex: 2,
               child: Container(
                 width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300], // Placeholder color
-                ),
-                child: Center(
-                  child: Text(
-                    'Image Unavailable',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ),
+                // Check if a valid image URL exists
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(child: CircularProgressIndicator());
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                              child: Text(
+                                  'Image not found',
+                                  style: TextStyle(color: Colors.grey[600]),
+                              ),
+                          );
+                        },
+                      )
+                    : Center( // Fallback if no image URL
+                        child: Text(
+                          'Image Unavailable',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ),
               ),
             ),
             Expanded(
@@ -491,11 +492,14 @@ class _BlogsScreenState extends State<BlogsScreen> {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(), // Pushes date and read more to the bottom
+                    const Spacer(),
                     Align(
                       alignment: Alignment.bottomRight,
                       child: Text(
-                        blog['date']!,
+                        // Format the timestamp if it exists, otherwise use a placeholder
+                        blog['timestamp'] != null
+                            ? (blog['timestamp'] as Timestamp).toDate().toString().split(' ')[0]
+                            : 'Date Unavailable',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[500],
@@ -510,7 +514,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
                           Navigator.pushNamed(
                             context,
                             '/blog_view',
-                            arguments: blog, // Pass the entire blog map as arguments
+                            arguments: blog,
                           );
                         },
                         child: const Text(
