@@ -17,58 +17,60 @@ class BlogViewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final commonWidgets = CommonWidgets(context: context, authService: authService);
+    final bool isLoggedIn = authService.getCurrentUser() != null;
     
     return Scaffold(
-      // The AppBar has been removed as per your request.
-      
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFF1E90FF), // A beautiful blue
-              Color(0xFF8A2BE2), // A beautiful purple
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              spreadRadius: 2,
-              blurRadius: 5,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: () {
-              // Navigate to the create blog screen
-              Navigator.pushNamed(context, '/create_blog');
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.add, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text(
-                    'Create Blog',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+      backgroundColor: Colors.white,
+      floatingActionButton: isLoggedIn
+          ? Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF1E90FF), // A beautiful blue
+                    Color(0xFF8A2BE2), // A beautiful purple
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    spreadRadius: 2,
+                    blurRadius: 5,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
-            ),
-          ),
-        ),
-      ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    // Navigate to the create blog screen
+                    Navigator.pushNamed(context, '/create_blog');
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.add, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text(
+                          'Create Blog',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : null, // Hide the button if the user is not logged in
       
       body: Column(
         children: [
@@ -99,8 +101,9 @@ class BlogViewScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
+                        // Corrected the key from 'author' to 'user'
                         Text(
-                          'By ${blogPost['author']} on ${blogPost['date']}',
+                          'By ${blogPost['user'] ?? 'Sora Team'} on ${blogPost['date']}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],

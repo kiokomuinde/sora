@@ -135,6 +135,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth >= 1000;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
+    final bool isLoggedIn = widget.authService.getCurrentUser() != null; // Check login status
 
     return Scaffold(
       appBar: commonWidgets.buildAppBar(),
@@ -183,22 +184,24 @@ class _BlogsScreenState extends State<BlogsScreen> {
                             ),
                           ],
                         ),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/create_blog');
-                          },
-                          icon: const Icon(Icons.add, color: Color(0xFF0A66C2)),
-                          label: const Text('Create Blog'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF0A66C2),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                        // Conditionally render the button
+                        if (isLoggedIn)
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/create_blog');
+                            },
+                            icon: const Icon(Icons.add, color: Color(0xFF0A66C2)),
+                            label: const Text('Create Blog'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF0A66C2),
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 5,
                             ),
-                            elevation: 5,
                           ),
-                        ),
                       ],
                     )
                   : Column(
@@ -221,22 +224,24 @@ class _BlogsScreenState extends State<BlogsScreen> {
                           ),
                         ),
                         SizedBox(height: isMediumScreen ? 20 : 15),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/create_blog');
-                          },
-                          icon: const Icon(Icons.add, color: Color(0xFF0A66C2)),
-                          label: const Text('Create Blog'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF0A66C2),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                        // Conditionally render the button
+                        if (isLoggedIn)
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/create_blog');
+                            },
+                            icon: const Icon(Icons.add, color: Color(0xFF0A66C2)),
+                            label: const Text('Create Blog'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF0A66C2),
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 5,
                             ),
-                            elevation: 5,
                           ),
-                        ),
                       ],
                     ),
             ),

@@ -166,6 +166,10 @@ class CommonWidgets {
                 _buildAppBarButton('Contact Us', '/contact'),
                 const SizedBox(width: 20),
                 _buildAppBarButton('Blog', '/blogs'),
+                if (isLoggedIn) ...[
+                  const SizedBox(width: 20),
+                  _buildAppBarButton('Create Blog', '/create_blog')
+                ]
               ],
             )
           : null,
@@ -425,40 +429,46 @@ class CommonWidgets {
             },
           ),
           const Divider(),
-          if (isLoggedIn)
-            ...[
-              ListTile(
-                leading: const Icon(Icons.add_home_work),
-                title: const Text('My Listings'),
-                onTap: () {
-                  Navigator.pushNamed(context, '/my_listings');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.favorite),
-                title: const Text('My Favorites'),
-                onTap: () {
-                  Navigator.pushNamed(context, '/my_favorites');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.history),
-                title: const Text('Recently Viewed'),
-                onTap: () {
-                  Navigator.pushNamed(context, '/recently_viewed');
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.logout),
-                title: const Text('Logout'),
-                onTap: () async {
-                  await authService.signOut();
-                  Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-                },
-              ),
-            ]
-          else
+          if (isLoggedIn) ...[
+            ListTile(
+              leading: const FaIcon(FontAwesomeIcons.plus, size: 20),
+              title: const Text('Create Blog'),
+              onTap: () {
+                Navigator.pushNamed(context, '/create_blog');
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.add_home_work),
+              title: const Text('My Listings'),
+              onTap: () {
+                Navigator.pushNamed(context, '/my_listings');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.favorite),
+              title: const Text('My Favorites'),
+              onTap: () {
+                Navigator.pushNamed(context, '/my_favorites');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Recently Viewed'),
+              onTap: () {
+                Navigator.pushNamed(context, '/recently_viewed');
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
+              onTap: () async {
+                await authService.signOut();
+                Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+              },
+            ),
+          ] else
             ListTile(
               leading: const Icon(Icons.login),
               title: const Text('Sign In'),
