@@ -32,7 +32,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
     {
       "id": "1",
       "title": "The Future of Real Estate in Africa: 2025 Trends",
-      "image": "assets/images/blog1.webp",
+      "image": "", // NOTE: Removed image path to fix asset loading errors.
       "category": "Market Trends",
       "date": "July 10, 2025",
       "snippet": "Explore the emerging trends shaping the African real estate market, from sustainable development to digital transformation.",
@@ -41,7 +41,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
     {
       "id": "2",
       "title": "Home Staging Tips to Sell Your Property Faster",
-      "image": "assets/images/blog2.webp",
+      "image": "", // NOTE: Removed image path to fix asset loading errors.
       "category": "Selling Tips",
       "date": "June 28, 2025",
       "snippet": "Discover professional home staging techniques that can significantly reduce your property's time on the market.",
@@ -50,7 +50,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
     {
       "id": "3",
       "title": "Investing in Rental Properties: A Beginner's Guide",
-      "image": "assets/images/blog3.webp",
+      "image": "", // NOTE: Removed image path to fix asset loading errors.
       "category": "Investment",
       "date": "May 15, 2025",
       "snippet": "A comprehensive guide for first-time investors looking to venture into the lucrative world of rental properties.",
@@ -59,7 +59,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
     {
       "id": "4",
       "title": "Smart Home Technology: Enhancing Property Value",
-      "image": "assets/images/blog4.webp",
+      "image": "", // NOTE: Removed image path to fix asset loading errors.
       "category": "Technology",
       "date": "April 01, 2025",
       "snippet": "Learn how integrating smart home devices can boost your property's appeal and market value.",
@@ -68,7 +68,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
     {
       "id": "5",
       "title": "Understanding Mortgage Options: A Guide for Buyers",
-      "image": "assets/images/blog5.webp",
+      "image": "", // NOTE: Removed image path to fix asset loading errors.
       "category": "Financing",
       "date": "March 20, 2025",
       "snippet": "Navigate the complexities of mortgage options with this essential guide for first-time and experienced homebuyers.",
@@ -440,9 +440,12 @@ class _BlogsScreenState extends State<BlogsScreen> {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage(blog['image']!),
-                    fit: BoxFit.cover,
+                  color: Colors.grey[300], // Placeholder color
+                ),
+                child: Center(
+                  child: Text(
+                    'Image Unavailable',
+                    style: TextStyle(color: Colors.grey[600]),
                   ),
                 ),
               ),

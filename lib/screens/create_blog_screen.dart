@@ -143,34 +143,52 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   }
 
   void _submitBlog() {
-    if (_formKey.currentState!.validate()) {
-      if (_imageFiles.length != _imagesCount) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Please select exactly $_imagesCount images.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-      print('Main Topic: ${_mainTopicController.text}');
-      print('Number of Subtopics: $_subtopicsCount');
-      print('Number of Images: $_imagesCount');
-      print('Category: $_selectedCategory');
-      print('Summary: ${_snippetController.text}');
-      print('Introduction: ${_introductionController.text}');
-      print('Summary of Blog (Step 3): ${_summaryController.text}');
-      print('Image Files: ${_imageFiles.map((xfile) => xfile.path).toList()}');
-
-      for (int i = 0; i < _subtopicTitleControllers.length; i++) {
-        print('Subtopic ${i + 1} Title: ${_subtopicTitleControllers[i].text}');
-        print('Subtopic ${i + 1} Body: ${_subtopicBodyControllers[i].text}');
-      }
-
+    // Check if the final summary is not empty
+    if (_summaryController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Blog submitted successfully!')),
+        const SnackBar(
+          content: Text('Please enter a final summary.'),
+          backgroundColor: Colors.red,
+        ),
       );
+      return;
     }
+
+    // Check if the correct number of images have been selected
+    if (_imageFiles.length != _imagesCount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select exactly $_imagesCount images.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Since the form in Step 1 is no longer in the widget tree,
+    // we cannot call _formKey.currentState!.validate().
+    // The validation for that form was already done in _nextPage().
+
+    print('Main Topic: ${_mainTopicController.text}');
+    print('Number of Subtopics: $_subtopicsCount');
+    print('Number of Images: $_imagesCount');
+    print('Category: $_selectedCategory');
+    print('Summary: ${_snippetController.text}');
+    print('Introduction: ${_introductionController.text}');
+    print('Summary of Blog (Step 3): ${_summaryController.text}');
+    print('Image Files: ${_imageFiles.map((xfile) => xfile.path).toList()}');
+
+    for (int i = 0; i < _subtopicTitleControllers.length; i++) {
+      print('Subtopic ${i + 1} Title: ${_subtopicTitleControllers[i].text}');
+      print('Subtopic ${i + 1} Body: ${_subtopicBodyControllers[i].text}');
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Blog submitted successfully!')),
+    );
+
+    // Navigate to the blogs screen after successful submission
+    Navigator.pushNamed(context, '/blogs');
   }
 
   Future<void> _pickImages() async {

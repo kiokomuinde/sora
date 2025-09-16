@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart'; // Required for direct Fi
 import 'package:sora_app/data/property_data.dart'; // Import the centralized property data
 import 'package:sora_app/services/firestore_service.dart'; // NEW: Import the Firestore service
 import 'package:sora_app/screens/airbnb_screen.dart'; // New Import
+import 'package:firebase_auth/firebase_auth.dart'; // Add this import
 
 class HomeScreen extends StatefulWidget {
   final AuthService authService;
@@ -160,6 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         _popularScrollController,
                         isLargeScreen,
                         isMediumScreen,
+                        'popularCarousel',
                       ),
 
                       // Hottest Deals Section
@@ -170,6 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         _dealsScrollController,
                         isLargeScreen,
                         isMediumScreen,
+                        'dealsCarousel',
                       ),
 
                       // New in Market Section
@@ -180,6 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         _newScrollController,
                         isLargeScreen,
                         isMediumScreen,
+                        'newCarousel',
                       ),
                     ],
                   );
@@ -238,8 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: isLargeScreen ? 10 : 5),
-            // New "Now Featuring:" typing animation
+            SizedBox(height: isLargeScreen ? 10 : 5), // New "Now Featuring:" typing animation
             TypingTextAnimation(
               text: 'Now Featuring:',
               style: TextStyle(
@@ -252,7 +255,10 @@ class _HomeScreenState extends State<HomeScreen> {
             // Airbnb button with new rolling animation
             RollingButton(
               onPressed: () {
-                Navigator.of(context).pushNamed('/airbnb');
+                Navigator.of(context).pushNamed(
+                  '/property_listing',
+                  arguments: {'listingType': 'Staycation'},
+                );
               },
             ),
           ],
@@ -379,7 +385,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPropertiesCarousel(BuildContext context, String title, List<Map<String, dynamic>> properties, ScrollController scrollController, bool isLargeScreen, bool isMediumScreen) {
+  Widget _buildPropertiesCarousel(
+    BuildContext context,
+    String title,
+    List<Map<String, dynamic>> properties,
+    ScrollController scrollController,
+    bool isLargeScreen,
+    bool isMediumScreen,
+    String carouselTag, // Add a new parameter for a unique tag
+  ) {
     if (properties.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -396,7 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                title,
+                'Popular Properties',
                 style: TextStyle(
                   fontSize: isLargeScreen ? 36 : (isMediumScreen ? 28 : 22),
                   fontWeight: FontWeight.bold,
@@ -452,12 +466,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+
               // Left Carousel Button
               Positioned(
                 left: 0,
                 child: Opacity(
                   opacity: 0.7,
                   child: FloatingActionButton(
+                    heroTag: 'leftButton$carouselTag', // Unique heroTag
                     onPressed: () {
                       scrollController.animateTo(
                         scrollController.offset - (isLargeScreen ? 320 : (isMediumScreen ? 270 : 240)),
@@ -471,12 +487,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+
               // Right Carousel Button
               Positioned(
                 right: 0,
                 child: Opacity(
                   opacity: 0.7,
                   child: FloatingActionButton(
+                    heroTag: 'rightButton$carouselTag', // Unique heroTag
                     onPressed: () {
                       scrollController.animateTo(
                         scrollController.offset + (isLargeScreen ? 320 : (isMediumScreen ? 270 : 240)),
@@ -494,6 +512,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+      // Fix for the carousel spacing
     );
   }
 
@@ -578,7 +597,6 @@ class _HomeScreenState extends State<HomeScreen> {
         'location': 'Kisumu, Kenya',
       },
     ];
-
     return Container(
       color: Colors.white,
       padding: EdgeInsets.symmetric(
@@ -615,63 +633,67 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           SizedBox(height: isLargeScreen ? 30 : 20),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
-              crossAxisSpacing: isLargeScreen ? 30 : 20,
-              mainAxisSpacing: isLargeScreen ? 30 : 20,
-              childAspectRatio: isLargeScreen ? 1.0 : (isMediumScreen ? 0.9 : 1.1),
-            ),
-            itemCount: testimonials.length,
-            itemBuilder: (context, index) {
-              final testimonial = testimonials[index];
-              return _buildTestimonialCard(testimonial);
-            },
-          ),
+          LayoutBuilder(builder: (context, constraints) {
+            int crossAxisCount;
+            if (isLargeScreen) {
+              crossAxisCount = 3;
+            } else if (isMediumScreen) {
+              crossAxisCount = 2;
+            } else {
+              crossAxisCount = 1;
+            }
+            return GridView.count(
+              crossAxisCount: crossAxisCount,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: isLargeScreen ? 30 : 15,
+              crossAxisSpacing: isLargeScreen ? 30 : 15,
+              childAspectRatio: 1.5,
+              children: testimonials.map((testimonial) {
+                return _buildTestimonialCard(
+                  quote: testimonial['quote']!,
+                  author: testimonial['author']!,
+                  location: testimonial['location']!,
+                );
+              }).toList(),
+            );
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildTestimonialCard(Map<String, String> testimonial) {
+  Widget _buildTestimonialCard({
+    required String quote,
+    required String author,
+    required String location,
+  }) {
     return Card(
       elevation: 5,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.format_quote, size: 40, color: Colors.grey[400]),
+            const Icon(Icons.format_quote, size: 40, color: Color(0xFF0A66C2)),
             const SizedBox(height: 10),
-            Text(
-              testimonial['quote']!,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey[700],
+            Expanded(
+              child: Text(
+                quote,
+                style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 5,
               ),
-              maxLines: 5,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 15),
             Text(
-              '- ${testimonial['author']!}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0A66C2),
-              ),
+              author,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(
-              testimonial['location']!,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              location,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -680,8 +702,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// A new StatefulWidget for the individual property cards
-class _PropertyCard extends StatefulWidget {
+class _PropertyCard extends StatelessWidget {
   final Map<String, dynamic> property;
   final bool isLargeScreen;
   final bool isMediumScreen;
@@ -697,425 +718,217 @@ class _PropertyCard extends StatefulWidget {
   });
 
   @override
-  State<_PropertyCard> createState() => _PropertyCardState();
-}
-
-class _PropertyCardState extends State<_PropertyCard> {
-  bool _isFavorite = false;
-  late FirestoreService _firestoreService;
-
-  @override
-  void initState() {
-    super.initState();
-    _firestoreService = FirestoreService();
-    _checkFavoriteStatus();
-  }
-
-  void _checkFavoriteStatus() async {
-    final user = widget.authService.getCurrentUser();
-    if (user != null && widget.property['id'] != null) {
-      final isFav = await _firestoreService.isFavorite(user.uid, widget.property['id']);
-      if (mounted) {
-        setState(() {
-          _isFavorite = isFav;
-        });
-      }
-    }
-  }
-
-  // New method to show a confirmation dialog for removing a favorite
-  void _showRemoveFavoriteDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Remove from Favorites?'),
-          content: const Text('Are you sure you want to remove this property from your favorites?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(false); // Do not remove
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(true); // Remove
-              },
-              child: const Text('Yes, Remove'),
-            ),
-          ],
-        );
-      },
-    ).then((confirmed) async {
-      if (confirmed != null && confirmed) {
-        final user = widget.authService.getCurrentUser();
-        final propertyId = widget.property['id']?.toString();
-        if (user != null && propertyId != null) {
-          await _firestoreService.removeFavorite(user.uid, propertyId);
-          if (mounted) {
-            setState(() {
-              _isFavorite = false;
-            });
-          }
-        }
-      }
-    });
-  }
-
-  void _toggleFavorite() async {
-    final user = widget.authService.getCurrentUser();
-    if (user == null) {
-      widget.onAuthRequired();
-      return;
-    }
-
-    final propertyId = widget.property['id']?.toString();
-    if (propertyId == null) {
-      print('Property ID is null, cannot save favorite.');
-      return;
-    }
-
-    if (_isFavorite) {
-      _showRemoveFavoriteDialog();
-    } else {
-      await _firestoreService.addFavorite(user.uid, propertyId);
-      if (mounted) {
-        setState(() {
-          _isFavorite = true;
-        });
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final String imageUrl = widget.property['coverImageUrl']?.toString() ?? 'https://via.placeholder.com/150';
-
-    // Map the listingType from the database to the display text
-    String listingTypeDisplay = 'Unknown';
-    if (widget.property['listingType'] != null) {
-      switch (widget.property['listingType']) {
-        case 'For Sale':
-          listingTypeDisplay = 'Buy';
-          break;
-        case 'For Lease':
-          listingTypeDisplay = 'Lease';
-          break;
-        case 'For Rent':
-          listingTypeDisplay = 'Rent';
-          break;
-        case 'Staycation':
-          listingTypeDisplay = 'Staycation';
-          break;
-        default:
-          listingTypeDisplay = 'Unknown';
-      }
-    }
+    // Safely retrieve the image URL from the 'coverImageUrl' field
+    String? imageUrl = property['coverImageUrl']?.toString();
 
     return GestureDetector(
       onTap: () {
-        // Updated to use the named route '/view_property'
-        Navigator.pushNamed(context, '/view_property', arguments: widget.property);
+        Navigator.pushNamed(
+          context,
+          '/view_property',
+          arguments: property['id'],
+        );
       },
-      child: Container(
-        width: widget.isLargeScreen ? 300 : (widget.isMediumScreen ? 250 : 220),
-        decoration: BoxDecoration(
-          color: Colors.white,
+      child: Card(
+        elevation: 8,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 2,
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                  child: Image.network(
-                    imageUrl,
-                    height: widget.isLargeScreen ? 200 : (widget.isMediumScreen ? 160 : 140),
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-                      if (loadingProgress == null) {
-                        return child;
-                      }
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: widget.isLargeScreen ? 200 : (widget.isMediumScreen ? 160 : 140),
-                        width: double.infinity,
-                        color: Colors.grey[200],
-                        child: Icon(
-                          Icons.image_not_supported,
-                          size: 50,
-                          color: Colors.grey[400],
-                        ),
-                      );
-                    },
+        child: Container(
+          width: isLargeScreen ? 300 : (isMediumScreen ? 250 : 220),
+          height: isLargeScreen ? 380 : (isMediumScreen ? 320 : 280),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            color: Colors.white,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Image.network(
+                      imageUrl ?? 'https://via.placeholder.com/150',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(child: Icon(Icons.broken_image, size: 50));
+                      },
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'KSh ${widget.property['price']?.toString() ?? 'N/A'}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0A66C2),
-                        ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.black54,
+                      child: IconButton(
+                        icon: const Icon(Icons.favorite_border, color: Colors.white),
+                        onPressed: () {
+                          if (FirebaseAuth.instance.currentUser != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Property saved to favorites!'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          } else {
+                            onAuthRequired();
+                          }
+                        },
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.property['title']?.toString() ?? 'No Title',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      property['title'] ?? 'Property Name',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0A66C2),
                       ),
-                      const SizedBox(height: 4),
-                      if (widget.property['location'] != null && widget.property['location']['town'] != null)
-                        Row(
-                          children: [
-                            Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                widget.property['location']['town'].toString(),
-                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            property['location']?['locality'] ?? 'Location',
+                            style: const TextStyle(fontSize: 14, color: Colors.grey),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      if (widget.property['residentialDetails'] != null) ...[
-                        if (widget.property['residentialDetails']['bedrooms'] != null)
-                          Row(
-                            children: [
-                              Icon(Icons.bed, size: 16, color: Colors.grey[600]),
-                              const SizedBox(height: 4),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${widget.property['residentialDetails']['bedrooms']} Beds',
-                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
-                        if (widget.property['residentialDetails']['bathrooms'] != null)
-                          Row(
-                            children: [
-                              Icon(Icons.bathtub, size: 16, color: Colors.grey[600]),
-                              const SizedBox(height: 4),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${widget.property['residentialDetails']['bathrooms']} Baths',
-                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
                       ],
-                      if (widget.property['area'] != null && widget.property['area'] != "0")
-                        Row(
-                          children: [
-                            Icon(Icons.square_foot, size: 16, color: Colors.grey[600]),
-                            const SizedBox(height: 4),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${widget.property['area']} sqft',
-                              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                            ),
-                          ],
-                        ),
-                    ].whereType<Widget>().toList(),
-                  ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '\$${property['price'] ?? '0'}',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            // Listing type button - Moved to top left
-            Positioned(
-              top: 10,
-              left: 10,
-              child: ElevatedButton(
-                onPressed: () {
-                  // This button is for display, so onPressed is empty
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0A66C2),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  minimumSize: Size.zero, // Set this to wrap the content tightly
-                ),
-                child: Text(listingTypeDisplay),
               ),
-            ),
-            // Favorite button - New position on top right
-            Positioned(
-              top: 5,
-              right: 5,
-              child: IconButton(
-                icon: Icon(
-                  _isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: _isFavorite ? Colors.red : Colors.white,
-                  size: 30,
-                ),
-                onPressed: _toggleFavorite,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// Fixed: This widget now uses a ShaderMask to create the blue cloud passing effect.
 class FadingColorText extends StatefulWidget {
   final String text;
   final TextStyle style;
 
-  const FadingColorText({
-    super.key,
-    required this.text,
-    required this.style,
-  });
+  const FadingColorText({super.key, required this.text, required this.style});
 
   @override
   State<FadingColorText> createState() => _FadingColorTextState();
 }
 
 class _FadingColorTextState extends State<FadingColorText> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+  late AnimationController _controller;
+  late Animation<Color?> _colorAnimation;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    _controller = AnimationController(
+      duration: const Duration(seconds: 5),
       vsync: this,
-      duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
+    _colorAnimation = ColorTween(
+      begin: Colors.white,
+      end: const Color(0xFF1E90FF),
+    ).animate(_controller);
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _animationController,
+      animation: _colorAnimation,
       builder: (context, child) {
-        final double gradientPosition = _animationController.value;
-        return ShaderMask(
-          shaderCallback: (bounds) {
-            return LinearGradient(
-              colors: const [Colors.white, Colors.blue, Colors.white],
-              stops: [
-                gradientPosition - 0.1,
-                gradientPosition,
-                gradientPosition + 0.1,
-              ],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ).createShader(bounds);
-          },
-          child: Text(
-            widget.text,
-            textAlign: TextAlign.center,
-            style: widget.style.copyWith(color: Colors.white),
-          ),
+        return Text(
+          widget.text,
+          style: widget.style.copyWith(color: _colorAnimation.value),
         );
       },
     );
   }
 }
 
-
 class GlidingBlueFlash extends StatefulWidget {
   final String text;
   final TextStyle style;
 
-  const GlidingBlueFlash({
-    super.key,
-    required this.text,
-    required this.style,
-  });
+  const GlidingBlueFlash({super.key, required this.text, required this.style});
 
   @override
   State<GlidingBlueFlash> createState() => _GlidingBlueFlashState();
 }
 
 class _GlidingBlueFlashState extends State<GlidingBlueFlash> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+  late AnimationController _controller;
+  late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4), // Changed from 2 to 4 seconds
-    )..repeat();
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: false);
+    _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeIn,
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _animationController,
+      animation: _animation,
       builder: (context, child) {
-        final double gradientPosition = _animationController.value;
-
         return ShaderMask(
           shaderCallback: (bounds) {
             return LinearGradient(
-              colors: const [
-                Colors.white,
-                Colors.blue,
-                Colors.white,
-              ],
-              stops: [
-                gradientPosition - 0.1,
-                gradientPosition,
-                gradientPosition + 0.1,
-              ],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
+              colors: const [Colors.white, Color(0xFF1E90FF), Colors.white],
+              stops: [_animation.value - 0.1, _animation.value, _animation.value + 0.1],
             ).createShader(bounds);
           },
           child: Text(
             widget.text,
-            textAlign: TextAlign.center,
-            style: widget.style.copyWith(color: Colors.white),
+            style: widget.style.copyWith(color: Colors.white), // Use white as base color
           ),
         );
       },
@@ -1126,85 +939,60 @@ class _GlidingBlueFlashState extends State<GlidingBlueFlash> with SingleTickerPr
 class TypingTextAnimation extends StatefulWidget {
   final String text;
   final TextStyle style;
+  final Duration duration;
+
   const TypingTextAnimation({
     super.key,
     required this.text,
     required this.style,
+    this.duration = const Duration(seconds: 2),
   });
 
   @override
   State<TypingTextAnimation> createState() => _TypingTextAnimationState();
 }
 
-class _TypingTextAnimationState extends State<TypingTextAnimation> {
-  String _currentText = '';
-  int _charIndex = 0;
-  bool _isDeleting = false;
-  bool _showCursor = true;
-  int _colorIndex = 0;
-  final List<Color> _colors = [Colors.blue, Colors.white];
+class _TypingTextAnimationState extends State<TypingTextAnimation> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<int> _textAnimation;
 
   @override
   void initState() {
     super.initState();
-    _startAnimation();
+    _controller = AnimationController(
+      duration: widget.duration,
+      vsync: this,
+    )..repeat(reverse: true);
+    _textAnimation = IntTween(begin: 0, end: widget.text.length).animate(_controller);
   }
 
-  void _startAnimation() async {
-    while (mounted) {
-      if (!_isDeleting) {
-        // Typing animation
-        if (_charIndex < widget.text.length) {
-          _currentText = widget.text.substring(0, _charIndex + 1);
-          _charIndex++;
-          await Future.delayed(const Duration(milliseconds: 100)); // Typing speed
-        } else {
-          _isDeleting = true;
-          // Blinking cursor
-          for (int i = 0; i < 5; i++) {
-            _showCursor = !_showCursor;
-            setState(() {});
-            await Future.delayed(const Duration(milliseconds: 500));
-          }
-        }
-      } else {
-        // Deleting animation
-        if (_charIndex > 0) {
-          _currentText = widget.text.substring(0, _charIndex - 1);
-          _charIndex--;
-          await Future.delayed(const Duration(milliseconds: 100)); // Deleting speed
-        } else {
-          _isDeleting = false;
-          _charIndex = 0; // Reset index for the next cycle
-          _colorIndex = (_colorIndex + 1) % _colors.length; // Change color for the next cycle
-          await Future.delayed(const Duration(milliseconds: 500)); // Pause before starting over
-        }
-      }
-      setState(() {});
-    }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      _currentText + (_showCursor ? '|' : ''),
-      style: widget.style.copyWith(
-        color: _colors[_colorIndex],
-      ),
+    return AnimatedBuilder(
+      animation: _textAnimation,
+      builder: (context, child) {
+        String animatedText = widget.text.substring(0, _textAnimation.value);
+        return Text(
+          animatedText,
+          style: widget.style,
+          overflow: TextOverflow.visible,
+          softWrap: false,
+        );
+      },
     );
   }
 }
 
-// NEW: A custom button for the rolling, fading animation
 class RollingButton extends StatefulWidget {
   final VoidCallback onPressed;
-  final Widget? child;
 
-  const RollingButton({
-    super.key,
-    required this.onPressed,
-    this.child,
-  });
+  const RollingButton({super.key, required this.onPressed});
 
   @override
   State<RollingButton> createState() => _RollingButtonState();
@@ -1220,16 +1008,11 @@ class _RollingButtonState extends State<RollingButton> with SingleTickerProvider
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
-    );
-    _controller.forward(); // Run the animation once
-
-    _fontWeightAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
+    )..repeat();
+    _fontWeightAnimation = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.0, 0.5, curve: Curves.linear),
-    ));
+    );
   }
 
   @override
