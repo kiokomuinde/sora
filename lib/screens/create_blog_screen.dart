@@ -7,6 +7,10 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+// Import the new services
+import 'package:sora_app/services/cloudinary_service.dart';
+import 'package:sora_app/services/firestore_service.dart';
+
 class CreateBlogScreen extends StatefulWidget {
   final AuthService authService;
 
@@ -49,6 +53,10 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     'Real Estate',
     'Airbnb'
   ];
+
+  // NEW: Instantiate your services here
+  final CloudinaryService _cloudinaryService = CloudinaryService();
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -142,7 +150,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     );
   }
 
-  void _submitBlog() {
+  Future<void> _submitBlog() async {
     // Check if the final summary is not empty
     if (_summaryController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -168,27 +176,56 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     // Since the form in Step 1 is no longer in the widget tree,
     // we cannot call _formKey.currentState!.validate().
     // The validation for that form was already done in _nextPage().
-
-    print('Main Topic: ${_mainTopicController.text}');
-    print('Number of Subtopics: $_subtopicsCount');
-    print('Number of Images: $_imagesCount');
-    print('Category: $_selectedCategory');
-    print('Summary: ${_snippetController.text}');
-    print('Introduction: ${_introductionController.text}');
-    print('Summary of Blog (Step 3): ${_summaryController.text}');
-    print('Image Files: ${_imageFiles.map((xfile) => xfile.path).toList()}');
-
-    for (int i = 0; i < _subtopicTitleControllers.length; i++) {
-      print('Subtopic ${i + 1} Title: ${_subtopicTitleControllers[i].text}');
-      print('Subtopic ${i + 1} Body: ${_subtopicBodyControllers[i].text}');
-    }
-
+    // Show loading indicator while processing
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Blog submitted successfully!')),
+      const SnackBar(content: Text('Submitting blog post...')),
     );
 
-    // Navigate to the blogs screen after successful submission
-    Navigator.pushNamed(context, '/blogs');
+    try {
+      // Step 1: Upload images to Cloudinary
+      final List<String> imageUrls = await _cloudinaryService.uploadMultipleImages(_imageFiles);
+
+      if (imageUrls.isEmpty) {
+        throw Exception('Image upload failed. Please try again.');
+      }
+
+      // Step 2: Prepare the data for Firestore
+      final blogData = {
+        'title': _mainTopicController.text,
+        'category': _selectedCategory,
+        'snippet': _snippetController.text,
+        'introduction': _introductionController.text,
+        'summary': _summaryController.text,
+        'imageUrls': imageUrls, // Store the Cloudinary image URLs
+        'subtopics': _subtopicTitleControllers.asMap().entries.map((entry) {
+          final int index = entry.key;
+          return {
+            'title': entry.value.text,
+            'body': _subtopicBodyControllers[index].text,
+          };
+        }).toList(),
+      };
+
+      // Step 3: Save the blog data to Firestore
+      final bool success = await _firestoreService.addBlog(blogData);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Blog post created successfully!')),
+        );
+        // Navigate to a new screen or clear the form
+        Navigator.of(context).pop(); // Go back to the previous screen
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save blog post to Firestore.')),
+        );
+      }
+    } catch (e) {
+      print('Submission error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred during submission: $e')),
+      );
+    }
   }
 
   Future<void> _pickImages() async {

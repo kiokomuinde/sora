@@ -131,4 +131,26 @@ class FirestoreService {
       return false;
     }
   }
+
+  // NEW: Method to add a new blog post to Firestore
+  Future<bool> addBlog(Map<String, dynamic> blogData) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      print('User is not authenticated.');
+      return false;
+    }
+
+    // Add the user's ID and a timestamp to the blog data
+    blogData['userId'] = user.uid;
+    blogData['timestamp'] = FieldValue.serverTimestamp();
+
+    try {
+      await _firestore.collection('blogs').add(blogData);
+      print('Blog post added to Firestore successfully!');
+      return true;
+    } catch (e) {
+      print('Error adding blog post to Firestore: $e');
+      return false;
+    }
+  }
 }
