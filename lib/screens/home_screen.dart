@@ -702,7 +702,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _PropertyCard extends StatelessWidget {
+class _PropertyCard extends StatefulWidget {
   final Map<String, dynamic> property;
   final bool isLargeScreen;
   final bool isMediumScreen;
@@ -718,16 +718,74 @@ class _PropertyCard extends StatelessWidget {
   });
 
   @override
+  State<_PropertyCard> createState() => _PropertyCardState();
+}
+
+class _PropertyCardState extends State<_PropertyCard> {
+  late FirestoreService _firestoreService;
+  late bool _isFavorite;
+
+  @override
+  void initState() {
+    super.initState();
+    _firestoreService = FirestoreService();
+    _isFavorite = false; // Initial state
+    _checkIfFavorite();
+  }
+
+  Future<void> _checkIfFavorite() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final isFav = await _firestoreService.isFavorite(user.uid, widget.property['id']);
+      if (mounted) {
+        setState(() {
+          _isFavorite = isFav;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      widget.onAuthRequired();
+      return;
+    }
+
+    try {
+      if (_isFavorite) {
+        await _firestoreService.removeFavorite(user.uid, widget.property['id']);
+      } else {
+        await _firestoreService.addFavorite(user.uid, widget.property['id']);
+      }
+      if (mounted) {
+        setState(() {
+          _isFavorite = !_isFavorite;
+        });
+      }
+    } catch (e) {
+      print('Error toggling favorite status: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Safely retrieve the image URL from the 'coverImageUrl' field
-    String? imageUrl = property['coverImageUrl']?.toString();
+    String? imageUrl = widget.property['coverImageUrl']?.toString();
+    final int beds = int.tryParse((widget.property['beds'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+    final int bathrooms = int.tryParse((widget.property['bathrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+    final int size = int.tryParse((widget.property['size'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+    final String listingType = widget.property['listingType'] ?? 'Unknown';
+
+    // Safely retrieve and parse the price from string to int
+    final int price = int.tryParse((widget.property['price'] ?? '0').toString().replaceAll(',', '')) ?? 0;
 
     return GestureDetector(
       onTap: () {
         Navigator.pushNamed(
           context,
           '/view_property',
-          arguments: property['id'],
+          arguments: widget.property, // Corrected: Passing the full property map
         );
       },
       child: Card(
@@ -736,8 +794,8 @@ class _PropertyCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
         ),
         child: Container(
-          width: isLargeScreen ? 300 : (isMediumScreen ? 250 : 220),
-          height: isLargeScreen ? 380 : (isMediumScreen ? 320 : 280),
+          width: widget.isLargeScreen ? 300 : (widget.isMediumScreen ? 250 : 220),
+          height: widget.isLargeScreen ? 380 : (widget.isMediumScreen ? 320 : 280),
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(15),
@@ -762,21 +820,32 @@ class _PropertyCard extends StatelessWidget {
                     top: 10,
                     right: 10,
                     child: CircleAvatar(
-                      backgroundColor: Colors.black54,
+                      backgroundColor: _isFavorite ? Colors.transparent : Colors.black54,
                       child: IconButton(
-                        icon: const Icon(Icons.favorite_border, color: Colors.white),
-                        onPressed: () {
-                          if (FirebaseAuth.instance.currentUser != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Property saved to favorites!'),
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
-                          } else {
-                            onAuthRequired();
-                          }
-                        },
+                        icon: Icon(
+                          _isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: _isFavorite ? Colors.red : Colors.white,
+                        ),
+                        onPressed: _toggleFavorite,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A66C2).withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        listingType.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -788,7 +857,7 @@ class _PropertyCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      property['title'] ?? 'Property Name',
+                      widget.property['title'] ?? 'Property Name',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -804,7 +873,7 @@ class _PropertyCard extends StatelessWidget {
                         const SizedBox(width: 5),
                         Expanded(
                           child: Text(
-                            property['location']?['locality'] ?? 'Location',
+                            widget.property['location']?['locality'] ?? 'Location',
                             style: const TextStyle(fontSize: 14, color: Colors.grey),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -812,13 +881,29 @@ class _PropertyCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 5),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildPropertyFeature(Icons.bed_rounded, '$beds Beds'),
+                        _buildPropertyFeature(FontAwesomeIcons.toilet, '$bathrooms Baths'),
+                        _buildPropertyFeature(Icons.square_foot, '$size sqft'),
+                      ],
+                    ),
                     const SizedBox(height: 10),
-                    Text(
-                      '\$${property['price'] ?? '0'}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                    ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [Colors.purple, Colors.blue],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ).createShader(bounds),
+                      child: Text(
+                        'KSH ${price.toString()}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white, // The color is masked by the gradient
+                        ),
                       ),
                     ),
                   ],
@@ -830,6 +915,25 @@ class _PropertyCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// Reusable method for building property features
+Widget _buildPropertyFeature(IconData icon, String text) {
+  return Expanded(
+    child: Row(
+      children: [
+        FaIcon(icon, size: 16, color: const Color(0xFF0A66C2)),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class FadingColorText extends StatefulWidget {
