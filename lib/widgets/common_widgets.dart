@@ -528,6 +528,11 @@ class CommonWidgets {
                         _buildSocialButton(FontAwesomeIcons.facebookF, 'https://facebook.com'),
                         _buildSocialButton(FontAwesomeIcons.instagram, 'https://instagram.com'),
                         _buildSocialButton(FontAwesomeIcons.linkedinIn, 'https://linkedin.com'),
+                        _buildSocialButton(FontAwesomeIcons.youtube, 'https://youtube.com'),
+                        _buildSocialButton(FontAwesomeIcons.whatsapp, 'https://whatsapp.com'),
+                        _buildSocialButton(FontAwesomeIcons.tiktok, 'https://tiktok.com'),
+                        _buildSocialButton(FontAwesomeIcons.pinterest, 'https://pinterest.com'),
+                        _buildSocialButton(FontAwesomeIcons.google, 'https://google.com/business'),
                       ],
                     ),
                   ],
@@ -600,7 +605,7 @@ class CommonWidgets {
           const Divider(color: Colors.white24, height: 40),
           Center(
             child: Text(
-              '© ${DateTime.now().year} Sora. All rights reserved.',
+              '© ${DateTime.now().year} Sora Properties Ltd. All rights reserved.',
               style: const TextStyle(color: Colors.white70),
             ),
           ),

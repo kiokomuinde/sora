@@ -7,6 +7,23 @@ class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // NEW: Method to add a contact message to Firestore
+  Future<bool> addContactMessage(String name, String email, String message) async {
+    try {
+      await _firestore.collection('contactMessages').add({
+        'name': name,
+        'email': email,
+        'message': message,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print('Contact message sent to Firestore successfully!');
+      return true;
+    } catch (e) {
+      print('Error sending contact message: $e');
+      return false;
+    }
+  }
+
   Future<bool> addProperty(Map<String, dynamic> propertyData) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -157,5 +174,20 @@ class FirestoreService {
   // NEW: Method to get a real-time stream of all blog posts
   Stream<QuerySnapshot> getBlogs() {
     return _firestore.collection('blogs').snapshots();
+  }
+
+  // CORRECTED: Method to add a newsletter subscriber's email to Firestore
+  Future<bool> addNewsletterSubscriber(String email) async {
+    try {
+      await _firestore.collection('newsletterSubscribers').add({
+        'email': email,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print('Newsletter email added to Firestore successfully!');
+      return true;
+    } catch (e) {
+      print('Error adding newsletter email: $e');
+      return false;
+    }
   }
 }

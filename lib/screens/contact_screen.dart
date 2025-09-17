@@ -1,14 +1,15 @@
 // /lib/screens/contact_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // Needed for kIsWeb
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import for User type
-import 'package:sora_app/services/auth_service.dart'; // Import AuthService
-import 'package:sora_app/widgets/common_widgets.dart'; // Import CommonWidgets
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sora_app/services/auth_service.dart';
+import 'package:sora_app/widgets/common_widgets.dart';
+import 'package:sora_app/services/firestore_service.dart';
 
 class ContactScreen extends StatefulWidget {
-  final AuthService authService; // Receive AuthService to handle auth state
+  final AuthService authService;
 
   const ContactScreen({super.key, required this.authService});
 
@@ -17,34 +18,57 @@ class ContactScreen extends StatefulWidget {
 }
 
 class _ContactScreenState extends State<ContactScreen> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _newsletterEmailController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
-  late CommonWidgets commonWidgets; // Declare commonWidgets
+  late CommonWidgets commonWidgets;
 
-  String _currentListingTypeFilter = ''; // Needed for the common app bar buttons
+  String _currentListingTypeFilter = '';
+  bool _isEmailValid = false;
 
   @override
   void initState() {
     super.initState();
-    commonWidgets = CommonWidgets(context: context, authService: widget.authService); // Initialize commonWidgets
+    commonWidgets = CommonWidgets(context: context, authService: widget.authService);
+
+    _emailController.addListener(_validateEmail);
   }
 
   @override
   void dispose() {
     _newsletterEmailController.dispose();
     _nameController.dispose();
+    _emailController.removeListener(_validateEmail);
     _emailController.dispose();
     _messageController.dispose();
     super.dispose();
   }
 
-  // Common dialog for login/signup prompt, copied from home_screen.dart
+  void _validateEmail() {
+    final email = _emailController.text;
+    final bool isValid = email.contains('@') && email.endsWith('.com');
+    if (_isEmailValid != isValid) {
+      setState(() {
+        _isEmailValid = isValid;
+      });
+    }
+  }
+
+  void _showColoredSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+      ),
+    );
+  }
+
   void _showLoginSignupDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           title: const Text(
@@ -55,7 +79,7 @@ class _ContactScreenState extends State<ContactScreen> {
             ),
           ),
           content: const Text(
-            'Please log in or create an account to proceed with this action.',
+            'Please log in or create an account to send a message.',
             style: TextStyle(fontSize: 16),
           ),
           actions: <Widget>[
@@ -65,7 +89,7 @@ class _ContactScreenState extends State<ContactScreen> {
                 style: TextStyle(color: Colors.grey),
               ),
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
               },
             ),
             ElevatedButton(
@@ -78,8 +102,8 @@ class _ContactScreenState extends State<ContactScreen> {
               ),
               child: const Text('Login / Sign Up'),
               onPressed: () {
-                Navigator.of(context).pop(); // Dismiss dialog
-                Navigator.pushNamed(context, '/signin'); // Navigate to sign-in
+                Navigator.of(dialogContext).pop();
+                Navigator.pushNamed(context, '/signin');
               },
             ),
           ],
@@ -88,29 +112,44 @@ class _ContactScreenState extends State<ContactScreen> {
     );
   }
 
-  void _submitContactForm() {
-    if (_nameController.text.isEmpty || _emailController.text.isEmpty || _messageController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields.')),
-      );
-      return;
-    }
-    if (!_emailController.text.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid email address.')),
-      );
+  void _submitContactForm() async {
+    if (widget.authService.getCurrentUser() == null) {
+      _showLoginSignupDialog();
       return;
     }
 
-    // Here you would typically send the form data to a backend service
-    // For this example, we'll just show a success message.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Message from ${_nameController.text} sent successfully!')),
-    );
+    if (_formKey.currentState!.validate()) {
+      if (!_isEmailValid) {
+        _showColoredSnackBar('Please enter a valid email address.', Colors.red);
+        return;
+      }
+      try {
+        final firestoreService = FirestoreService();
+        final success = await firestoreService.addContactMessage(
+          _nameController.text,
+          _emailController.text,
+          _messageController.text,
+        );
 
-    _nameController.clear();
-    _emailController.clear();
-    _messageController.clear();
+        if (success) {
+          _showColoredSnackBar('Message sent successfully!', Colors.green);
+          _nameController.clear();
+          _emailController.clear();
+          _messageController.clear();
+          _formKey.currentState!.reset();
+          setState(() {
+            _isEmailValid = false;
+          });
+        } else {
+          _showColoredSnackBar('Failed to send message. Please try again.', Colors.red);
+        }
+      } catch (e) {
+        _showColoredSnackBar('An error occurred. Please try again later.', Colors.red);
+        print('Error submitting form: $e');
+      }
+    } else {
+      _showColoredSnackBar('Please correct the errors in the form.', Colors.red);
+    }
   }
 
   @override
@@ -191,71 +230,140 @@ class _ContactScreenState extends State<ContactScreen> {
                           ),
                         ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Send Us a Message',
-                            style: TextStyle(
-                              fontSize: isLargeScreen ? 28 : (isMediumScreen ? 24 : 20),
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF0A66C2),
-                            ),
-                          ),
-                          SizedBox(height: isLargeScreen ? 30 : 20),
-                          TextField(
-                            controller: _nameController,
-                            decoration: InputDecoration(
-                              labelText: 'Your Name',
-                              hintText: 'Enter your full name',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              prefixIcon: const Icon(Icons.person),
-                            ),
-                          ),
-                          SizedBox(height: isLargeScreen ? 20 : 15),
-                          TextField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: InputDecoration(
-                              labelText: 'Your Email',
-                              hintText: 'Enter your email address',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              prefixIcon: const Icon(Icons.email),
-                            ),
-                          ),
-                          SizedBox(height: isLargeScreen ? 20 : 15),
-                          TextField(
-                            controller: _messageController,
-                            maxLines: 6,
-                            decoration: InputDecoration(
-                              labelText: 'Your Message',
-                              hintText: 'Type your message here...',
-                              alignLabelWithHint: true,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              prefixIcon: const Padding(
-                                padding: EdgeInsets.only(bottom: 100), // Adjust padding to align icon to top
-                                child: Icon(Icons.message),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Send Us a Message',
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 28 : (isMediumScreen ? 24 : 20),
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0A66C2),
                               ),
                             ),
-                          ),
-                          SizedBox(height: isLargeScreen ? 30 : 20),
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: _submitContactForm,
-                              icon: const Icon(Icons.send),
-                              label: const Text('Send Message'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1E90FF),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                shape: RoundedRectangleBorder(
+                            SizedBox(height: isLargeScreen ? 30 : 20),
+                            TextFormField(
+                              controller: _nameController,
+                              decoration: InputDecoration(
+                                labelText: 'Your Name',
+                                hintText: 'Enter your full name',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(color: Colors.red),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(color: Colors.red, width: 2.0),
+                                ),
+                                prefixIcon: const Icon(Icons.person),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Name cannot be empty';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: isLargeScreen ? 20 : 15),
+                            TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: InputDecoration(
+                                labelText: 'Your Email',
+                                hintText: 'Enter your email address',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: _emailController.text.isEmpty
+                                        ? Colors.grey
+                                        : _isEmailValid
+                                            ? Colors.green
+                                            : Colors.red,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: _isEmailValid ? Colors.green : Colors.red,
+                                    width: 2.0,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: _emailController.text.isEmpty
+                                        ? Colors.grey
+                                        : _isEmailValid
+                                            ? Colors.green
+                                            : Colors.red,
+                                  ),
+                                ),
+                                prefixIcon: const Icon(Icons.email),
+                                hintStyle: TextStyle(
+                                  color: _isEmailValid ? Colors.green : Colors.red,
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Email cannot be empty';
+                                }
+                                if (!_isEmailValid) {
+                                  return 'Please enter a valid email';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: isLargeScreen ? 20 : 15),
+                            TextFormField(
+                              controller: _messageController,
+                              maxLines: 6,
+                              decoration: InputDecoration(
+                                labelText: 'Your Message',
+                                hintText: 'Type your message here...',
+                                alignLabelWithHint: true,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(color: Colors.red),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(color: Colors.red, width: 2.0),
+                                ),
+                                prefixIcon: const Padding(
+                                  padding: EdgeInsets.only(bottom: 100),
+                                  child: Icon(Icons.message),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Message cannot be empty';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: isLargeScreen ? 30 : 20),
+                            Center(
+                              child: ElevatedButton.icon(
+                                onPressed: _submitContactForm,
+                                icon: const Icon(Icons.send),
+                                label: const Text('Send Message'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF1E90FF),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -313,6 +421,18 @@ class _ContactScreenState extends State<ContactScreen> {
                               _buildSocialIcon(FontAwesomeIcons.linkedinIn, 'LinkedIn', const Color(0xFF0A66C2)),
                               const SizedBox(width: 15),
                               _buildSocialIcon(FontAwesomeIcons.xTwitter, 'X (Twitter)', Colors.black),
+                              const SizedBox(width: 15),
+                              _buildSocialIcon(FontAwesomeIcons.youtube, 'YouTube', const Color(0xFFFF0000)),
+                              const SizedBox(width: 15),
+                              _buildSocialIcon(FontAwesomeIcons.whatsapp, 'WhatsApp', const Color(0xFF25D366)),
+                              const SizedBox(width: 15),
+                              _buildSocialIcon(FontAwesomeIcons.tiktok, 'TikTok', Colors.black),
+                              const SizedBox(width: 15),
+                              _buildSocialIcon(FontAwesomeIcons.pinterest, 'Pinterest', const Color(0xFFE60023)),
+                              const SizedBox(width: 15),
+                              _buildSocialIcon(FontAwesomeIcons.google, 'Google Business', const Color(0xFF4285F4)),
+                              const SizedBox(width: 15),
+                              _buildSocialIcon(FontAwesomeIcons.instagram, 'Instagram', const Color(0xFFE1306C)),
                             ],
                           ),
                         ],
@@ -330,7 +450,7 @@ class _ContactScreenState extends State<ContactScreen> {
                 vertical: isLargeScreen ? 60 : 30,
                 horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
               ),
-              color: const Color(0xFFF0F2F5), // Light grey background
+              color: const Color(0xFFF0F2F5),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -374,16 +494,18 @@ class _ContactScreenState extends State<ContactScreen> {
                   ),
                   SizedBox(height: 10),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (_newsletterEmailController.text.isNotEmpty && _newsletterEmailController.text.contains('@')) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Subscribed with ${_newsletterEmailController.text}!')),
-                        );
-                        _newsletterEmailController.clear();
+                        final firestoreService = FirestoreService();
+                        final success = await firestoreService.addNewsletterSubscriber(_newsletterEmailController.text);
+                        if (success) {
+                          _showColoredSnackBar('Subscribed with ${_newsletterEmailController.text}!', Colors.green);
+                          _newsletterEmailController.clear();
+                        } else {
+                          _showColoredSnackBar('Failed to subscribe. Please try again.', Colors.red);
+                        }
                       } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter a valid email address.')),
-                        );
+                        _showColoredSnackBar('Please enter a valid email address.', Colors.red);
                       }
                     },
                     style: ElevatedButton.styleFrom(
