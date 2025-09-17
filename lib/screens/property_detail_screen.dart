@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart'; // For PointerDeviceKind
 import 'package:url_launcher/url_launcher.dart'; // For launching calls, emails, etc.
 import 'package:share_plus/share_plus.dart'; // For sharing functionality
+import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // For social icons like WhatsApp
 
 class PropertyDetailScreen extends StatefulWidget {
   final Map<String, dynamic> property;
@@ -185,7 +186,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         break;
       case 'WhatsApp':
         final formattedValue = value.replaceAll(RegExp(r'[^\d]'), '');
-        uriString = ' https://wa.me/ $formattedValue';
+        uriString = 'https://wa.me/$formattedValue';
         break;
       case 'Email':
         uriString = 'mailto:$value?subject=Inquiry about property ${widget.property['title']}';
@@ -315,6 +316,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               ),
               if (_showSwipeInstruction) _buildSwipeInstructionOverlay(),
               _buildThumbnailNavigationButtons(images),
+              // Left navigation button
               Positioned(
                 left: isLargeScreen ? 32 : 16,
                 top: 0,
@@ -323,7 +325,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   child: FloatingActionButton(
                     heroTag: 'leftBtn',
                     mini: true,
-                    backgroundColor: Colors.white.withOpacity(0.8),
+                    elevation: 4,
+                    backgroundColor: Theme.of(context).cardColor,
                     onPressed: _currentPage > 0
                         ? () => _pageController.previousPage(
                               duration: const Duration(milliseconds: 300),
@@ -338,6 +341,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   ),
                 ),
               ),
+              // Right navigation button
               Positioned(
                 right: isLargeScreen ? 32 : 16,
                 top: 0,
@@ -346,7 +350,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   child: FloatingActionButton(
                     heroTag: 'rightBtn',
                     mini: true,
-                    backgroundColor: Colors.white.withOpacity(0.8),
+                    elevation: 4,
+                    backgroundColor: Theme.of(context).cardColor,
                     onPressed: _currentPage < images.length - 1
                         ? () => _pageController.nextPage(
                               duration: const Duration(milliseconds: 300),
@@ -588,10 +593,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             spacing: 12,
             runSpacing: 8,
             children: [
-              _buildInfoChip("🛏 ${property['bedrooms'] ?? 'N/A'} Beds"),
-              _buildInfoChip("🛁 ${property['bathrooms'] ?? 'N/A'} Baths"),
-              _buildInfoChip("📐 ${property['area'] ?? 'N/A'} sqft"),
-              _buildInfoChip(property['type'] ?? 'Property'),
+              _buildInfoChip(Icons.bed, "${property['bedrooms'] ?? 'N/A'} Beds"),
+              _buildInfoChip(Icons.bathtub, "${property['bathrooms'] ?? 'N/A'} Baths"),
+              _buildInfoChip(Icons.square_foot, "${property['area'] ?? 'N/A'} sqft"),
+              _buildInfoChip(Icons.home_work, property['type'] ?? 'Property'),
             ],
           ),
         ],
@@ -663,7 +668,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             itemBuilder: (context, index) {
               final entry = features.entries.elementAt(index);
               final icon = _featureIcons[entry.key] ?? Icons.info_outline;
-              return _buildFeatureCard(icon!, entry.key, entry.value);
+              return _buildFeatureCard(icon, entry.key, entry.value);
             },
           ),
         ],
@@ -748,7 +753,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       {"icon": Icons.park, "title": "Park", "subtitle": "1 km away"},
       {"icon": Icons.restaurant, "title": "Restaurant", "subtitle": "800 m away"},
       {"icon": Icons.directions_bus, "title": "Bus Stop", "subtitle": "100 m away"},
-      {"icon": Icons.train, "title": "Train Station", "subtitle": "4 km away"}, // ✅ Fixed syntax
+      {"icon": Icons.train, "title": "Train Station", "subtitle": "4 km away"},
     ];
     return amenities.map((amenity) => _buildAmenityCard(
           amenity["icon"] as IconData,
@@ -868,7 +873,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       onCallPressed: () => _handleContactAction('Call', '+254702778897', 'Eric Ntingai'),
                       onWhatsAppPressed: () => _handleContactAction('WhatsApp', '+254702778897', 'Eric Ntingai'),
                       onEmailPressed: () => _handleContactAction('Email', 'soraproperties001@gmail.com', 'Eric Ntingai'),
-                      onMessagePressed: () => _handleContactAction('SMS', '+254702778897', 'Eric Ntongai'),
+                      onMessagePressed: () => _handleContactAction('SMS', '+254702778897', 'Eric Ntingai'),
                     ),
                     const SizedBox(height: 16),
                     _buildAgentCard(
@@ -964,7 +969,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildContactIconButton(icon: Icons.phone, color: Colors.green, onPressed: onCallPressed, tooltip: 'Call'),
-                _buildContactIconButton(icon: Icons.chat_bubble, color: const Color(0xFF25D366), onPressed: onWhatsAppPressed, tooltip: 'WhatsApp'),
+                _buildContactIconButton(icon: FontAwesomeIcons.whatsapp, color: const Color(0xFF25D366), onPressed: onWhatsAppPressed, tooltip: 'WhatsApp'),
                 _buildContactIconButton(icon: Icons.email, color: Colors.red, onPressed: onEmailPressed, tooltip: 'Email'),
                 _buildContactIconButton(icon: Icons.message, color: Theme.of(context).primaryColor, onPressed: onMessagePressed, tooltip: 'Message'),
               ],
@@ -1000,7 +1005,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   // Info chip
-  Widget _buildInfoChip(String label) {
+  Widget _buildInfoChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
@@ -1014,12 +1019,18 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ),
         ],
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: Colors.grey[700]),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -1032,7 +1043,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         'title': 'Spacious Family Home',
         'price': '\$480,000',
         'location': 'Springfield, IL',
-        'image': 'https://picsum.photos/seed/1/200/300 ',
+        'images': ['https://picsum.photos/seed/1/200/300'],
         'bedrooms': 4,
         'bathrooms': 2,
         'area': '2200',
@@ -1042,7 +1053,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         'title': 'Cozy Apartment Downtown',
         'price': '\$250,000',
         'location': 'Metropolis, NY',
-        'image': 'https://picsum.photos/seed/2/200/300 ',
+        'images': ['https://picsum.photos/seed/2/200/300'],
         'bedrooms': 2,
         'bathrooms': 1,
         'area': '1000',
@@ -1161,7 +1172,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             children: [
               Expanded(
                 flex: 3,
-                child: _buildImage(property['image']),
+                child: _buildImage(property['images']?.first),
               ),
               Expanded(
                 flex: 2,

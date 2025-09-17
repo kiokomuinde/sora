@@ -106,6 +106,8 @@ class ViewPropertyScreen extends StatefulWidget {
 class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   late CommonWidgets commonWidgets;
   final PageController _pageController = PageController();
+  // New: A variable to track the current page for button visibility
+  int _currentPage = 0;
 
   // A helper method to format the price
   String _formatPrice(dynamic price) {
@@ -237,6 +239,15 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   void initState() {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
+    // New: Add a listener to the page controller to track the current page
+    _pageController.addListener(() {
+      int next = _pageController.page?.round() ?? 0;
+      if (_currentPage != next) {
+        setState(() {
+          _currentPage = next;
+        });
+      }
+    });
   }
 
   @override
@@ -432,29 +443,85 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // Widget to build the image carousel
+  // Widget to build the image carousel with navigation buttons
   Widget _buildImageCarousel(List<String> imageUrls) {
+    if (imageUrls.isEmpty) {
+      return const SizedBox(
+        height: 300,
+        child: Center(child: Text('No images available.')),
+      );
+    }
+
     return Card(
       elevation: 5,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
       clipBehavior: Clip.antiAlias,
-      child: SizedBox(
-        height: MediaQuery.of(context).size.width >= 1000 ? 500 : 300,
-        child: PageView.builder(
-          controller: _pageController,
-          itemCount: imageUrls.length,
-          itemBuilder: (context, index) {
-            return Image.network(
-              imageUrls[index],
-              fit: BoxFit.cover,
-              width: double.infinity,
-              errorBuilder: (context, error, stackTrace) =>
-                  const Center(child: Icon(Icons.image_not_supported, size: 100, color: Colors.grey)),
-            );
-          },
-        ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.width >= 1000 ? 500 : 300,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: imageUrls.length,
+              itemBuilder: (context, index) {
+                return Image.network(
+                  imageUrls[index],
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Center(child: Icon(Icons.image_not_supported, size: 100, color: Colors.grey)),
+                );
+              },
+            ),
+          ),
+          // New: Previous button
+          Positioned(
+            left: 10,
+            child: Visibility(
+              visible: _currentPage > 0,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios, size: 30),
+                color: const Color(0xFF0A66C2),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.7),
+                  shape: const CircleBorder(),
+                  padding: const EdgeInsets.all(12),
+                ),
+                onPressed: () {
+                  _pageController.previousPage(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
+                  );
+                },
+              ),
+            ),
+          ),
+          // New: Next button
+          Positioned(
+            right: 10,
+            child: Visibility(
+              visible: _currentPage < imageUrls.length - 1,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_forward_ios, size: 30),
+                color: const Color(0xFF0A66C2),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.7),
+                  shape: const CircleBorder(),
+                  padding: const EdgeInsets.all(12),
+                ),
+                onPressed: () {
+                  _pageController.nextPage(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -558,20 +625,26 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
           children: [
             Icon(icon, size: 28, color: const Color(0xFF0A66C2)),
             const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            Expanded( // Use Expanded to prevent text overflow
+              child: Text(
+                label,
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+            Expanded( // Use Expanded to prevent text overflow
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
