@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/screens/home_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Extension for capitalizing first letter of a string
 extension StringExtension on String {
@@ -522,9 +523,12 @@ class CommonWidgets {
                       style: TextStyle(color: Colors.white70),
                     ),
                     const SizedBox(height: 16),
-                    Row(
+                    // Replaced Row with Wrap for responsive social media icons
+                    Wrap(
+                      spacing: 16.0,
+                      runSpacing: 8.0,
                       children: [
-                        _buildSocialButton(FontAwesomeIcons.twitter, 'https://twitter.com'),
+                        _buildSocialButton(FontAwesomeIcons.xTwitter, 'https://x.com'),
                         _buildSocialButton(FontAwesomeIcons.facebookF, 'https://facebook.com'),
                         _buildSocialButton(FontAwesomeIcons.instagram, 'https://instagram.com'),
                         _buildSocialButton(FontAwesomeIcons.linkedinIn, 'https://linkedin.com'),

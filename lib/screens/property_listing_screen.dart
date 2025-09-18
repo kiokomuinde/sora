@@ -59,7 +59,6 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     try {
       Query query = FirebaseFirestore.instance.collection('properties');
 
-      // Correctly map listing type to the string stored in Firestore
       String? queryValue;
       switch (_currentListingTypeFilter.toLowerCase()) {
         case 'buy':
@@ -94,7 +93,6 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
   List<Map<String, dynamic>> _applyFiltersAndSort(List<Map<String, dynamic>> properties) {
     List<Map<String, dynamic>> filteredList = properties;
 
-    // Apply search query filter
     if (_searchQuery.isNotEmpty) {
       final queryLower = _searchQuery.toLowerCase();
       filteredList = filteredList.where((p) {
@@ -105,12 +103,10 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       }).toList();
     }
 
-    // Apply sorting
     filteredList.sort((a, b) {
       final double? priceA = double.tryParse(a['price']?.toString() ?? '0') ?? 0;
       final double? priceB = double.tryParse(b['price']?.toString() ?? '0') ?? 0;
       
-      // Safely parse bedrooms from string to int
       final bedroomsA = int.tryParse((a['residentialDetails'] as Map<String, dynamic>?)?['bedrooms']?.toString() ?? '0') ?? 0;
       final bedroomsB = int.tryParse((b['residentialDetails'] as Map<String, dynamic>?)?['bedrooms']?.toString() ?? '0') ?? 0;
       
@@ -129,7 +125,6 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     return filteredList;
   }
 
-  // A new method to show the login/signup popup
   void _showAuthDialog() {
     showDialog(
       context: context,
@@ -144,15 +139,15 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Close the dialog
-                Navigator.pushNamed(context, '/signup'); // Navigate to sign up
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/signup');
               },
               child: const Text('Sign Up'),
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context); // Close the dialog
-                Navigator.pushNamed(context, '/signin'); // Navigate to sign in
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/signin');
               },
               child: const Text('Sign In'),
             ),
@@ -167,7 +162,6 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth >= 1000;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
-
     return Scaffold(
       appBar: commonWidgets.buildAppBar(
         currentListingTypeFilter: _currentListingTypeFilter,
@@ -187,33 +181,13 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
                 } else if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return commonWidgets.buildEmptyState(
-                    'No Properties Found',
-                    'There are no properties matching your search criteria.',
-                    () {
-                      setState(() {
-                        _searchController.clear();
-                      });
-                    },
-                    'Reset Filters',
-                  );
-                } else {
-                  final properties = _applyFiltersAndSort(snapshot.data!);
-                  if (properties.isEmpty) {
-                    return commonWidgets.buildEmptyState(
-                      'No Matching Properties',
-                      'No properties match your current search and filter settings.',
-                      () {
-                        setState(() {
-                          _searchController.clear();
-                          _currentSortOption = 'price_low_to_high';
-                        });
-                      },
-                      'Clear Filters',
-                    );
-                  }
-                  return _buildPropertiesGrid(properties, isLargeScreen, isMediumScreen);
+                  return const Center(child: Text('No properties found.'));
                 }
+                final filteredAndSortedProperties = _applyFiltersAndSort(snapshot.data!);
+                if (filteredAndSortedProperties.isEmpty) {
+                  return const Center(child: Text('No properties match your search.'));
+                }
+                return _buildPropertiesGrid(filteredAndSortedProperties, isLargeScreen, isMediumScreen);
               },
             ),
             commonWidgets.buildFooter(),
@@ -224,30 +198,15 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
   }
 
   Widget _buildHeader() {
-    String headerText = 'Property Listings';
-    switch (_currentListingTypeFilter.toLowerCase()) {
-      case 'buy':
-        headerText = 'For Sale Properties';
-        break;
-      case 'rent':
-        headerText = 'For Rent Properties';
-        break;
-      case 'lease':
-        headerText = 'For Lease Properties';
-        break;
-      case 'airbnb':
-        headerText = 'Staycation';
-        break;
-    }
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-      color: Colors.grey[100],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            headerText,
+            widget.listingType.isNotEmpty
+                ? '${widget.listingType.toCapitalized()} Properties'
+                : 'All Properties',
             style: const TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -256,10 +215,10 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Explore the perfect properties for your needs.',
+            'Explore our exclusive collection of properties tailored to your needs.',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey,
+              color: Colors.black54,
             ),
           ),
         ],
@@ -269,35 +228,34 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
 
   Widget _buildFilterAndSortSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        alignment: WrapAlignment.center,
         children: [
-          Expanded(
+          SizedBox(
+            width: 250,
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by location, title...',
+                hintText: 'Search by title or town...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                filled: true,
-                fillColor: Colors.grey[200],
-                contentPadding: const EdgeInsets.symmetric(vertical: 15.0),
               ),
             ),
           ),
-          const SizedBox(width: 10),
           DropdownButton<String>(
             value: _currentSortOption,
             icon: const Icon(Icons.sort),
+            elevation: 16,
+            style: const TextStyle(color: Colors.black),
             onChanged: (String? newValue) {
-              if (newValue != null) {
-                setState(() {
-                  _currentSortOption = newValue;
-                });
-              }
+              setState(() {
+                _currentSortOption = newValue!;
+              });
             },
             items: <String>[
               'price_low_to_high',

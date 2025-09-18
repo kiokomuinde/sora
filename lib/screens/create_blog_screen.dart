@@ -35,6 +35,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   String? _selectedCategory;
   int _subtopicsCount = 1;
   int _imagesCount = 1;
+  bool _isSubmitting = false; // New variable to track submission state
 
   // Controllers for Step 2
   List<TextEditingController> _subtopicTitleControllers = [];
@@ -176,17 +177,21 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     // Since the form in Step 1 is no longer in the widget tree,
     // we cannot call _formKey.currentState!.validate().
     // The validation for that form was already done in _nextPage().
-    // Show loading indicator while processing
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Submitting blog post...')),
-    );
+
+    // Start the submission process
+    setState(() {
+      _isSubmitting = true;
+    });
 
     try {
       // Step 1: Upload images to Cloudinary
       final List<String> imageUrls = await _cloudinaryService.uploadMultipleImages(_imageFiles);
 
       if (imageUrls.isEmpty) {
-        throw Exception('Image upload failed. Please try again.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image upload failed. Please try again.'), backgroundColor: Colors.red),
+        );
+        return;
       }
 
       // Step 2: Prepare the data for Firestore
@@ -211,20 +216,34 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Blog post created successfully!')),
+          const SnackBar(
+            content: Text('Blog post created successfully!'),
+            backgroundColor: Colors.green, // Green for success
+          ),
         );
-        // Navigate to a new screen or clear the form
-        Navigator.of(context).pop(); // Go back to the previous screen
+        // Corrected navigation to go directly to the blogs screen
+        Navigator.of(context).pushReplacementNamed('/blogs');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save blog post to Firestore.')),
+          const SnackBar(
+            content: Text('Failed to save blog post to Firestore.'),
+            backgroundColor: Colors.red, // Red for failure
+          ),
         );
       }
     } catch (e) {
       print('Submission error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An error occurred during submission: $e')),
+        SnackBar(
+          content: Text('An error occurred during submission: $e'),
+          backgroundColor: Colors.red, // Red for general errors
+        ),
       );
+    } finally {
+      // Ensure the button state is reset after completion
+      setState(() {
+        _isSubmitting = false;
+      });
     }
   }
 
@@ -571,7 +590,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
                   child: const Text('Back'),
                 ),
                 ElevatedButton(
-                  onPressed: _submitBlog,
+                  onPressed: _isSubmitting ? null : _submitBlog, // Disable the button while submitting
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E90FF),
                     foregroundColor: Colors.white,
@@ -580,7 +599,16 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30)),
                   ),
-                  child: const Text('Submit'),
+                  child: _isSubmitting // Show a loader or the button text
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Submit'),
                 ),
               ],
             ),
