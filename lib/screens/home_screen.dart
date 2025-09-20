@@ -10,6 +10,7 @@ import 'package:sora_app/data/property_data.dart'; // Import the centralized pro
 import 'package:sora_app/services/firestore_service.dart'; // NEW: Import the Firestore service
 import 'package:sora_app/screens/airbnb_screen.dart'; // New Import
 import 'package:firebase_auth/firebase_auth.dart'; // Add this import
+import 'package:intl/intl.dart'; // Import for number formatting
 
 class HomeScreen extends StatefulWidget {
   final AuthService authService;
@@ -523,9 +524,13 @@ class _HomeScreenState extends State<HomeScreen> {
         vertical: isLargeScreen ? 80 : 40,
         horizontal: isLargeScreen ? 100 : 20,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0A66C2), Color(0xFF1E90FF)],
+          colors: [
+            Colors.purple.withOpacity(0.8),
+            Colors.blue.withOpacity(0.8),
+            Colors.purple.withOpacity(0.8)
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -779,6 +784,10 @@ class _PropertyCardState extends State<_PropertyCard> {
 
     // Safely retrieve and parse the price from string to int
     final int price = int.tryParse((widget.property['price'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+    final formatter = NumberFormat('#,###', 'en_US');
+
+    // Conditional text for the listing type button
+    final String buttonText = listingType == 'Staycation' ? 'Airbnb' : listingType.toUpperCase();
 
     return GestureDetector(
       onTap: () {
@@ -840,7 +849,7 @@ class _PropertyCardState extends State<_PropertyCard> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        listingType.toUpperCase(),
+                        buttonText,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -898,7 +907,7 @@ class _PropertyCardState extends State<_PropertyCard> {
                         end: Alignment.bottomRight,
                       ).createShader(bounds),
                       child: Text(
-                        'KSH ${price.toString()}',
+                        'KSH ${formatter.format(price)}',
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
