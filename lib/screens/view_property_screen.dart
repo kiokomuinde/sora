@@ -6,88 +6,9 @@ import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:sora_app/services/firestore_service.dart'; // NEW: Import the Firestore service
 
-// Updated mock data to include more details for filtering similar properties
-final List<Map<String, dynamic>> _mockPropertiesData = [
-  {
-    'id': '1',
-    'title': 'Luxury Apartment in Kilimani',
-    'coverImageUrl': 'https://firebasestorage.googleapis.com/v0/b/sora-1c448.appspot.com/o/images%2Fproperty1.jpg?alt=media&token=c1a3b1a3-b1a3-b1a3-b1a3-b1a3b1a3b1a3',
-    'location': {'town': 'Kilimani'},
-    'propertyType': 'Apartment',
-    'residentialDetails': {'bedrooms': 3, 'bathrooms': 3},
-    'price': 25000000,
-    'listingType': 'Buy',
-    'description': 'A stunning 3-bedroom apartment located in a prime area of Kilimani.',
-    'amenities': ['Swimming Pool', 'Gym', '24/7 Security'],
-    'features': ['Balcony', 'En-suite bedrooms'],
-  },
-  {
-    'id': '2',
-    'title': 'Modern Townhouse in Lavington',
-    'coverImageUrl': 'https://firebasestorage.googleapis.com/v0/b/sora-1c448.appspot.com/o/images%2Fproperty2.jpg?alt=media&token=c1a3b1a3-b1a3-b1a3-b1a3-b1a3b1a3b1a3',
-    'location': {'town': 'Lavington'},
-    'propertyType': 'Townhouse',
-    'residentialDetails': {'bedrooms': 4, 'bathrooms': 4},
-    'price': 180000,
-    'listingType': 'Rent',
-    'description': 'A spacious 4-bedroom townhouse in a gated community in Lavington.',
-    'amenities': ['Gated Community', 'Playground', 'Parking'],
-    'features': ['Garden', 'Modern kitchen'],
-  },
-  {
-    'id': '3',
-    'title': 'Spacious Family Villa in Karen',
-    'coverImageUrl': 'https://firebasestorage.googleapis.com/v0/b/sora-1c448.appspot.com/o/images%2Fproperty3.jpg?alt=media&token=c1a3b1a3-b1a3-b1a3-b1a3-b1a3b1a3b1a3',
-    'location': {'town': 'Karen'},
-    'propertyType': 'Villa',
-    'residentialDetails': {'bedrooms': 5, 'bathrooms': 5},
-    'price': 45000000,
-    'listingType': 'Buy',
-    'description': 'An elegant 5-bedroom villa with a private garden in Karen.',
-    'amenities': ['Private Garden', 'Swimming Pool', '24/7 Security'],
-    'features': ['Study room', 'Spacious living area'],
-  },
-  {
-    'id': '4',
-    'title': 'Cozy Bungalow in Westlands',
-    'coverImageUrl': 'https://firebasestorage.googleapis.com/v0/b/sora-1c448.appspot.com/o/images%2Fproperty4.jpg?alt=media&token=c1a3b1a3-b1a3-b1a3-b1a3-b1a3b1a3b1a3',
-    'location': {'town': 'Westlands'},
-    'propertyType': 'Bungalow',
-    'residentialDetails': {'bedrooms': 2, 'bathrooms': 2},
-    'price': 95000,
-    'listingType': 'Rent',
-    'description': 'A charming 2-bedroom bungalow ideal for a small family in Westlands.',
-    'amenities': ['Parking', 'Quiet neighborhood'],
-    'features': ['Fireplace', 'Lawn'],
-  },
-  {
-    'id': '5',
-    'title': 'Studio Apartment in Westlands',
-    'coverImageUrl': 'https://firebasestorage.googleapis.com/v0/b/sora-1c448.appspot.com/o/images%2Fproperty5.jpg?alt=media&token=c1a3b1a3-b1a3-b1a3-b1a3-b1a3b1a3b1a3',
-    'location': {'town': 'Westlands'},
-    'propertyType': 'Apartment',
-    'residentialDetails': {'bedrooms': 0, 'bathrooms': 1},
-    'price': 60000,
-    'listingType': 'Rent',
-    'description': 'A modern studio apartment perfect for a young professional in Westlands.',
-    'amenities': ['Elevator', 'Gym', '24/7 Security'],
-    'features': ['Open plan kitchen'],
-  },
-  {
-    'id': '6',
-    'title': 'Family Townhouse in Lavington',
-    'coverImageUrl': 'https://firebasestorage.googleapis.com/v0/b/sora-1c448.appspot.com/o/images%2Fproperty6.jpg?alt=media&token=c1a3b1a3-b1a3-b1a3-b1a3-b1a3b1a3b1a3',
-    'location': {'town': 'Lavington'},
-    'propertyType': 'Townhouse',
-    'residentialDetails': {'bedrooms': 3, 'bathrooms': 3},
-    'price': 150000,
-    'listingType': 'Rent',
-    'description': 'A lovely 3-bedroom townhouse with a small yard, located in Lavington.',
-    'amenities': ['Gated Community', 'Playground', 'Parking'],
-    'features': ['Small yard', 'Modern fittings'],
-  },
-];
+// Removed the _mockPropertiesData list
 
 class ViewPropertyScreen extends StatefulWidget {
   final Map<String, dynamic> propertyData;
@@ -108,6 +29,8 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   final PageController _pageController = PageController();
   // New: A variable to track the current page for button visibility
   int _currentPage = 0;
+  // NEW: Initialize FirestoreService
+  late final FirestoreService _firestoreService;
 
   // A helper method to format the price
   String _formatPrice(dynamic price) {
@@ -129,70 +52,22 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     return 'KSH ${price.toString()}';
   }
 
-  // Updated mock function to fetch similar properties based on criteria
+  // Updated function to fetch similar properties from Firestore
   Future<List<Map<String, dynamic>>> _fetchSimilarProperties(Map<String, dynamic> currentProperty) async {
-    await Future.delayed(const Duration(seconds: 1));
-
+    final currentListingType = currentProperty['listingType'];
     final currentPropertyId = currentProperty['id'];
-    final currentPropertyLocation = currentProperty['location']?['town'];
-    final currentPropertyType = currentProperty['propertyType'];
+
+    if (currentListingType == null) {
+      return [];
+    }
+
+    // Fetch properties from Firestore that share the same listingType
+    final allProperties = await _firestoreService.getPropertiesByListingType(currentListingType);
     
-    // Tier 1: Strict match - same location and property type
-    List<Map<String, dynamic>> similarProperties = _mockPropertiesData.where((property) {
-      // Exclude the current property from the similar list
-      if (property['id'] == currentPropertyId) {
-        return false;
-      }
-      return property['location']?['town'] == currentPropertyLocation &&
-             property['propertyType'] == currentPropertyType;
+    // Filter out the current property from the list
+    final similarProperties = allProperties.where((property) {
+      return property['id'] != currentPropertyId;
     }).toList();
-
-    // Tier 2: Less strict - same location and similar rooms/guests
-    if (similarProperties.isEmpty) {
-      similarProperties = _mockPropertiesData.where((property) {
-        if (property['id'] == currentPropertyId) {
-          return false;
-        }
-
-        bool hasSimilarDetails = false;
-        if (currentPropertyType == 'Residential' && property['propertyType'] == 'Residential') {
-          final currentBedrooms = currentProperty['residentialDetails']?['bedrooms'];
-          final currentBathrooms = currentProperty['residentialDetails']?['bathrooms'];
-          final propertyBedrooms = property['residentialDetails']?['bedrooms'];
-          final propertyBathrooms = property['residentialDetails']?['bathrooms'];
-          
-          if (currentBedrooms != null && currentBathrooms != null && propertyBedrooms != null && propertyBathrooms != null) {
-            hasSimilarDetails = (propertyBedrooms - currentBedrooms).abs() <= 1 &&
-                               (propertyBathrooms - currentBathrooms).abs() <= 1;
-          }
-        } else if (currentPropertyType == 'Vocational' && property['propertyType'] == 'Vocational') {
-          final currentGuests = int.tryParse(currentProperty['airbnbDetails']?['guests'] ?? '0');
-          final propertyGuests = int.tryParse(property['airbnbDetails']?['guests'] ?? '0');
-          if (currentGuests != null && propertyGuests != null) {
-            hasSimilarDetails = (propertyGuests - currentGuests).abs() <= 2; // Allow for a wider guest count range
-          }
-        }
-        
-        return property['location']?['town'] == currentPropertyLocation && hasSimilarDetails;
-      }).toList();
-    }
-
-    // Tier 3: Broaden search - same property type, any location
-    if (similarProperties.isEmpty) {
-      similarProperties = _mockPropertiesData.where((property) {
-        if (property['id'] == currentPropertyId) {
-          return false;
-        }
-        return property['propertyType'] == currentPropertyType;
-      }).toList();
-    }
-    
-    // Tier 4: Last resort - just show other properties
-    if (similarProperties.isEmpty) {
-      similarProperties = _mockPropertiesData.where((property) {
-        return property['id'] != currentPropertyId;
-      }).take(3).toList(); // Show up to 3 other properties
-    }
     
     return similarProperties;
   }
@@ -234,11 +109,21 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
       },
     );
   }
+  
+  // New method to handle the login check and show dialog
+  void _handleContactTap() {
+    if (widget.authService.getCurrentUser() != null) {
+      _showContactDialog(widget.propertyData['contactInfo'] ?? {});
+    } else {
+      commonWidgets.showLoginSignupDialog();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
+    _firestoreService = FirestoreService(); // NEW: Instantiate the service
     // New: Add a listener to the page controller to track the current page
     _pageController.addListener(() {
       int next = _pageController.page?.round() ?? 0;
@@ -340,7 +225,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                         mainAxisSpacing: 20,
                         crossAxisSpacing: 20,
                         // Adjusted childAspectRatio to give the cards more vertical room and prevent overflow.
-                        childAspectRatio: 2.2,
+                        mainAxisExtent: 150.0,
                       ),
                       itemBuilder: (context, index) {
                         final detail = propertyDetails[index];
@@ -369,10 +254,13 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                   // Section 5: Contact Information
                   _buildSectionCard(
                     title: 'Contact Information',
-                    // Check if the user is logged in to show full or blurred info
-                    child: widget.authService.getCurrentUser() != null
-                        ? _buildContactInfo(contactInfo)
-                        : _buildBlurredContactInfo(contactInfo),
+                    // Wrap the child in a GestureDetector to make the whole section clickable
+                    child: GestureDetector(
+                      onTap: _handleContactTap,
+                      child: widget.authService.getCurrentUser() != null
+                          ? _buildContactInfo(contactInfo)
+                          : _buildBlurredContactInfo(contactInfo),
+                    ),
                   ),
                   const SizedBox(height: 40),
 

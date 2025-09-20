@@ -91,6 +91,20 @@ class FirestoreService {
         .snapshots();
   }
 
+  // NEW: Method to get properties by a specific listing type
+  Future<List<Map<String, dynamic>>> getPropertiesByListingType(String listingType) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('properties')
+          .where('listingType', isEqualTo: listingType)
+          .get();
+      return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    } catch (e) {
+      print('Error fetching properties by listing type: $e');
+      return [];
+    }
+  }
+
   // Method to delete a property from Firestore
   Future<bool> deleteProperty(String propertyId) async {
     try {
