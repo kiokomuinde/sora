@@ -571,8 +571,33 @@ class CommonWidgets {
                   flex: 1,
                   child: _buildFooterColumn('Contact Us', [
                     _buildContactInfo(Icons.location_on, '123 Real Estate Avenue, Nairobi, Kenya'),
-                    _buildContactInfo(Icons.phone, '+254 712 345 678'),
-                    _buildContactInfo(Icons.email, 'info@sora.co.ke'),
+                    _buildContactInfo(
+                      Icons.phone,
+                      '+254702778897',
+                      onTap: () {
+                        launchUrl(Uri(scheme: 'tel', path: '+254702778897'));
+                      },
+                    ),
+                    _buildContactInfo(
+                      Icons.phone,
+                      '+254712529637',
+                      onTap: () {
+                        launchUrl(Uri(scheme: 'tel', path: '+254712529637'));
+                      },
+                    ),
+                    _buildContactInfo(
+                      Icons.email,
+                      'soraproperties002@gmail.com',
+                      onTap: () async {
+                        final email = 'soraproperties002@gmail.com';
+                        final url = kIsWeb
+                          ? Uri.parse('https://mail.google.com/mail/?view=cm&fs=1&to=$email')
+                          : Uri(scheme: 'mailto', path: email);
+                        if (!await launchUrl(url)) {
+                          // Handle error, e.g., show a snackbar
+                        }
+                      },
+                    ),
                   ]),
                 ),
               ],
@@ -602,8 +627,33 @@ class CommonWidgets {
             const SizedBox(height: 20),
             _buildFooterColumn('Contact Us', [
               _buildContactInfo(Icons.location_on, '123 Real Estate Avenue, Nairobi, Kenya'),
-              _buildContactInfo(Icons.phone, '+254 712 345 678'),
-              _buildContactInfo(Icons.email, 'info@sora.co.ke'),
+              _buildContactInfo(
+                Icons.phone,
+                '+254702778897',
+                onTap: () {
+                  launchUrl(Uri(scheme: 'tel', path: '+254702778897'));
+                },
+              ),
+              _buildContactInfo(
+                Icons.phone,
+                '+254712529637',
+                onTap: () {
+                  launchUrl(Uri(scheme: 'tel', path: '+254712529637'));
+                },
+              ),
+              _buildContactInfo(
+                Icons.email,
+                'soraproperties002@gmail.com',
+                onTap: () async {
+                  final email = 'soraproperties002@gmail.com';
+                  final url = kIsWeb
+                      ? Uri.parse('https://mail.google.com/mail/?view=cm&fs=1&to=$email')
+                      : Uri(scheme: 'mailto', path: email);
+                  if (!await launchUrl(url)) {
+                    // Handle error, e.g., show a snackbar
+                  }
+                },
+              ),
             ]),
           ],
           const Divider(color: Colors.white24, height: 40),
@@ -696,21 +746,24 @@ class CommonWidgets {
     );
   }
 
-  Widget _buildContactInfo(IconData icon, String text) {
+  Widget _buildContactInfo(IconData icon, String text, {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.white70, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+      child: InkWell(
+        onTap: onTap,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: Colors.white70, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

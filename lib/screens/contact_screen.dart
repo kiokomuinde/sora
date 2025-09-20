@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/firestore_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ContactScreen extends StatefulWidget {
   final AuthService authService;
@@ -149,6 +150,23 @@ class _ContactScreenState extends State<ContactScreen> {
       }
     } else {
       _showColoredSnackBar('Please correct the errors in the form.', Colors.red);
+    }
+  }
+
+  Future<void> _launchPhoneDialer(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (!await launchUrl(phoneUri)) {
+      _showColoredSnackBar('Could not launch phone app.', Colors.red);
+    }
+  }
+
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+    );
+    if (!await launchUrl(emailUri)) {
+      _showColoredSnackBar('Could not launch email app.', Colors.red);
     }
   }
 
@@ -399,11 +417,13 @@ class _ContactScreenState extends State<ContactScreen> {
                           SizedBox(height: isLargeScreen ? 30 : 20),
                           _buildContactInfoItem(Icons.location_on, '123 Real Estate Avenue, Nairobi, Kenya'),
                           SizedBox(height: isLargeScreen ? 20 : 15),
-                          _buildContactInfoItem(Icons.phone, '+254 702 778 897'),
+                          _buildContactInfoItem(Icons.phone, '+254702778897', onTap: () => _launchPhoneDialer('+254702778897')),
+                          SizedBox(height: 10),
+                          _buildContactInfoItem(Icons.phone, '+254712529637', onTap: () => _launchPhoneDialer('+254712529637')),
                           SizedBox(height: isLargeScreen ? 20 : 15),
-                          _buildContactInfoItem(Icons.email, 'soraproperties001@gmail.com'),
+                          _buildContactInfoItem(Icons.email, 'soraproperties002@gmail.com', onTap: () => _launchEmail('soraproperties002@gmail.com')),
                           SizedBox(height: isLargeScreen ? 20 : 15),
-                          _buildContactInfoItem(Icons.access_time, 'Monday - Friday: 9 AM - 5 PM EAT'),
+                          _buildContactInfoItem(Icons.access_time, '24/7'),
                           SizedBox(height: isLargeScreen ? 30 : 20),
                           Text(
                             'Follow Us',
@@ -524,32 +544,40 @@ class _ContactScreenState extends State<ContactScreen> {
     );
   }
 
-  Widget _buildContactInfoItem(IconData icon, String title) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: 24,
-          color: const Color(0xFF0A66C2),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                  height: 1.5,
-                ),
+  Widget _buildContactInfoItem(IconData icon, String title, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: const Color(0xFF0A66C2),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                      decoration: onTap != null ? TextDecoration.underline : TextDecoration.none,
+                      decorationColor: Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
