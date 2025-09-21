@@ -11,6 +11,7 @@ import 'package:sora_app/services/firestore_service.dart'; // NEW: Import the Fi
 import 'package:sora_app/screens/airbnb_screen.dart'; // New Import
 import 'package:firebase_auth/firebase_auth.dart'; // Add this import
 import 'package:intl/intl.dart'; // Import for number formatting
+import 'package:sora_app/screens/blogs_screen.dart'; // Import for blogs_screen.dart
 
 class HomeScreen extends StatefulWidget {
   final AuthService authService;
@@ -197,6 +198,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Categories Section
             _buildCategoriesSection(isLargeScreen, isMediumScreen),
+
+            // Blog Posts Section (NOW DYNAMIC)
+            _buildBlogSection(isLargeScreen, isMediumScreen),
 
             // Testimonials Section
             _buildTestimonialsSection(isLargeScreen, isMediumScreen),
@@ -582,6 +586,251 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // NEW: Blog Posts Section with dynamic data
+  Widget _buildBlogSection(bool isLargeScreen, bool isMediumScreen) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        vertical: isLargeScreen ? 60 : 30,
+        horizontal: isLargeScreen ? 100 : 20,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.5), // Start with a transparent white
+            const Color(0xFF4169E1).withOpacity(0.2), // Light Royal Blue
+            Colors.white.withOpacity(0.5), // End with a transparent white
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Read Our Latest Blogs',
+                style: TextStyle(
+                  fontSize: isLargeScreen ? 36 : (isMediumScreen ? 28 : 22),
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0A66C2),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/blogs');
+                },
+                child: const Text(
+                  'View All',
+                  style: TextStyle(
+                    color: Color(0xFF1E90FF),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: isLargeScreen ? 40 : 20),
+          StreamBuilder<QuerySnapshot>(
+            // Limit to 6 latest blog posts
+            stream: FirebaseFirestore.instance.collection('blogs').orderBy('timestamp', descending: true).limit(6).snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(child: Text('No blog posts available.'));
+              }
+
+              final blogs = snapshot.data!.docs.map((doc) => {
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }).toList();
+
+              return LayoutBuilder(builder: (context, constraints) {
+                int crossAxisCount;
+                if (isLargeScreen) {
+                  crossAxisCount = 3;
+                } else if (isMediumScreen) {
+                  crossAxisCount = 2;
+                } else {
+                  crossAxisCount = 1;
+                }
+                // Adjusted aspect ratio to make cards smaller
+                double childAspectRatio = isLargeScreen ? 0.9 : (isMediumScreen ? 0.8 : 0.95);
+
+                return GridView.count(
+                  crossAxisCount: crossAxisCount,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: isLargeScreen ? 30 : 20,
+                  crossAxisSpacing: isLargeScreen ? 30 : 20,
+                  childAspectRatio: childAspectRatio,
+                  children: blogs.map((blog) {
+                    return _buildBlogCard(
+                      blog: blog,
+                      isLargeScreen: isLargeScreen,
+                      isMediumScreen: isMediumScreen,
+                    );
+                  }).toList(),
+                );
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Re-usable widget from blogs_screen.dart, adapted for local use
+  Widget _buildBlogCard({
+    required Map<String, dynamic> blog,
+    required bool isLargeScreen,
+    required bool isMediumScreen,
+  }) {
+    final String imageUrl = blog['imageUrls'] != null && blog['imageUrls'].isNotEmpty
+        ? blog['imageUrls'][0]
+        : '';
+    Timestamp? timestamp = blog['timestamp'] as Timestamp?;
+    String date = timestamp != null
+        ? DateFormat('MMMM d, yyyy').format(timestamp.toDate())
+        : 'Date Unavailable';
+    String snippet = blog['snippet'] ?? '';
+
+    // Calculate max lines for snippet based on screen size to prevent overflow
+    int maxSnippetLines = isLargeScreen ? 5 : (isMediumScreen ? 4 : 3);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/blog_view',
+          arguments: blog,
+        );
+      },
+      child: Card(
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Container(
+                width: double.infinity,
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(child: CircularProgressIndicator());
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                              child: Text(
+                                  'Image not found',
+                                  style: TextStyle(color: Colors.grey[600]),
+                              ),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Text(
+                          'Image Unavailable',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ),
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      blog['category'] ?? 'Uncategorized',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E90FF),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      blog['title'] ?? 'Untitled Blog Post',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0A66C2),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      snippet,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                      maxLines: maxSnippetLines,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Text(
+                        date,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/blog_view',
+                            arguments: blog,
+                          );
+                        },
+                        child: const Text(
+                          'Read More',
+                          style: TextStyle(
+                            color: Color(0xFF1E90FF),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildTestimonialsSection(bool isLargeScreen, bool isMediumScreen) {
     // Mock testimonials data
