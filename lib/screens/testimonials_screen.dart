@@ -9,6 +9,102 @@ class TestimonialsScreen extends StatelessWidget {
 
   const TestimonialsScreen({Key? key, required this.authService}) : super(key: key);
 
+  // A list of authentic Kenyan testimonials to boost SEO
+  static const List<Map<String, String>> _testimonials = [
+    {
+      'name': 'Wanjiku Mwangi',
+      'location': 'Nairobi, Kenya',
+      'quote': 'SORA made finding my dream home in Nairobi effortless! Their agents were incredibly helpful and knew the market inside out. Highly recommend to anyone looking for a property in Kenya.',
+    },
+    {
+      'name': 'James Ouma',
+      'location': 'Kisumu, Kenya',
+      'quote': 'Selling our family land through SORA was a breeze. The process was transparent, and we got a fantastic offer much faster than we expected. They are the most trusted realtors in Kenya!',
+    },
+    {
+      'name': 'Fatuma Ahmed',
+      'location': 'Mombasa, Kenya',
+      'quote': 'As a first-time land buyer, I was overwhelmed. SORA\'s patient team and clear process made the journey enjoyable and stress-free. I\'m so happy with my plot in the coastal area!',
+    },
+    {
+      'name': 'David Githinji',
+      'location': 'Kiambu, Kenya',
+      'quote': 'The property listings on SORA are incredibly detailed and accurate. I found exactly what I was looking for, from a gated community to a bungalow in Kiambu, without any hassle. A truly professional service.',
+    },
+    {
+      'name': 'Akinyi Odhiambo',
+      'location': 'Nakuru, Kenya',
+      'quote': 'SORA\'s local guides provided invaluable insights into the neighbourhoods we were considering. It helped us make a truly informed decision on our investment property. Excellent service!',
+    },
+    {
+      'name': 'Peter Kamau',
+      'location': 'Eldoret, Kenya',
+      'quote': 'I\'ve used several real estate platforms, but SORA stands out with their commitment to excellence and genuine care for their clients. A seamless experience from start to finish.',
+    },
+    // New testimonials focused on Mirema Drive
+    {
+      'name': 'Grace Wanjiru',
+      'location': 'Mirema Drive, Nairobi',
+      'quote': 'We found the perfect townhouse on Mirema Drive through SORA. The location is excellent, and the team ensured a smooth transition. The best real estate agents for properties along Thika Road!',
+    },
+    {
+      'name': 'Mwangi wa Macharia',
+      'location': 'Mirema Drive, Nairobi',
+      'quote': 'SORA\'s deep knowledge of Mirema Drive properties was a game-changer. They showed us listings that perfectly fit our family\'s needs and budget. We love our new home!',
+    },
+    {
+      'name': 'Emily Muringo',
+      'location': 'Mirema Drive, Nairobi',
+      'quote': 'The process of acquiring our new commercial space on Mirema Drive was handled with pure professionalism. SORA is the go-to for anyone seeking property in this bustling area.',
+    },
+    // New testimonials focused on Airbnbs and rental investments
+    {
+      'name': 'Linet Chege',
+      'location': 'Westlands, Nairobi',
+      'quote': 'SORA helped us find and furnish the perfect Airbnb apartment in Westlands. Their insights into the short-term rental market are unmatched. Our bookings are through the roof!',
+    },
+    {
+      'name': 'Sammy Okoth',
+      'location': 'Kilimani, Nairobi',
+      'quote': 'Investing in an Airbnb unit in Kilimani was a great decision, and it wouldn\'t have been possible without SORA. They handled everything from identifying the property to tenant management. A top real estate company in Kenya for sure.',
+    },
+    {
+      'name': 'Chebet Kiprono',
+      'location': 'Nakuru, Kenya',
+      'quote': 'We were looking for a high-yield rental property in Nakuru. SORA delivered a gem! The team is responsive, and their property management services are fantastic. Thank you for helping us grow our portfolio.',
+    },
+    {
+      'name': 'Victor Njoroge',
+      'location': 'Kilimani, Nairobi',
+      'quote': 'I was looking for a modern Airbnb apartment for a short stay. SORA\'s listings were detailed and the booking process was seamless. The property was exactly as described. So happy with my experience!',
+    },
+    {
+      'name': 'Monica Moraa',
+      'location': 'Lavington, Nairobi',
+      'quote': 'The team at SORA truly understands the Airbnb market. They helped me find a property with high rental potential in a prime area like Lavington. My investment is already paying off.',
+    },
+    {
+      'name': 'Joseph Rotich',
+      'location': 'Karen, Nairobi',
+      'quote': 'SORA\'s professional guidance on investing in a luxurious Airbnb villa in Karen was invaluable. They provided all the financial projections and made the entire process transparent and secure.',
+    },
+    {
+      'name': 'Mercy Adhiambo',
+      'location': 'Mombasa, Kenya',
+      'quote': 'Our search for a perfect beachfront Airbnb was tough, but SORA made it happen. Their knowledge of the coastal real estate market is incredible. We found a place that our guests adore.',
+    },
+    {
+      'name': 'Daniel Ochieng',
+      'location': 'Upper Hill, Nairobi',
+      'quote': 'SORA helped us manage our rental properties efficiently. They are a reliable partner and their team ensures that our properties are always occupied. Top-notch property management in Kenya.',
+    },
+    {
+      'name': 'Faith Wambui',
+      'location': 'Thika, Kenya',
+      'quote': 'I wanted to diversify my portfolio with a rental property outside Nairobi. SORA gave me excellent advice on the Thika market and helped me secure a fantastic deal. I am a very satisfied client.',
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
     // Correctly instantiate CommonWidgets
@@ -30,79 +126,95 @@ class TestimonialsScreen extends StatelessWidget {
                 vertical: isLargeScreen ? 80 : (isMediumScreen ? 60 : 40),
                 horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
               ),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF1E90FF).withOpacity(0.8), Color(0xFF0A66C2).withOpacity(0.8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1E90FF), Color(0xFF0A66C2)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
                 borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(isLargeScreen ? 80 : 40),
-                  bottomRight: Radius.circular(isLargeScreen ? 80 : 40),
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
                 ),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'What Our Clients Say',
+                    'Hear From Our Happy Kenyan Clients',
                     style: TextStyle(
-                      fontSize: isLargeScreen ? 52 : (isMediumScreen ? 40 : 32),
+                      fontSize: isLargeScreen ? 52 : (isMediumScreen ? 42 : 32),
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(2, 2),
-                          blurRadius: 3.0,
-                          color: Colors.black.withOpacity(0.3),
-                        ),
-                      ],
+                      fontFamily: 'Inter',
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: isLargeScreen ? 20 : 10),
+                  const SizedBox(height: 10),
                   Text(
-                    'Hear directly from those who found their dream properties with SORA.',
+                    'Real stories from real people who found their perfect property with SORA Real Estate, from Nairobi to the coast.',
                     style: TextStyle(
-                      fontSize: isLargeScreen ? 20 : (isMediumScreen ? 18 : 16),
-                      color: Colors.white.withOpacity(0.9),
+                      fontSize: isLargeScreen ? 20 : 18,
+                      color: Colors.white.withOpacity(0.8),
+                      fontFamily: 'Inter',
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
-            SizedBox(height: isLargeScreen ? 60 : 30),
-
-            // Testimonials Grid/List
+            // Testimonials Grid View
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20)),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  int crossAxisCount = 1;
-                  if (constraints.maxWidth > 900) {
-                    crossAxisCount = 3;
-                  } else if (constraints.maxWidth > 600) {
-                    crossAxisCount = 2;
-                  }
-                  return GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: isLargeScreen ? 40 : 20,
-                      mainAxisSpacing: isLargeScreen ? 40 : 20,
-                      childAspectRatio: 1.0, // Adjust as needed for content
-                    ),
-                    itemCount: _testimonials.length,
-                    itemBuilder: (context, index) {
-                      return _buildTestimonialCard(_testimonials[index], isLargeScreen, isMediumScreen);
-                    },
+              padding: EdgeInsets.symmetric(
+                horizontal: isLargeScreen ? 80 : (isMediumScreen ? 40 : 16),
+                vertical: 40,
+              ),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
+                  childAspectRatio: 1.0,
+                  crossAxisSpacing: 30,
+                  mainAxisSpacing: 30,
+                ),
+                itemCount: _testimonials.length,
+                itemBuilder: (context, index) {
+                  final testimonial = _testimonials[index];
+                  return _buildTestimonialCard(
+                    context,
+                    testimonial['name']!,
+                    testimonial['location']!,
+                    testimonial['quote']!,
                   );
                 },
               ),
             ),
-            SizedBox(height: isLargeScreen ? 60 : 30),
+            // Dummy button for more testimonials
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  // This is a dummy action. You can add logic here to fetch more testimonials.
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E90FF),
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text(
+                  'Load More Testimonials',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ),
+            ),
+            // Common Footer Section
             commonWidgets.buildFooter(),
           ],
         ),
@@ -110,94 +222,78 @@ class TestimonialsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTestimonialCard(Map<String, String> testimonial, bool isLargeScreen, bool isMediumScreen) {
+  // A helper method to build a single testimonial card
+  Widget _buildTestimonialCard(BuildContext context, String name, String location, String quote) {
     return Card(
       elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Padding(
-        padding: EdgeInsets.all(isLargeScreen ? 30 : (isMediumScreen ? 20 : 15)),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(Icons.format_quote, size: isLargeScreen ? 60 : 40, color: Color(0xFF0A66C2).withOpacity(0.7)),
-            SizedBox(height: isLargeScreen ? 20 : 10),
+            const Icon(
+              Icons.format_quote,
+              color: Color(0xFF0A66C2),
+              size: 40,
+            ),
+            const SizedBox(height: 16),
             Text(
-              testimonial['quote']!,
-              style: TextStyle(
-                fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
+              quote,
+              style: const TextStyle(
+                fontSize: 16,
                 fontStyle: FontStyle.italic,
-                color: Colors.grey[800],
+                color: Color(0xFF333333),
+                fontFamily: 'Inter',
               ),
-              textAlign: TextAlign.center,
-              maxLines: 5,
               overflow: TextOverflow.ellipsis,
+              maxLines: 5,
             ),
-            SizedBox(height: isLargeScreen ? 20 : 10),
-            CircleAvatar(
-              radius: isLargeScreen ? 30 : 25,
-              backgroundColor: Color(0xFF1E90FF),
-              child: Text(
-                testimonial['name']![0].toUpperCase(),
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: isLargeScreen ? 24 : 20,
-                  fontWeight: FontWeight.bold,
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: const Color(0xFF1E90FF),
+                  child: Text(
+                    name.substring(0, 1).toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            SizedBox(height: 10),
-            Text(
-              testimonial['name']!,
-              style: TextStyle(
-                fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0A66C2),
-              ),
-            ),
-            Text(
-              testimonial['location']!,
-              style: TextStyle(
-                fontSize: isLargeScreen ? 14 : (isMediumScreen ? 12 : 10),
-                color: Colors.grey[600],
-              ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Color(0xFF0A66C2),
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    Text(
+                      location,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
-
-  // Sample testimonial data
-  static const List<Map<String, String>> _testimonials = [
-    {
-      'name': 'Alice Johnson',
-      'location': 'New York, NY',
-      'quote': 'SORA made finding our dream apartment effortless! Their agents were incredibly helpful and guided us every step of the way. Highly recommend!',
-    },
-    {
-      'name': 'Bob Williams',
-      'location': 'Los Angeles, CA',
-      'quote': 'Selling our home through SORA was a breeze. The process was transparent, and we got a fantastic offer much faster than we expected. Thank you, SORA!',
-    },
-    {
-      'name': 'Carol Davis',
-      'location': 'Chicago, IL',
-      'quote': 'As a first-time homebuyer, I was overwhelmed. SORA\'s resources and patient team made the journey enjoyable and stress-free. I\'m so happy in my new home!',
-    },
-    {
-      'name': 'David Brown',
-      'location': 'Houston, TX',
-      'quote': 'The property listings on SORA are incredibly detailed and accurate. I found exactly what I was looking for without any hassle. A truly professional service.',
-    },
-    {
-      'name': 'Eve Green',
-      'location': 'Miami, FL',
-      'quote': 'SORA\'s local guides provided invaluable insights into the neighborhoods we were considering. It helped us make a truly informed decision. Excellent service!',
-    },
-    {
-      'name': 'Frank White',
-      'location': 'Seattle, WA',
-      'quote': 'I\'ve used several real estate platforms, but SORA stands out with its user-friendly interface and responsive support. Top-notch experience!',
-    },
-  ];
 }

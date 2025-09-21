@@ -84,12 +84,12 @@ class _AgentsScreenState extends State<AgentsScreen> {
     );
   }
 
-  // Mock agent data
+  // Mock agent data with updated image paths
   final List<Map<String, String>> _agents = [
     {
-      'name': 'Erick Ntogai',
+      'name': 'Erick Ntongai',
       'title': 'Senior Real Estate Agent',
-      'image': 'assets/images/agent1.webp',
+      'image': 'assets/images/riki_pro.png',
       'phone': '+254702778897',
       'email': 'soraproperties001@gmail.com',
       'bio': 'Erick specializes in luxury residential properties and has over 10 years of experience in the Nairobi market. She is dedicated to providing exceptional service and finding the perfect home for her clients.',
@@ -97,26 +97,26 @@ class _AgentsScreenState extends State<AgentsScreen> {
     {
       'name': 'Kioko Muinde',
       'title': 'Commercial Property Specialist',
-      'image': 'assets/images/agent2.webp',
+      'image': 'assets/images/kioko_pro.png',
       'phone': '+254712529637',
-      'email': 'soraproperties001@gmail.com',
+      'email': 'kiokomuinde022soraproperties001@gmail.com',
       'bio': 'Kioko is an expert in commercial real estate, assisting businesses with office spaces, retail locations, and industrial properties across Kenya. His analytical approach ensures optimal investment decisions.',
     },
     {
-      'name': 'Margret Wambui',
+      'name': 'Regina Wambui',
       'title': 'Rental & Lease Expert',
       'image': 'assets/images/agent3.webp',
-      'phone': '+254712529637',
-      'email': 'soraproperties001@gmail.com',
-      'bio': 'Margret has a deep understanding of the rental market, helping individuals and families find suitable rental properties and managing lease agreements with efficiency and care.',
+      'phone': '+254798111621',
+      'email': 'soraproperties002@gmail.com',
+      'bio': 'Regina has a deep understanding of the rental market, helping individuals and families find suitable rental properties and managing lease agreements with efficiency and care.',
     },
     {
-      'name': 'Eugine Okoth',
+      'name': 'Kelvin Kithinji',
       'title': 'New Developments Consultant',
-      'image': 'assets/images/agent4.webp',
+      'image': 'assets/images/voke_pro.png',
       'phone': '+254702778897',
-      'email': 'soraproperties001@gmail.com',
-      'bio': 'Eugine focuses on new property developments, providing insights into emerging neighborhoods and off-plan investments. He helps clients navigate the complexities of buying into new projects.',
+      'email': 'soraproperties002@gmail.com',
+      'bio': 'Kelvin focuses on new property developments, providing insights into emerging neighborhoods and off-plan investments. He helps clients navigate the complexities of buying into new projects.',
     },
   ];
 
