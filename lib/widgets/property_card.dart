@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/services/firestore_service.dart';
+import 'package:intl/intl.dart';
 
 // A new StatefulWidget for the individual property cards
 class PropertyCard extends StatefulWidget {
@@ -113,6 +114,26 @@ class _PropertyCardState extends State<PropertyCard> {
     }
   }
 
+  // A new method to format the price with commas
+  String _formatPrice(dynamic price) {
+    try {
+      final numberPrice = double.tryParse(price.toString());
+      if (numberPrice == null) {
+        return 'N/A';
+      }
+
+      final currencyFormatter = NumberFormat.currency(
+        locale: 'en_US',
+        symbol: 'KSh ',
+        decimalDigits: 0,
+      );
+      return currencyFormatter.format(numberPrice);
+    } catch (e) {
+      print('Error formatting price: $e');
+      return 'N/A';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final String imageUrl = widget.property['coverImageUrl']?.toString() ?? 'https://via.placeholder.com/150';
@@ -199,12 +220,21 @@ class _PropertyCardState extends State<PropertyCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'KSh ${widget.property['price']?.toString() ?? 'N/A'}',
-                        style: const TextStyle(
-                          fontSize: 21,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0A66C2),
+                      ShaderMask(
+                        shaderCallback: (Rect bounds) {
+                          return const LinearGradient(
+                            colors: [Colors.deepPurple, Colors.blue],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ).createShader(bounds);
+                        },
+                        child: Text(
+                          _formatPrice(widget.property['price']),
+                          style: const TextStyle(
+                            fontSize: 21,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white, // Color must be white to see the gradient effect
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -213,6 +243,7 @@ class _PropertyCardState extends State<PropertyCard> {
                         style: const TextStyle(
                           fontSize: 19,
                           fontWeight: FontWeight.w600,
+                          color: Colors.blue, // Updated to blue
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

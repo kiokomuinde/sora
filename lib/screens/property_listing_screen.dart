@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:sora_app/widgets/property_card.dart'; // Import the new, reusable property card widget
-import 'package:sora_app/services/firestore_service.dart'; // Import FirestoreService
+import 'package:sora_app/widgets/property_card.dart';
+import 'package:sora_app/services/firestore_service.dart';
 
 class PropertyListingScreen extends StatefulWidget {
   final AuthService authService;
@@ -187,7 +187,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
                 if (filteredAndSortedProperties.isEmpty) {
                   return const Center(child: Text('No properties match your search.'));
                 }
-                return _buildPropertiesGrid(filteredAndSortedProperties, isLargeScreen, isMediumScreen);
+                return _buildPropertiesGrid(filteredAndSortedProperties, isLargeScreen, isMediumScreen, screenWidth);
               },
             ),
             commonWidgets.buildFooter(),
@@ -291,14 +291,25 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     );
   }
 
-  Widget _buildPropertiesGrid(List<Map<String, dynamic>> properties, bool isLargeScreen, bool isMediumScreen) {
+  Widget _buildPropertiesGrid(List<Map<String, dynamic>> properties, bool isLargeScreen, bool isMediumScreen, double screenWidth) {
+    int crossAxisCount;
+    if (isLargeScreen) {
+      crossAxisCount = 5;
+    } else if (isMediumScreen) {
+      crossAxisCount = 3;
+    } else if (screenWidth > 400) {
+      crossAxisCount = 2;
+    } else {
+      crossAxisCount = 1;
+    }
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 100 : 20, vertical: 20),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: isLargeScreen ? 5 : (isMediumScreen ? 3 : 2),
+          crossAxisCount: crossAxisCount,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
           childAspectRatio: 0.75, // Adjusted to make the cards slightly shorter
