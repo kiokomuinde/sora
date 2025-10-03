@@ -30,6 +30,25 @@ class _PropertyCardState extends State<PropertyCard> {
   bool _isFavorite = false;
   late FirestoreService _firestoreService;
 
+  // Helper map for common amenity names to Material Icons
+  static const Map<String, IconData> _amenityIcons = {
+    'Wi-Fi': Icons.wifi,
+    'Kitchen': Icons.kitchen,
+    'Parking': Icons.local_parking,
+    'Pool': Icons.pool,
+    'AC': Icons.ac_unit,
+    'Gym': Icons.fitness_center,
+    'Washer': Icons.local_laundry_service,
+    'Hanger': Icons.dry_cleaning,
+    'Self check-in': Icons.lock_open,
+    'TV': Icons.tv,
+    'Patio or balcony': Icons.deck,
+    'Hot tub': Icons.hot_tub,
+    'Heating': Icons.whatshot,
+    'Breakfast': Icons.free_breakfast,
+    'Pets allowed': Icons.pets,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -117,7 +136,8 @@ class _PropertyCardState extends State<PropertyCard> {
   // A new method to format the price with commas
   String _formatPrice(dynamic price) {
     try {
-      final numberPrice = double.tryParse(price.toString());
+      // Handle the possibility of a string with commas or a number
+      final numberPrice = double.tryParse(price.toString().replaceAll(',', ''));
       if (numberPrice == null) {
         return 'N/A';
       }
@@ -134,11 +154,80 @@ class _PropertyCardState extends State<PropertyCard> {
     }
   }
 
+  // Helper widget to display up to 5 amenity icons for Staycation listings
+  Widget _buildStaycationAmenities(Map<String, dynamic> airbnbDetails) {
+    // Safely cast amenities to a list of strings
+    final List<String> amenities = (airbnbDetails['amenities'] as List<dynamic>?)
+        ?.map((e) => e.toString())
+        .toList() ?? [];
+
+    // Filter for known icons and take the top 5
+    final List<Widget> amenityWidgets = amenities
+        .where(_amenityIcons.containsKey)
+        .take(5) // Dynamic: Take the first 5 amenities
+        .map((amenity) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 12.0),
+        child: Tooltip(
+          message: amenity,
+          child: Icon(
+            _amenityIcons[amenity]!, // Use ! because we checked containsKey
+            size: 20,
+            color: const Color(0xFF0A66C2), // Prominent blue color
+          ),
+        ),
+      );
+    }).toList();
+
+    if (amenityWidgets.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Row(
+          children: amenityWidgets,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // --- START: Conditional Data Parsing (FIXED) ---
+    final String listingType = widget.property['listingType'] ?? 'Unknown';
+    // Safely access nested maps
+    final Map<String, dynamic> residentialDetails = widget.property['residentialDetails'] as Map<String, dynamic>? ?? {};
+    final Map<String, dynamic> airbnbDetails = widget.property['airbnbDetails'] as Map<String, dynamic>? ?? {};
+
+    // Variables for Card Display
+    final int displayBeds;
+    final int displayBaths;
+    final String displayArea;
+    int guestsCapacity = 0;
+
+    // Safely retrieve area. We assume 'area' is the field for size.
+    final String rootArea = widget.property['area']?.toString() ?? '0';
+
+    if (listingType == 'Staycation') {
+      // Staycation: Show Guests and Baths
+      guestsCapacity = int.tryParse((airbnbDetails['guests'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+      displayBeds = 0;
+      displayArea = '0';
+      // Baths is a physical property detail, so use residentialDetails
+      displayBaths = int.tryParse((residentialDetails['bathrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+    } else {
+      // Residential (Buy, Rent, Lease): Show Beds, Baths, and Area
+      displayBeds = int.tryParse((residentialDetails['bedrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+      displayBaths = int.tryParse((residentialDetails['bathrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+      displayArea = rootArea;
+    }
+    // --- END: Conditional Data Parsing (FIXED) ---
+
     final String imageUrl = widget.property['coverImageUrl']?.toString() ?? 'https://via.placeholder.com/150';
 
-    // Map the listingType from the database to the display text
     String listingTypeDisplay = 'Unknown';
     if (widget.property['listingType'] != null) {
       switch (widget.property['listingType']) {
@@ -264,44 +353,69 @@ class _PropertyCardState extends State<PropertyCard> {
                             ),
                           ],
                         ),
-                      if (widget.property['residentialDetails'] != null) ...[
-                        if (widget.property['residentialDetails']['bedrooms'] != null)
-                          Row(
-                            children: [
-                              Icon(Icons.bed, size: 19, color: Colors.grey[600]),
-                              const SizedBox(height: 4),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${widget.property['residentialDetails']['bedrooms']} Beds',
-                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
-                        if (widget.property['residentialDetails']['bathrooms'] != null)
-                          Row(
-                            children: [
-                              Icon(Icons.bathtub, size: 19, color: Colors.grey[600]),
-                              const SizedBox(height: 4),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${widget.property['residentialDetails']['bathrooms']} Baths',
-                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
-                      ],
-                      if (widget.property['area'] != null && widget.property['area'] != "0")
+
+                      // --- START: Conditional Property Features (Guests/Beds, Baths, Area) ---
+                      const SizedBox(height: 8),
+                      if (listingType == 'Staycation') ...[
+                        // Display Guests and Baths for Staycation
                         Row(
                           children: [
-                            Icon(Icons.square_foot, size: 19, color: Colors.grey[600]),
-                            const SizedBox(height: 4),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${widget.property['area']} sqft',
-                              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                            ),
+                            if (guestsCapacity > 0) ...[
+                              Icon(Icons.people_alt, size: 19, color: Colors.grey[600]),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$guestsCapacity Guests',
+                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                              ),
+                              const SizedBox(width: 12),
+                            ],
+                            if (displayBaths > 0) ...[
+                              Icon(Icons.bathtub, size: 19, color: Colors.grey[600]),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$displayBaths Baths',
+                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                              ),
+                            ],
                           ],
                         ),
+                        // Display Amenity Icons (NEW)
+                        _buildStaycationAmenities(airbnbDetails),
+
+                      ] else ...[
+                        // Residential (Buy, Rent, Lease): Display Beds, Baths, and Area
+                        Row(
+                          children: [
+                            if (displayBeds > 0) ...[
+                              Icon(Icons.bed, size: 19, color: Colors.grey[600]),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$displayBeds Beds',
+                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                              ),
+                              const SizedBox(width: 12),
+                            ],
+                            if (displayBaths > 0) ...[
+                              Icon(Icons.bathtub, size: 19, color: Colors.grey[600]),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$displayBaths Baths',
+                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                              ),
+                              const SizedBox(width: 12),
+                            ],
+                            if (displayArea != '0') ...[
+                              Icon(Icons.square_foot, size: 19, color: Colors.grey[600]),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$displayArea sqft',
+                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                      // --- END: Conditional Property Features ---
                     ].whereType<Widget>().toList(),
                   ),
                 ),

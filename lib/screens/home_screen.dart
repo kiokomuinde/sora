@@ -1026,10 +1026,42 @@ class _PropertyCardState extends State<_PropertyCard> {
   Widget build(BuildContext context) {
     // Safely retrieve the image URL from the 'coverImageUrl' field
     String? imageUrl = widget.property['coverImageUrl']?.toString();
-    final int beds = int.tryParse((widget.property['beds'] ?? '0').toString().replaceAll(',', '')) ?? 0;
-    final int bathrooms = int.tryParse((widget.property['bathrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
-    final int size = int.tryParse((widget.property['size'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+    
     final String listingType = widget.property['listingType'] ?? 'Unknown';
+    
+    // Safely retrieve common nested maps
+    final Map<String, dynamic> residentialDetails = widget.property['residentialDetails'] as Map<String, dynamic>? ?? {};
+    final Map<String, dynamic> airbnbDetails = widget.property['airbnbDetails'] as Map<String, dynamic>? ?? {};
+
+    // Variables for Card Display
+    final int displayBeds;
+    final int displayBaths;
+    final int displaySize;
+    int guestsCapacity = 0; // Capacity is only relevant for Staycation
+    
+    // Safely retrieve size from the root of the property map for all property types
+    final int rootSize = int.tryParse((widget.property['size'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+
+
+    // --- START: Conditional Data Parsing for Property Card (FIXED) ---
+    if (listingType == 'Staycation') {
+      // Staycation: Get guests from airbnbDetails and baths from residentialDetails
+      guestsCapacity = int.tryParse((airbnbDetails['guests'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+      
+      // We don't display 'beds' or 'size' for Staycation, only Guests and Baths
+      displayBeds = 0; 
+      displaySize = 0; 
+      // Use residentialDetails for bathrooms, as it is a common field for the physical property
+      displayBaths = int.tryParse((residentialDetails['bathrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0; 
+
+    } else {
+      // Residential (Buy, Rent, Lease): Use residentialDetails for beds and baths
+      // THIS RESTORES THE ORIGINAL FIX for beds/bedrooms
+      displayBeds = int.tryParse((residentialDetails['bedrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+      displayBaths = int.tryParse((residentialDetails['bathrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
+      displaySize = rootSize; // Use the root size field
+    }
+    // --- END: Conditional Data Parsing for Property Card (FIXED) ---
 
     // Safely retrieve and parse the price from string to int
     final int price = int.tryParse((widget.property['price'] ?? '0').toString().replaceAll(',', '')) ?? 0;
@@ -1140,14 +1172,23 @@ class _PropertyCardState extends State<_PropertyCard> {
                       ],
                     ),
                     const SizedBox(height: 5),
+                    // --- PROPERTY FEATURES ROW ---
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildPropertyFeature(Icons.bed_rounded, '$beds Beds'),
-                        _buildPropertyFeature(FontAwesomeIcons.toilet, '$bathrooms Baths'),
-                        _buildPropertyFeature(Icons.square_foot, '$size sqft'),
+                        if (listingType == 'Staycation') ...[
+                          // Show Guests and Baths for Staycation
+                          _buildPropertyFeature(Icons.people_alt_rounded, '$guestsCapacity Guests'),
+                          _buildPropertyFeature(FontAwesomeIcons.toilet, '$displayBaths Baths'),
+                        ] else ...[
+                          // Show Beds, Baths, and Size for Residential
+                          _buildPropertyFeature(Icons.bed_rounded, '$displayBeds Beds'),
+                          _buildPropertyFeature(FontAwesomeIcons.toilet, '$displayBaths Baths'),
+                          _buildPropertyFeature(Icons.square_foot, '$displaySize sqft'),
+                        ],
                       ],
                     ),
+                    // --- END PROPERTY FEATURES ROW ---
                     const SizedBox(height: 10),
                     ShaderMask(
                       shaderCallback: (bounds) => const LinearGradient(
