@@ -358,19 +358,23 @@ class _AgentsScreenState extends State<AgentsScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            flex: 2,
+            // Increased flex from 2 to 3 to increase image height
+            flex: 3,
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
                 image: DecorationImage(
                   image: AssetImage(agent['image']!),
                   fit: BoxFit.cover,
+                  // Alignment.topCenter ensures the face isn't cut off
+                  alignment: Alignment.topCenter,
                 ),
               ),
             ),
           ),
           Expanded(
-            flex: 3,
+            // Decreased flex from 3 to 2 to maintain overall card size
+            flex: 2,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
