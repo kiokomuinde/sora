@@ -32,6 +32,98 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _dealsScrollController = ScrollController();
   final ScrollController _newScrollController = ScrollController();
 
+  // NEW: Updated Static data for the "Managed Rental Portfolio" section with WEBP assets
+  final List<Map<String, dynamic>> _managedProperties = const [
+    {
+      'id': 'static_01',
+      'title': 'Executive 2-Bedroom Apartment',
+      'location': {'locality': 'Kilimani, Nairobi'}, // New Location (Apartment)
+      'price': '120000', // Rent per month
+      'coverImageUrl': 'assets/images/rental1.webp', // <--- UPDATED TO .webp
+      'listingType': 'Rent', // All are Rent
+      'residentialDetails': {'bedrooms': '2', 'bathrooms': '2'},
+      'size': '1400',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_02',
+      'title': 'Spacious 3-Bedroom Flat',
+      'location': {'locality': 'Mirema, Nairobi'}, // Mirema (Flat)
+      'price': '65000', // Rent per month
+      'coverImageUrl': 'assets/images/rental2.webp', // <--- UPDATED TO .webp
+      'listingType': 'Rent', // All are Rent
+      'residentialDetails': {'bedrooms': '3', 'bathrooms': '2'},
+      'size': '1600',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_03',
+      'title': 'Modern Studio Apartment',
+      'location': {'locality': 'Ongata Rongai, Kajiado'}, // Ongata Rongai (Apartment)
+      'price': '25000', // Rent per month
+      'coverImageUrl': 'assets/images/rental3.webp', // <--- UPDATED TO .webp
+      'listingType': 'Rent', // All are Rent
+      'residentialDetails': {'bedrooms': '1', 'bathrooms': '1'},
+      'size': '550',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_04',
+      'title': 'Brand New 4-Bedroom Duplex',
+      'location': {'locality': 'Membley, Kiambu'}, // Membley (Apartment/Duplex)
+      'price': '80000', // Rent per month
+      'coverImageUrl': 'assets/images/rental4.webp', // <--- UPDATED TO .webp
+      'listingType': 'Rent', // All are Rent
+      'residentialDetails': {'bedrooms': '4', 'bathrooms': '3'},
+      'size': '2100',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_05',
+      'title': 'Compact 1-Bedroom Flat',
+      'location': {'locality': 'Thika, Kiambu'}, // Thika (Flat)
+      'price': '30000', // Rent per month
+      'coverImageUrl': 'assets/images/rental5.webp', // <--- UPDATED TO .webp
+      'listingType': 'Rent', // All are Rent
+      'residentialDetails': {'bedrooms': '1', 'bathrooms': '1'},
+      'size': '700',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_06',
+      'title': 'Prime 2-Bedroom Apartment',
+      'location': {'locality': 'Kitengela, Kajiado'}, // Kitengela (Apartment)
+      'price': '45000', // Rent per month
+      'coverImageUrl': 'assets/images/rental6.webp', // <--- UPDATED TO .webp
+      'listingType': 'Rent', // All are Rent
+      'residentialDetails': {'bedrooms': '2', 'bathrooms': '2'},
+      'size': '1100',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_07',
+      'title': 'Luxury 3-Bedroom Penthouse',
+      'location': {'locality': 'Kileleshwa, Nairobi'}, // New Location (Apartment/Penthouse)
+      'price': '180000', // Rent per month
+      'coverImageUrl': 'assets/images/rental7.webp', // <--- UPDATED TO .webp
+      'listingType': 'Rent', // All are Rent
+      'residentialDetails': {'bedrooms': '3', 'bathrooms': '4'},
+      'size': '2500',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_08',
+      'title': 'Affordable 2-Bedroom Flat',
+      'location': {'locality': 'Syokimau, Machakos'}, // Another new location (Flat)
+      'price': '38000', // Rent per month
+      'coverImageUrl': 'assets/images/rental8.webp', // <--- UPDATED TO .webp
+      'listingType': 'Rent', // All are Rent
+      'residentialDetails': {'bedrooms': '2', 'bathrooms': '1'},
+      'size': '950',
+      'isFavorite': false,
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -95,121 +187,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final bool isLargeScreen = screenWidth >= 1000;
-    final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
-
-    return Scaffold(
-      appBar: commonWidgets.buildAppBar(),
-      endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Hero Section with enhanced design and user experience
-            _buildHeroSection(isLargeScreen, isMediumScreen),
-
-            // Use FutureBuilder to handle the asynchronous data fetching
-            FutureBuilder<List<Map<String, dynamic>>>(
-              future: _propertiesFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(30.0),
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0A66C2)),
-                      ),
-                    ),
-                  );
-                } else if (snapshot.hasError) {
-                  print('Error in FutureBuilder: ${snapshot.error}');
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(30.0),
-                      child: Text('Error: ${snapshot.error}'),
-                    ),
-                  );
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(30.0),
-                      child: Text('No properties found.'),
-                    ),
-                  );
-                } else {
-                  final properties = snapshot.data!;
-                  // Segregate properties for carousels
-                  final List<Map<String, dynamic>> staycationProperties =
-                      properties.where((p) => p['listingType'] == 'Staycation').toList();
-                  final List<Map<String, dynamic>> otherProperties =
-                      properties.where((p) => p['listingType'] != 'Staycation').toList();
-
-                  // Create the combined list of 10 properties for each carousel
-                  List<Map<String, dynamic>> carouselProperties = [];
-                  final int numStaycations = staycationProperties.length > 3 ? 3 : staycationProperties.length;
-                  final int numOthers = 10 - numStaycations;
-                  carouselProperties.addAll(staycationProperties.take(numStaycations));
-                  carouselProperties.addAll(otherProperties.take(numOthers));
-
-                  return Column(
-                    children: [
-                      // Popular Properties Section
-                      _buildPropertiesCarousel(
-                        context,
-                        'Popular Properties',
-                        carouselProperties,
-                        _popularScrollController,
-                        isLargeScreen,
-                        isMediumScreen,
-                        'popularCarousel',
-                      ),
-
-                      // Hottest Deals Section
-                      _buildPropertiesCarousel(
-                        context,
-                        'Hottest Deals',
-                        carouselProperties,
-                        _dealsScrollController,
-                        isLargeScreen,
-                        isMediumScreen,
-                        'dealsCarousel',
-                      ),
-
-                      // New in Market Section
-                      _buildPropertiesCarousel(
-                        context,
-                        'New in Market',
-                        carouselProperties,
-                        _newScrollController,
-                        isLargeScreen,
-                        isMediumScreen,
-                        'newCarousel',
-                      ),
-                    ],
-                  );
-                }
-              },
+  // NEW: Dialog for Fully Occupied Managed Properties
+  void _showFullyOccupiedDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Row(
+            children: const [
+              Icon(Icons.sentiment_dissatisfied, color: Colors.orange, size: 30),
+              SizedBox(width: 10),
+              Text('Currently Fully Occupied'),
+            ],
+          ),
+          content: const Text(
+            'We are sorry, this property from our managed portfolio is currently **fully occupied** and unavailable for viewing or rent. Please explore our other available listings, or contact us for similar properties!',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK', style: TextStyle(color: Color(0xFF1E90FF))),
             ),
-
-            // Call to Action Section
-            _buildCallToActionSection(isLargeScreen, isMediumScreen),
-
-            // Categories Section
-            _buildCategoriesSection(isLargeScreen, isMediumScreen),
-
-            // Blog Posts Section (NOW DYNAMIC)
-            _buildBlogSection(isLargeScreen, isMediumScreen),
-
-            // Testimonials Section
-            _buildTestimonialsSection(isLargeScreen, isMediumScreen),
-
-            // Footer
-            commonWidgets.buildFooter(),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -286,6 +288,58 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 5,
       ),
       child: Text(text),
+    );
+  }
+
+  // NEW: Section Title and Logic for Managed Properties
+  Widget _buildManagedPropertiesSection(
+      List<Map<String, dynamic>> properties, bool isLargeScreen, bool isMediumScreen) {
+    // Determine the number of columns based on screen size
+    final int crossAxisCount = isLargeScreen ? 4 : isMediumScreen ? 2 : 1;
+    // Calculate aspect ratio for the GridView to control card size
+    final double childAspectRatio = isLargeScreen ? 0.95 : (isMediumScreen ? 0.75 : 0.85);
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+          horizontal: isLargeScreen ? 100.0 : 20.0, vertical: 40.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            // NEW PROFESSIONAL TITLE
+            'Managed Rental Portfolio: Exclusive Apartments and Flats',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF0A66C2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(), // Important for nested scrolling
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 25.0,
+              mainAxisSpacing: 25.0,
+              childAspectRatio: childAspectRatio,
+            ),
+            itemCount: properties.length,
+            itemBuilder: (context, index) {
+              final property = properties[index];
+              return _PropertyCard(
+                property: property,
+                isLargeScreen: isLargeScreen,
+                isMediumScreen: isMediumScreen,
+                authService: widget.authService,
+                onAuthRequired: _showAuthDialog,
+                // Pass the pop-up function for managed properties
+                onManagedPropertyTap: _showFullyOccupiedDialog,
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -465,6 +519,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           isMediumScreen: isMediumScreen,
                           authService: widget.authService,
                           onAuthRequired: _showAuthDialog,
+                          // Non-managed properties get a no-op function
+                          onManagedPropertyTap: () {},
                         ),
                       );
                     }).toList(),
@@ -954,6 +1010,128 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isLargeScreen = screenWidth >= 1000;
+    final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
+
+    return Scaffold(
+      appBar: commonWidgets.buildAppBar(),
+      endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Hero Section with enhanced design and user experience
+            _buildHeroSection(isLargeScreen, isMediumScreen),
+
+            // Use FutureBuilder to handle the asynchronous data fetching
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _propertiesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(30.0),
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0A66C2)),
+                      ),
+                    ),
+                  );
+                } else if (snapshot.hasError) {
+                  print('Error in FutureBuilder: ${snapshot.error}');
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(30.0),
+                      child: Text('Error: ${snapshot.error}'),
+                    ),
+                  );
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(30.0),
+                      child: Text('No properties found.'),
+                    ),
+                  );
+                } else {
+                  final properties = snapshot.data!;
+                  // Segregate properties for carousels
+                  final List<Map<String, dynamic>> staycationProperties =
+                      properties.where((p) => p['listingType'] == 'Staycation').toList();
+                  final List<Map<String, dynamic>> otherProperties =
+                      properties.where((p) => p['listingType'] != 'Staycation').toList();
+
+                  // Create the combined list of 10 properties for each carousel
+                  List<Map<String, dynamic>> carouselProperties = [];
+                  final int numStaycations = staycationProperties.length > 3 ? 3 : staycationProperties.length;
+                  final int numOthers = 10 - numStaycations;
+                  carouselProperties.addAll(staycationProperties.take(numStaycations));
+                  carouselProperties.addAll(otherProperties.take(numOthers));
+
+                  return Column(
+                    children: [
+                      // Popular Properties Section
+                      _buildPropertiesCarousel(
+                        context,
+                        'Popular Properties',
+                        carouselProperties,
+                        _popularScrollController,
+                        isLargeScreen,
+                        isMediumScreen,
+                        'popularCarousel',
+                      ),
+
+                      // Hottest Deals Section
+                      _buildPropertiesCarousel(
+                        context,
+                        'Hottest Deals',
+                        carouselProperties,
+                        _dealsScrollController,
+                        isLargeScreen,
+                        isMediumScreen,
+                        'dealsCarousel',
+                      ),
+
+                      // New in Market Section
+                      _buildPropertiesCarousel(
+                        context,
+                        'New in Market',
+                        carouselProperties,
+                        _newScrollController,
+                        isLargeScreen,
+                        isMediumScreen,
+                        'newCarousel',
+                      ),
+                    ],
+                  );
+                }
+              },
+            ),
+
+            // NEW: Managed Properties Section
+            _buildManagedPropertiesSection(
+                _managedProperties, isLargeScreen, isMediumScreen),
+
+            // Call to Action Section
+            _buildCallToActionSection(isLargeScreen, isMediumScreen),
+
+            // Categories Section
+            _buildCategoriesSection(isLargeScreen, isMediumScreen),
+
+            // Blog Posts Section (NOW DYNAMIC)
+            _buildBlogSection(isLargeScreen, isMediumScreen),
+
+            // Testimonials Section
+            _buildTestimonialsSection(isLargeScreen, isMediumScreen),
+
+            // Footer
+            commonWidgets.buildFooter(),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _PropertyCard extends StatefulWidget {
@@ -962,6 +1140,7 @@ class _PropertyCard extends StatefulWidget {
   final bool isMediumScreen;
   final AuthService authService;
   final VoidCallback onAuthRequired;
+  final VoidCallback onManagedPropertyTap; // NEW: Callback for managed property tap
 
   const _PropertyCard({
     required this.property,
@@ -969,6 +1148,7 @@ class _PropertyCard extends StatefulWidget {
     required this.isMediumScreen,
     required this.authService,
     required this.onAuthRequired,
+    required this.onManagedPropertyTap, // NEW: Required in constructor
   });
 
   @override
@@ -1026,9 +1206,9 @@ class _PropertyCardState extends State<_PropertyCard> {
   Widget build(BuildContext context) {
     // Safely retrieve the image URL from the 'coverImageUrl' field
     String? imageUrl = widget.property['coverImageUrl']?.toString();
-    
+
     final String listingType = widget.property['listingType'] ?? 'Unknown';
-    
+
     // Safely retrieve common nested maps
     final Map<String, dynamic> residentialDetails = widget.property['residentialDetails'] as Map<String, dynamic>? ?? {};
     final Map<String, dynamic> airbnbDetails = widget.property['airbnbDetails'] as Map<String, dynamic>? ?? {};
@@ -1038,7 +1218,7 @@ class _PropertyCardState extends State<_PropertyCard> {
     final int displayBaths;
     final int displaySize;
     int guestsCapacity = 0; // Capacity is only relevant for Staycation
-    
+
     // Safely retrieve size from the root of the property map for all property types
     final int rootSize = int.tryParse((widget.property['size'] ?? '0').toString().replaceAll(',', '')) ?? 0;
 
@@ -1047,12 +1227,12 @@ class _PropertyCardState extends State<_PropertyCard> {
     if (listingType == 'Staycation') {
       // Staycation: Get guests from airbnbDetails and baths from residentialDetails
       guestsCapacity = int.tryParse((airbnbDetails['guests'] ?? '0').toString().replaceAll(',', '')) ?? 0;
-      
+
       // We don't display 'beds' or 'size' for Staycation, only Guests and Baths
-      displayBeds = 0; 
-      displaySize = 0; 
+      displayBeds = 0;
+      displaySize = 0;
       // Use residentialDetails for bathrooms, as it is a common field for the physical property
-      displayBaths = int.tryParse((residentialDetails['bathrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0; 
+      displayBaths = int.tryParse((residentialDetails['bathrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
 
     } else {
       // Residential (Buy, Rent, Lease): Use residentialDetails for beds and baths
@@ -1072,6 +1252,14 @@ class _PropertyCardState extends State<_PropertyCard> {
 
     return GestureDetector(
       onTap: () {
+        // NEW: Check if the property is one of the static managed properties
+        if (widget.property['id'].toString().startsWith('static_')) {
+          // Trigger the fully occupied pop-up
+          widget.onManagedPropertyTap();
+          return; // STOP navigation for fully occupied properties
+        }
+
+        // Default navigation for dynamic properties
         Navigator.pushNamed(
           context,
           '/view_property',
@@ -1098,11 +1286,17 @@ class _PropertyCardState extends State<_PropertyCard> {
                 children: [
                   AspectRatio(
                     aspectRatio: 16 / 9,
-                    child: Image.network(
-                      imageUrl ?? 'https://via.placeholder.com/150',
+                    child: Image( // Use Image widget for asset images
+                      image: imageUrl?.startsWith('assets/') == true
+                          ? AssetImage(imageUrl!) as ImageProvider
+                          : NetworkImage(imageUrl ?? 'https://via.placeholder.com/150'),
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return const Center(child: Icon(Icons.broken_image, size: 50));
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(child: CircularProgressIndicator());
                       },
                     ),
                   ),
