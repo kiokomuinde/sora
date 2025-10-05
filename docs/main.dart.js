@@ -101689,7 +101689,7 @@ case 2:return A.w(o.at(-1),r)}})
 return A.y($async$ke,r)},
 aof(){var s=J.ag(this.a.c,"title")
 if(s==null)s="Check out this SORA blog post!"
-A.arn(s+"\n\nRead more here: https://soraproperties.co.ke/blogs/"+A.l(J.ag(this.a.c,"id")),s)},
+A.arn(s+"\n\nRead more here: https://soraproperties.co.ke/#/blog_view/"+A.l(J.ag(this.a.c,"id")),s)},
 I(a){var s,r,q,p,o,n,m=this,l=null,k="imageUrls",j=J.ag(m.a.c,k)!=null&&J.fS(J.ag(m.a.c,k))?J.ag(J.ag(m.a.c,k),0):"",i=t.Cc.a(J.ag(m.a.c,"timestamp")),h=i!=null?A.a9N("MMMM d, yyyy").hN(A.a9T(i.gDD())):"Date Unavailable",g=J.ag(m.a.c,"snippet")
 if(g==null)g=""
 s=m.a
