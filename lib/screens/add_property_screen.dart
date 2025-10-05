@@ -143,6 +143,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
   List<String> _filteredCounties = [];
   String _selectedCounty = '';
 
+  // 🎯 NEW: Town Search Field related controllers and state
+  final FocusNode _townFocusNode = FocusNode();
+  List<String> _filteredTowns = [];
+
   // General Property Details
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
@@ -203,7 +207,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
   final TextEditingController _utilitiesController = TextEditingController();
   final TextEditingController _landFeaturesController = TextEditingController();
 
-  // NEW: Airbnb Specific Fields
+  // NEW: Airbnb Specific Fields (Reusing _bedroomsController and _bathroomsController)
   final TextEditingController _guestsController = TextEditingController();
   final Map<String, bool> _airbnbAmenities = {
     'Wifi': false,
@@ -303,6 +307,11 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
   final TextEditingController _contactEmailController = TextEditingController();
   final TextEditingController _contactWhatsappController = TextEditingController();
 
+  // 🎯 OWNER DETAILS CONTROLLERS
+  final TextEditingController _ownerNameController = TextEditingController();
+  final TextEditingController _ownerPhoneController = TextEditingController();
+  // -------------------------------------------------------------------
+
   // NEW: Store XFile objects instead of URLs
   List<XFile> _coverImages = [];
   List<XFile> _additionalImages = [];
@@ -326,28 +335,28 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     'Garissa': ['Garissa'],
     'Homa Bay': ['Homa Bay'],
     'Isiolo': ['Isiolo'],
-    'Kajiado': ['Kajiado'],
+    'Kajiado': ['Kajiado', 'Rongai', 'Ngong'],
     'Kakamega': ['Kakamega'],
     'Kericho': ['Kericho'],
-    'Kiambu': ['Thika', 'Limuru', 'Ruaka', 'Kiambu Town'],
-    'Kilifi': ['Malindi', 'Watamu', 'Kilifi Town'],
+    'Kiambu': ['Thika', 'Limuru', 'Ruaka', 'Kiambu Town', 'Ruiru'],
+    'Kilifi': ['Malindi', 'Watamu', 'Kilifi Town', 'Mtwapa'],
     'Kirinyaga': ['Kerugoya'],
     'Kisii': ['Kisii'],
-    'Kisumu': ['Kisumu CBD', 'Milimani', 'Tom Mboya'],
+    'Kisumu': ['Kisumu CBD', 'Milimani', 'Tom Mboya', 'Ahero'],
     'Kitui': ['Kitui'],
-    'Kwale': ['Ukunda', 'Msambweni', 'Lunga Lunga'],
-    'Laikipia': ['Rumuruti'],
+    'Kwale': ['Ukunda', 'Msambweni', 'Lunga Lunga', 'Diani'],
+    'Laikipia': ['Rumuruti', 'Nanyuki'],
     'Lamu': ['Lamu'],
     'Machakos': ['Machakos Town', 'Athi River', 'Mlolongo'],
     'Makueni': ['Wote'],
     'Mandera': ['Mandera'],
     'Marsabit': ['Marsabit'],
-    'Meru': ['Meru'],
+    'Meru': ['Meru', 'Maua'],
     'Migori': ['Migori'],
-    'Mombasa': ['Mombasa CBD', 'Nyali', 'Diani', 'Ukunda'],
-    'Murang\'a': ['Murang\'a'],
+    'Mombasa': ['Mombasa CBD', 'Nyali', 'Mtwapa', 'Bamburi'],
+    'Murang\'a': ['Murang\'a', 'Kandara', 'Kenol'],
     'Nairobi': ['Nairobi CBD', 'Westlands', 'Karen', 'Gigiri', 'Kilimani', 'Lavington', 'Runda', 'Muthaiga', 'Embakasi', 'Syokimau'],
-    'Nakuru': ['Nakuru CBD', 'Lanet', 'Njoro'],
+    'Nakuru': ['Nakuru CBD', 'Lanet', 'Njoro', 'Gilgil'],
     'Nandi': ['Kapsabet'],
     'Narok': ['Narok'],
     'Nyamira': ['Nyamira'],
@@ -355,7 +364,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     'Nyeri': ['Nyeri'],
     'Samburu': ['Maralal'],
     'Siaya': ['Siaya'],
-    'Taita-Taveta': ['Wundanyi'],
+    'Taita-Taveta': ['Wundanyi', 'Voi'],
     'Tana River': ['Hola'],
     'Tharaka-Nithi': ['Kathwana'],
     'Trans-Nzoia': ['Kitale'],
@@ -380,8 +389,11 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
 
     // Add listener to the county text field to filter suggestions
     _countyController.addListener(_filterCounties);
+    // 🎯 NEW: Add listener to the town text field to filter suggestions
+    _townController.addListener(_filterTowns);
 
-    // Listen for focus changes to hide suggestions when field is unfocused
+
+    // Listen for focus changes to hide county suggestions when field is unfocused
     _countyFocusNode.addListener(() {
       if (!_countyFocusNode.hasFocus) {
         // Delay to allow for tap on a list item to register
@@ -399,6 +411,24 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
         });
       }
     });
+
+    // 🎯 NEW: Listen for focus changes to hide town suggestions when field is unfocused
+    _townFocusNode.addListener(() {
+      if (!_townFocusNode.hasFocus) {
+        // Delay to allow for tap on a list item to register
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) {
+            setState(() {
+              _filteredTowns = []; // Hide the list
+            });
+          }
+        });
+      }
+    });
+
+    // 🎯 NEW: Add listeners for owner details
+    _ownerNameController.addListener(() => setState(() {}));
+    _ownerPhoneController.addListener(() => setState(() {}));
   }
 
   // Method to filter the list of counties based on user input
@@ -407,6 +437,25 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     setState(() {
       _filteredCounties = _kenyanCounties.where((county) {
         return county.toLowerCase().contains(query);
+      }).toList();
+    });
+  }
+
+  // 🎯 NEW: Method to filter the list of towns based on user input and selected county
+  void _filterTowns() {
+    if (_selectedCounty.isEmpty) {
+      setState(() {
+        _filteredTowns = [];
+      });
+      return;
+    }
+
+    final query = _townController.text.toLowerCase();
+    final List<String> availableTowns = _countyTowns[_selectedCounty] ?? [];
+
+    setState(() {
+      _filteredTowns = availableTowns.where((town) {
+        return town.toLowerCase().contains(query);
       }).toList();
     });
   }
@@ -503,7 +552,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     _utilitiesController.clear();
     _landFeaturesController.clear();
 
-    // NEW: Clear Airbnb fields
+    // NEW: Clear Airbnb fields (now also includes bedrooms/bathrooms)
     _guestsController.clear();
     _airbnbAmenities.updateAll((key, value) => false);
     _airbnbParking.updateAll((key, value) => false);
@@ -546,10 +595,15 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     _contactPhoneController.dispose();
     _contactEmailController.dispose();
     _contactWhatsappController.dispose();
+    // 🎯 NEW: Dispose owner details controllers
+    _ownerNameController.dispose();
+    _ownerPhoneController.dispose();
     _townController.dispose();
     _localityMtaaController.dispose();
     _countyController.dispose();
     _countyFocusNode.dispose();
+    // 🎯 NEW: Dispose town focus node
+    _townFocusNode.dispose();
     // NEW: Dispose new Airbnb controller
     _guestsController.dispose();
     super.dispose();
@@ -581,29 +635,51 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
       }
 
       // 2. Prepare data for Firestore
+      final String formattedContactPhone = '+254${_contactPhoneController.text.replaceAll(' ', '')}';
+      final String formattedWhatsappPhone = '+254${_contactWhatsappController.text.replaceAll(' ', '')}';
+      // 🎯 NEW: Format owner's phone number
+      final String formattedOwnerPhone = '+254${_ownerPhoneController.text.replaceAll(' ', '')}';
+
+      // Conditional Size value
+      String sizeValue = '';
+      String sizeUnit = '';
+      // Only include size if it's NOT a 'Staycation' listing
+      if (!(_propertyType == 'Vocational' && _listingType == 'Staycation')) {
+          sizeValue = _sizeController.text;
+          sizeUnit = _sizeUnit;
+      }
+
       final Map<String, dynamic> propertyData = {
         'propertyType': _propertyType,
         'listingType': _listingType,
         'location': {
           'county': _selectedCounty,
-          'town': _townController.text,
+          'town': _townController.text, // Now guaranteed to have a value (selected or typed)
           'locality': _localityMtaaController.text,
         },
         'title': _addressController.text,
         'price': _priceController.text.replaceAll(',', ''), // Remove commas before storing
-        'size': _sizeController.text,
-        'sizeUnit': _sizeUnit,
+        'size': sizeValue, // Conditional size value
+        'sizeUnit': sizeUnit, // Conditional size unit
         'description': _descriptionController.text,
         'yearBuilt': _yearBuiltController.text,
         'plotNumber': _plotNumberController.text,
         'titleDeed': _titleDeedController.text,
         'coverImageUrl': coverImageUrl,
         'additionalImageUrls': additionalImageUrls,
+
+        // Existing Contact Information
         'contactInfo': {
           'contactPerson': _contactPersonController.text,
-          'phone': '+254' + _contactPhoneController.text.replaceAll(' ', ''),
+          'phone': formattedContactPhone,
           'email': _contactEmailController.text,
-          'whatsapp': '+254' + _contactWhatsappController.text.replaceAll(' ', ''),
+          'whatsapp': formattedWhatsappPhone,
+        },
+
+        // 🎯 NEW: Owner Information
+        'ownerInfo': {
+          'name': _ownerNameController.text,
+          'phone': formattedOwnerPhone,
         },
       };
 
@@ -653,6 +729,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           if (_selectedPropertyDetail == 'Airbnb') {
             propertyData['airbnbDetails'] = {
               'guests': _guestsController.text,
+              'bedrooms': _bedroomsController.text, // 🎯 ADDED TO AIRBNB DETAILS
+              'bathrooms': _bathroomsController.text, // 🎯 ADDED TO AIRBNB DETAILS
               'amenities': _airbnbAmenities.entries.where((e) => e.value).map((e) => e.key).toList(),
               'parking': _airbnbParking.entries.where((e) => e.value).map((e) => e.key).toList(),
             };
@@ -701,6 +779,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
   // NEW: Updated validation function for each step
   bool _validateStep() {
     String? errorMessage;
+    final isStaycation = _propertyType == 'Vocational' && _listingType == 'Staycation';
+
     if (_currentStep == 0) {
       if (_propertyType.isEmpty) {
         errorMessage = 'Please select a property type.';
@@ -708,7 +788,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
         errorMessage = 'Please select a listing type.';
       } else if (_selectedCounty.isEmpty) {
         errorMessage = 'Please select a county.';
-      } else if (_townController.text.isEmpty) {
+      } else if (_townController.text.isEmpty) { // Check town controller's text
         errorMessage = 'Please enter a town.';
       } else if (_localityMtaaController.text.isEmpty) {
         errorMessage = 'Please enter a locality or Mtaa.';
@@ -718,21 +798,41 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
         errorMessage = 'Please enter a property title.';
       } else if (_priceController.text.isEmpty) {
         errorMessage = 'Please enter a price.';
-      } else if (_sizeController.text.isEmpty) {
+      } else if (!isStaycation && _sizeController.text.isEmpty) { // 🎯 CONDITIONAL VALIDATION FOR SIZE
         errorMessage = 'Please enter the size.';
       } else if (_descriptionController.text.isEmpty) {
         errorMessage = 'Please enter a description.';
       }
+    } else if (_currentStep == 2) {
+      // Additional validation for Airbnb specific fields
+      if (isStaycation) {
+        if (_bedroomsController.text.isEmpty) {
+          errorMessage = 'Number of bedrooms is required for Staycation listings.';
+        } else if (_bathroomsController.text.isEmpty) {
+          errorMessage = 'Number of bathrooms is required for Staycation listings.';
+        } else if (_guestsController.text.isEmpty) {
+          errorMessage = 'Number of guests is required for Staycation listings.';
+        }
+      }
     } else if (_currentStep == 3) {
       if (_contactPersonController.text.isEmpty) {
         errorMessage = 'Contact person\'s name is required.';
-      } else if (_contactPhoneController.text.isEmpty) {
-        errorMessage = 'Phone number is required.';
-      } else if (_contactWhatsappController.text.isEmpty) {
-        errorMessage = 'WhatsApp number is required.';
+      } else if (_contactPhoneController.text.isEmpty || _contactPhoneController.text.replaceAll(' ', '').length != 9) {
+        errorMessage = 'A valid 9-digit phone number is required.';
+      } else if (_contactWhatsappController.text.isEmpty || _contactWhatsappController.text.replaceAll(' ', '').length != 9) {
+        errorMessage = 'A valid 9-digit WhatsApp number is required.';
       } else if (_contactEmailController.text.isEmpty) {
         errorMessage = 'Email address is required.';
-      } else if (_coverImages.isEmpty) {
+      }
+
+      // 🎯 Owner Details Validation
+      else if (_ownerNameController.text.isEmpty) {
+        errorMessage = 'Owner\'s name is required.';
+      } else if (_ownerPhoneController.text.isEmpty || _ownerPhoneController.text.replaceAll(' ', '').length != 9) {
+        errorMessage = 'A valid 9-digit owner\'s phone number is required.';
+      }
+
+      else if (_coverImages.isEmpty) {
         errorMessage = 'Please upload a cover image.';
       }
     }
@@ -777,18 +877,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
             Row(
               children: [
                 Expanded(
-                  child: _buildDropdownField(
-                    'Town *',
-                    _townController.text,
-                    _countyTowns[_selectedCounty] ?? [],
-                    (String? newValue) {
-                      setState(() {
-                        _townController.text = newValue!;
-                        _localityMtaaController.clear();
-                      });
-                    },
-                    icon: Icons.location_on,
-                  ),
+                  child: _buildSearchableTownDropdown(), // 🎯 UPDATED TO USE SEARCHABLE TOWN FIELD
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -813,8 +902,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     String descriptionLabel = 'Property Description *';
     String descriptionHint = 'Provide a detailed description of the property';
 
+    final isStaycation = _propertyType == 'Vocational' && _listingType == 'Staycation';
+
     // Check if the property type is Vocational and the detail is Airbnb
-    if (_propertyType == 'Vocational' && _selectedPropertyDetail == 'Airbnb') {
+    if (isStaycation) {
       titleLabel = 'Airbnb Title *';
       titleHint = 'e.g., Cozy loft near city center';
       descriptionLabel = 'Airbnb Description *';
@@ -865,7 +956,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
                       ),
                     ),
                   ),
-                if (_listingType == 'Staycation') // Added condition for "Staycation"
+                if (isStaycation) // Added condition for "Staycation"
                   Padding(
                     padding: const EdgeInsets.only(left: 8.0, top: 18.0),
                     child: Text(
@@ -877,9 +968,11 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
                     ),
                   ),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: _buildSizeField(),
-                ),
+                // 🎯 REMOVE SIZE FIELD FOR STAYCATION
+                if (!isStaycation)
+                  Expanded(
+                    child: _buildSizeField(),
+                  ),
               ],
             ),
             _buildTextField(
@@ -892,7 +985,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
               maxLength: 1000, // Character limit for description
             ),
             // Replaced the text field with a year picker
-            if (_propertyType != 'Land' && !(_propertyType == 'Vocational' && _selectedPropertyDetail == 'Airbnb'))
+            if (_propertyType != 'Land' && !isStaycation)
               _buildYearPickerField(),
           ],
         ),
@@ -935,6 +1028,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           'Contact Information',
           Icons.contact_phone,
           [
+            // Contact Details
+            _buildSubSectionTitle('Your Contact Details *'),
             _buildTextField(_contactPersonController, 'Contact Person Name *', 'e.g., John Doe', icon: Icons.person, widthFactor: 1.0),
             Row(
               children: [
@@ -946,14 +1041,14 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
                     keyboardType: TextInputType.phone,
                     icon: Icons.phone,
                     inputFormatters: [PhoneNumberInputFormatter()],
-                    prefix: Text(
+                    prefix: const Text(
                       '+254 ',
                       style: TextStyle(
                         color: Color(0xFF0A66C2),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    maxLength: 11, // Adjusted from 12 to 11
+                    maxLength: 11, // 3 digits + 3 spaces + 9 digits = 11
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -965,14 +1060,14 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
                     keyboardType: TextInputType.phone,
                     icon: Icons.chat,
                     inputFormatters: [PhoneNumberInputFormatter()],
-                    prefix: Text(
+                    prefix: const Text(
                       '+254 ',
                       style: TextStyle(
                         color: Color(0xFF0A66C2),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    maxLength: 11, // Adjusted from 12 to 11
+                    maxLength: 11, // 3 digits + 3 spaces + 9 digits = 11
                   ),
                 ),
               ],
@@ -998,6 +1093,34 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
               },
               autovalidateMode: AutovalidateMode.onUserInteraction,
             ),
+
+            // -------------------------------------------------------------------
+            // 🎯 NEW: OWNER DETAILS SECTION
+            // -------------------------------------------------------------------
+            const SizedBox(height: 24),
+            _buildSubSectionTitle("Owner's Details *"),
+            const SizedBox(height: 8),
+
+            _buildTextField(_ownerNameController, 'Owner\'s Full Name *', 'e.g., Jane Smith', icon: Icons.person, widthFactor: 1.0),
+
+            _buildTextField(
+                _ownerPhoneController,
+                'Owner\'s Phone Number *',
+                'e.g., 712 345 678',
+                keyboardType: TextInputType.phone,
+                icon: Icons.phone,
+                inputFormatters: [PhoneNumberInputFormatter()],
+                prefix: const Text(
+                  '+254 ',
+                  style: TextStyle(
+                    color: Color(0xFF0A66C2),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                maxLength: 11,
+            ),
+            // -------------------------------------------------------------------
+
           ],
         ),
         _buildFormSection(
@@ -1382,11 +1505,75 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
                       _townController.clear();
                       _localityMtaaController.clear();
                       _filteredCounties = []; // Hide the list
+                      _filterTowns(); // 🎯 Immediately filter towns for the new county
                     });
                     _countyFocusNode.unfocus(); // Dismiss keyboard
                   },
                 );
               },
+            ),
+          ),
+      ],
+    );
+  }
+
+  // 🎯 NEW: Method for searchable town dropdown
+  Widget _buildSearchableTownDropdown() {
+    // Only show suggestions if a county is selected
+    final bool hasSuggestions = _townFocusNode.hasFocus && _filteredTowns.isNotEmpty && _selectedCounty.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTextField(
+          _townController,
+          'Town *',
+          'Search or enter a town name',
+          icon: Icons.location_on,
+          focusNode: _townFocusNode,
+          // Disable editing if no county is selected
+          // readOnly: _selectedCounty.isEmpty,
+        ),
+        if (hasSuggestions)
+          Container(
+            constraints: const BoxConstraints(maxHeight: 200),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.2),
+                  blurRadius: 5,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _filteredTowns.length,
+              itemBuilder: (context, index) {
+                final town = _filteredTowns[index];
+                return ListTile(
+                  title: Text(town),
+                  onTap: () {
+                    setState(() {
+                      _townController.text = town;
+                      _localityMtaaController.clear();
+                      _filteredTowns = []; // Hide the list
+                    });
+                    _townFocusNode.unfocus(); // Dismiss keyboard
+                  },
+                );
+              },
+            ),
+          ),
+        if (_selectedCounty.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0),
+            child: Text(
+              'Please select a County first to get town suggestions.',
+              style: TextStyle(color: Colors.red[700], fontSize: 12),
             ),
           ),
       ],
@@ -1541,7 +1728,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
 
   Widget _buildListingTypeSelection() {
     List<Widget> buttons = [];
-    final bool staycationSelected = _listingType == 'Staycation';
+    final bool staycationSelected = _propertyType == 'Vocational' && _selectedPropertyDetail == 'Airbnb';
 
     buttons.addAll([
       _buildListingTypeButton('For Sale', Icons.attach_money, isEnabled: !staycationSelected),
@@ -1550,7 +1737,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     ]);
 
     // Conditionally add the 'Staycation' button
-    if (_propertyType == 'Vocational' && _selectedPropertyDetail == 'Airbnb') {
+    if (staycationSelected) {
       buttons.add(_buildListingTypeButton('Staycation', Icons.calendar_month, isEnabled: true));
     }
 
@@ -1835,7 +2022,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
     );
   }
 
-  // NEW: Airbnb specific section
+  // 🎯 UPDATED: Airbnb specific section to include bedrooms and bathrooms
   Widget _buildAirbnbDetails() {
     return _buildFormSection(
       'Airbnb Specifics',
@@ -1843,12 +2030,23 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
       [
         _buildTextField(
           _guestsController,
-          'Number of Guests',
+          'Max Number of Guests *',
           'e.g., 4',
           keyboardType: TextInputType.number,
           icon: Icons.group,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           widthFactor: 1.0,
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildTextField(_bedroomsController, 'Bedrooms *', 'e.g., 2', keyboardType: TextInputType.number, icon: Icons.bed, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildTextField(_bathroomsController, 'Bathrooms *', 'e.g., 1', keyboardType: TextInputType.number, icon: Icons.bathtub, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         _buildSubSectionTitle('Amenities'),
@@ -1949,19 +2147,6 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with SingleTicker
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildImageUploadSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSubSectionTitle('Cover Image (Max 1)'),
-        _buildImageUploadContainer(isCoverPhoto: true),
-        const SizedBox(height: 20),
-        _buildSubSectionTitle('Additional Images (Max 26)'),
-        _buildImageUploadContainer(isCoverPhoto: false),
-      ],
     );
   }
 
