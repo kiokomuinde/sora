@@ -102,25 +102,42 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const OnboardingScreen());
           case '/home':
             return MaterialPageRoute(builder: (_) => HomeScreen(authService: authService));
+            
           case '/property_listing':
+            String listingType = parameter ?? '';
+            // Check for arguments (used by programmatic navigation, e.g., from HomeScreen's RollingButton)
+            if (settings.arguments is Map<String, dynamic>) {
+                final args = settings.arguments as Map<String, dynamic>;
+                listingType = args['listingType'] ?? listingType;
+            }
             return MaterialPageRoute(builder: (_) => PropertyListingScreen(
               authService: authService,
-              listingType: parameter ?? '',
+              listingType: listingType,
             ));
+            
           case '/buy':
           case '/rent':
           case '/lease':
-          case '/airbnb': // Added case for airbnb
+          case '/airbnb':
+            String listingType = routeName.substring(1); // Default listing type from route name (e.g., 'buy')
+            // Check if arguments contain a more specific listingType (e.g., 'Plot' for /buy, 'Staycation' for /airbnb)
+            if (settings.arguments is Map<String, dynamic>) {
+                final args = settings.arguments as Map<String, dynamic>;
+                listingType = args['listingType'] ?? listingType;
+            }
             return MaterialPageRoute(builder: (_) => PropertyListingScreen(
               authService: authService,
-              listingType: routeName.substring(1), // Remove the leading '/'
+              listingType: listingType,
             ));
+            
           // Note: The /airbnb case is now handled by PropertyListingScreen, so we remove the old entry
           // case '/airbnb':
           //   return MaterialPageRoute(builder: (_) => AirbnbScreen(authService: authService));
+            
           case '/view_property':
             final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(builder: (_) => ViewPropertyScreen(authService: authService, propertyData: args));
+            
           case '/add_property':
             return MaterialPageRoute(builder: (_) => AddPropertyScreen(authService: authService));
           case '/about':
