@@ -9,6 +9,8 @@ import 'package:sora_app/services/auth_service.dart';
 import 'dart:html' as html;
 // Add the flutter_dotenv import
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+// 🎯 CRITICAL: Import for PathUrlStrategy
+import 'package:flutter_web_plugins/url_strategy.dart'; 
 
 // New screens
 import 'screens/splash_screen.dart';
@@ -51,6 +53,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // 🎯 CRITICAL FIX 1: Enable Path URL Strategy for web only
+  if (kIsWeb) {
+    usePathUrlStrategy();
+  }
 
   final AuthService authService = AuthService(firebaseAuth: FirebaseAuth.instance);
   runApp(MyApp(authService: authService));
@@ -154,9 +161,26 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => CareersScreen(authService: authService));
           case '/blogs':
             return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
+            
           case '/blog_view':
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(builder: (_) => BlogViewScreen(blogPost: args, authService: authService));
+            // Check for programmatic navigation (internal button click)
+            if (settings.arguments is Map<String, dynamic>) {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(builder: (_) => BlogViewScreen(blogPost: args, authService: authService));
+            } 
+            // 🎯 CRITICAL FIX 2: Handle Deep Link (direct URL entry/shared link)
+            else if (parameter != null) {
+                // The 'parameter' is the blog slug (e.g., 'my-post-slug').
+                // The app must fetch the blog post data here using this slug.
+                // Since this fetching logic is not yet implemented in main.dart, 
+                // we safely navigate to the main BlogsScreen to prevent a crash.
+                // Once implemented, this should navigate to BlogViewScreen(blogPost: fetchedData).
+                return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
+            } else {
+                // Fallback for an incomplete link (e.g., just /blog_view)
+                return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
+            }
+            
           case '/create_blog': // New route for the create blog screen
             return MaterialPageRoute(builder: (_) => CreateBlogScreen(authService: authService));
           case '/testimonials':
