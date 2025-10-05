@@ -1105,8 +1105,9 @@ class _BlogCardState extends State<_BlogCard> {
 
   void _shareBlog() {
     final String title = widget.blog['title'] ?? 'Check out this SORA blog post!';
-    // CORRECTED: Changed placeholder URL from sora-app.com to soraproperties.co.ke
-    final String shareText = '$title\n\nRead more here: https://soraproperties.co.ke/blogs/${widget.blog['id']}';
+    
+    // FIX: Changed from server path routing to Flutter web hash routing
+    final String shareText = '$title\n\nRead more here: https://soraproperties.co.ke/#/blog_view/${widget.blog['id']}';
 
     Share.share(shareText, subject: title);
   }
