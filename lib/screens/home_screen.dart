@@ -12,6 +12,7 @@ import 'package:sora_app/screens/airbnb_screen.dart'; // New Import
 import 'package:firebase_auth/firebase_auth.dart'; // Add this import
 import 'package:intl/intl.dart'; // Import for number formatting
 import 'package:sora_app/screens/blogs_screen.dart'; // Import for blogs_screen.dart
+import 'package:share_plus/share_plus.dart'; // Import for sharing functionality
 
 class HomeScreen extends StatefulWidget {
   final AuthService authService;
@@ -161,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Log In to Save Favorites'),
-          content: const Text('You must be logged in to save properties to your favorites.'),
+          content: const Text('You must be logged in to save properties or blogs to your favorites.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -733,10 +734,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisSpacing: isLargeScreen ? 30 : 20,
                   childAspectRatio: childAspectRatio,
                   children: blogs.map((blog) {
-                    return _buildBlogCard(
+                    return _BlogCard(
+                      // Changed to use the new _BlogCard Stateful widget
                       blog: blog,
                       isLargeScreen: isLargeScreen,
                       isMediumScreen: isMediumScreen,
+                      onAuthRequired: _showAuthDialog,
+                      firestoreService: _firestoreService,
                     );
                   }).toList(),
                 );
@@ -749,144 +753,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Re-usable widget from blogs_screen.dart, adapted for local use
+  // **REPLACED with _BlogCard Stateful widget below**
+  /*
   Widget _buildBlogCard({
     required Map<String, dynamic> blog,
     required bool isLargeScreen,
     required bool isMediumScreen,
   }) {
-    final String imageUrl = blog['imageUrls'] != null && blog['imageUrls'].isNotEmpty
-        ? blog['imageUrls'][0]
-        : '';
-    Timestamp? timestamp = blog['timestamp'] as Timestamp?;
-    String date = timestamp != null
-        ? DateFormat('MMMM d, yyyy').format(timestamp.toDate())
-        : 'Date Unavailable';
-    String snippet = blog['snippet'] ?? '';
-
-    // Calculate max lines for snippet based on screen size to prevent overflow
-    int maxSnippetLines = isLargeScreen ? 5 : (isMediumScreen ? 4 : 3);
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          '/blog_view',
-          arguments: blog,
-        );
-      },
-      child: Card(
-        elevation: 8,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: Container(
-                width: double.infinity,
-                child: imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Center(child: CircularProgressIndicator());
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                              child: Text(
-                                  'Image not found',
-                                  style: TextStyle(color: Colors.grey[600]),
-                              ),
-                          );
-                        },
-                      )
-                    : Center(
-                        child: Text(
-                          'Image Unavailable',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ),
-              ),
-            ),
-            Expanded(
-              flex: 3,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      blog['category'] ?? 'Uncategorized',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E90FF),
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      blog['title'] ?? 'Untitled Blog Post',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0A66C2),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      snippet,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                      maxLines: maxSnippetLines,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const Spacer(),
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: Text(
-                        date,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/blog_view',
-                            arguments: blog,
-                          );
-                        },
-                        child: const Text(
-                          'Read More',
-                          style: TextStyle(
-                            color: Color(0xFF1E90FF),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    // ... [Original code removed]
   }
-
+  */
 
   Widget _buildTestimonialsSection(bool isLargeScreen, bool isMediumScreen) {
     // Mock testimonials data
@@ -1133,6 +1009,287 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
+// ====================================================================
+// NEW: Stateful Widget for Blog Cards with Favorites and Share Functionality
+// ====================================================================
+
+class _BlogCard extends StatefulWidget {
+  final Map<String, dynamic> blog;
+  final bool isLargeScreen;
+  final bool isMediumScreen;
+  final VoidCallback onAuthRequired;
+  final FirestoreService firestoreService; // Pass the service for logic
+
+  const _BlogCard({
+    required this.blog,
+    required this.isLargeScreen,
+    required this.isMediumScreen,
+    required this.onAuthRequired,
+    required this.firestoreService,
+  });
+
+  @override
+  State<_BlogCard> createState() => _BlogCardState();
+}
+
+class _BlogCardState extends State<_BlogCard> {
+  late bool _isFavorite;
+  final _db = FirebaseFirestore.instance; // Direct Firebase access to fix compilation
+
+  @override
+  void initState() {
+    super.initState();
+    _isFavorite = false;
+    _checkIfFavorite();
+  }
+
+  // FIX: Implement the logic directly using FirebaseFirestore, as the custom
+  // methods (isBlogFavorite, etc.) are missing from FirestoreService.
+  Future<void> _checkIfFavorite() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await _db
+            .collection('users')
+            .doc(user.uid)
+            .collection('favorite_blogs') // Dedicated sub-collection for blog favorites
+            .doc(widget.blog['id'])
+            .get();
+
+        if (mounted) {
+          setState(() {
+            _isFavorite = doc.exists;
+          });
+        }
+      } catch (e) {
+        print('Error checking blog favorite status: $e');
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      widget.onAuthRequired();
+      return;
+    }
+
+    try {
+      final blogRef = _db
+          .collection('users')
+          .doc(user.uid)
+          .collection('favorite_blogs')
+          .doc(widget.blog['id']);
+
+      if (_isFavorite) {
+        // Remove favorite
+        await blogRef.delete();
+      } else {
+        // Add favorite - save the blog ID and a timestamp
+        await blogRef.set({
+          'blogId': widget.blog['id'],
+          'timestamp': FieldValue.serverTimestamp(),
+          // Optionally, save key blog details to denormalize the data
+        });
+      }
+      if (mounted) {
+        setState(() {
+          _isFavorite = !_isFavorite;
+        });
+      }
+    } catch (e) {
+      print('Error toggling blog favorite status: $e');
+    }
+  }
+
+  void _shareBlog() {
+    final String title = widget.blog['title'] ?? 'Check out this SORA blog post!';
+    // CORRECTED: Changed placeholder URL from sora-app.com to soraproperties.co.ke
+    final String shareText = '$title\n\nRead more here: https://soraproperties.co.ke/blogs/${widget.blog['id']}';
+
+    Share.share(shareText, subject: title);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String imageUrl = widget.blog['imageUrls'] != null && widget.blog['imageUrls'].isNotEmpty
+        ? widget.blog['imageUrls'][0]
+        : '';
+    Timestamp? timestamp = widget.blog['timestamp'] as Timestamp?;
+    String date = timestamp != null
+        ? DateFormat('MMMM d, yyyy').format(timestamp.toDate())
+        : 'Date Unavailable';
+    String snippet = widget.blog['snippet'] ?? '';
+
+    // Calculate max lines for snippet based on screen size to prevent overflow
+    int maxSnippetLines = widget.isLargeScreen ? 5 : (widget.isMediumScreen ? 4 : 3);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/blog_view',
+          arguments: widget.blog,
+        );
+      },
+      child: Card(
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Stack( // Use Stack for image and icon overlays
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const Center(child: CircularProgressIndicator());
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Center(
+                                  child: Text(
+                                      'Image not found',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                              );
+                            },
+                          )
+                        : Center(
+                            child: Text(
+                              'Image Unavailable',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                          ),
+                  ),
+                  // NEW: Favorite Icon (Top Left)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: _isFavorite ? Colors.red.withOpacity(0.8) : Colors.black54,
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        iconSize: 20,
+                        icon: Icon(
+                          _isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: Colors.white,
+                        ),
+                        onPressed: _toggleFavorite,
+                      ),
+                    ),
+                  ),
+                  // NEW: Share Icon (Top Right)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.black54,
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        iconSize: 20,
+                        icon: const Icon(
+                          Icons.share,
+                          color: Colors.white,
+                        ),
+                        onPressed: _shareBlog,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.blog['category'] ?? 'Uncategorized',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E90FF),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      widget.blog['title'] ?? 'Untitled Blog Post',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0A66C2),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      snippet,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                      maxLines: maxSnippetLines,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Text(
+                        date,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/blog_view',
+                            arguments: widget.blog,
+                          );
+                        },
+                        child: const Text(
+                          'Read More',
+                          style: TextStyle(
+                            color: Color(0xFF1E90FF),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ====================================================================
+// END: NEW _BlogCard Stateful widget (FIXED)
+// ====================================================================
 
 class _PropertyCard extends StatefulWidget {
   final Map<String, dynamic> property;
