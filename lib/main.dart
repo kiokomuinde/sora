@@ -137,10 +137,6 @@ class MyApp extends StatelessWidget {
               listingType: listingType,
             ));
             
-          // Note: The /airbnb case is now handled by PropertyListingScreen, so we remove the old entry
-          // case '/airbnb':
-          //   return MaterialPageRoute(builder: (_) => AirbnbScreen(authService: authService));
-            
           case '/view_property':
             final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(builder: (_) => ViewPropertyScreen(authService: authService, propertyData: args));
@@ -159,27 +155,46 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => ContactScreen(authService: authService));
           case '/careers':
             return MaterialPageRoute(builder: (_) => CareersScreen(authService: authService));
+            
           case '/blogs':
+            // 🎯 DEEP LINKING FIX: Route /blogs/<slug>
+            if (parameter != null && parameter.isNotEmpty) {
+                // Deep link detected: /blogs/my-post-slug
+                final blogSlug = parameter;
+                
+                return MaterialPageRoute(
+                    builder: (_) => BlogViewScreen(
+                        authService: authService, 
+                        blogSlug: blogSlug, // Pass the slug
+                        blogPost: null, // No data pre-fetched
+                    )
+                );
+            }
+            // Normal route: /blogs
             return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
             
           case '/blog_view':
-            // Check for programmatic navigation (internal button click)
+            // LEGACY ROUTE FIX: Route /blog_view 
             if (settings.arguments is Map<String, dynamic>) {
                 final args = settings.arguments as Map<String, dynamic>;
-                return MaterialPageRoute(builder: (_) => BlogViewScreen(blogPost: args, authService: authService));
+                return MaterialPageRoute(builder: (_) => BlogViewScreen(
+                    blogPost: args, 
+                    authService: authService,
+                    // Try to extract slug from internal arguments if available
+                    blogSlug: args['slug'] as String?, 
+                ));
             } 
-            // 🎯 CRITICAL FIX 2: Handle Deep Link (direct URL entry/shared link)
-            else if (parameter != null) {
-                // The 'parameter' is the blog slug (e.g., 'my-post-slug').
-                // The app must fetch the blog post data here using this slug.
-                // Since this fetching logic is not yet implemented in main.dart, 
-                // we safely navigate to the main BlogsScreen to prevent a crash.
-                // Once implemented, this should navigate to BlogViewScreen(blogPost: fetchedData).
-                return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
-            } else {
-                // Fallback for an incomplete link (e.g., just /blog_view)
-                return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
+            // Handle /blog_view/<slug> fallback
+            else if (parameter != null && parameter.isNotEmpty) {
+                // Treat parameter as slug for compatibility
+                return MaterialPageRoute(builder: (_) => BlogViewScreen(
+                    blogPost: null, // Force fetch
+                    authService: authService,
+                    blogSlug: parameter,
+                ));
             }
+            // Fallback for an incomplete link (e.g., just /blog_view)
+            return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
             
           case '/create_blog': // New route for the create blog screen
             return MaterialPageRoute(builder: (_) => CreateBlogScreen(authService: authService));

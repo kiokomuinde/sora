@@ -184,6 +184,27 @@ class FirestoreService {
       return false;
     }
   }
+  
+  // 🎯 NEW: Method to get a blog post by its unique slug for deep linking
+  Future<Map<String, dynamic>?> getBlogPostBySlug(String slug) async {
+    try {
+      final querySnapshot = await _firestore.collection('blogs')
+          .where('slug', isEqualTo: slug)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final data = querySnapshot.docs.first.data() as Map<String, dynamic>;
+        data['blogId'] = querySnapshot.docs.first.id; // Include the document ID
+        return data;
+      }
+      return null; // Post not found
+    } catch (e) {
+      print('Error getting blog post by slug: $e');
+      return null;
+    }
+  }
+
 
   // NEW: Method to get a real-time stream of all blog posts
   Stream<QuerySnapshot> getBlogs() {
