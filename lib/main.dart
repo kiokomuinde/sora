@@ -7,7 +7,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sora_app/firebase_options.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'dart:html' as html;
-// Add the flutter_dotenv import
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 // 🎯 CRITICAL: Import for PathUrlStrategy
 import 'package:flutter_web_plugins/url_strategy.dart'; 
@@ -41,20 +40,16 @@ import 'screens/my_listings_screen.dart';
 import 'screens/profile_settings_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/recently_viewed_screen.dart';
-import 'screens/create_blog_screen.dart'; // Import the new screen
-// Note: airbnb_screen.dart is no longer imported as the route is now handled by PropertyListingScreen
-// import 'screens/airbnb_screen.dart';
+import 'screens/create_blog_screen.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: "env.txt");
 
-  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // 🎯 CRITICAL FIX 1: Enable Path URL Strategy for web only
   if (kIsWeb) {
     usePathUrlStrategy();
   }
@@ -76,8 +71,6 @@ class MyApp extends StatelessWidget {
     } else {
       chosenInitialRoute = '/splash';
     }
-
-    print('App starting with initial route: $chosenInitialRoute (kIsWeb: $kIsWeb)');
 
     return MaterialApp(
       title: 'SORA',
@@ -112,7 +105,6 @@ class MyApp extends StatelessWidget {
             
           case '/property_listing':
             String listingType = parameter ?? '';
-            // Check for arguments (used by programmatic navigation, e.g., from HomeScreen's RollingButton)
             if (settings.arguments is Map<String, dynamic>) {
                 final args = settings.arguments as Map<String, dynamic>;
                 listingType = args['listingType'] ?? listingType;
@@ -126,8 +118,7 @@ class MyApp extends StatelessWidget {
           case '/rent':
           case '/lease':
           case '/airbnb':
-            String listingType = routeName.substring(1); // Default listing type from route name (e.g., 'buy')
-            // Check if arguments contain a more specific listingType (e.g., 'Plot' for /buy, 'Staycation' for /airbnb)
+            String listingType = routeName.substring(1); 
             if (settings.arguments is Map<String, dynamic>) {
                 final args = settings.arguments as Map<String, dynamic>;
                 listingType = args['listingType'] ?? listingType;
@@ -138,8 +129,11 @@ class MyApp extends StatelessWidget {
             ));
             
           case '/view_property':
-            final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(builder: (_) => ViewPropertyScreen(authService: authService, propertyData: args));
+            if (settings.arguments is Map<String, dynamic>) {
+                final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(builder: (_) => ViewPropertyScreen(authService: authService, propertyData: args));
+            }
+            return MaterialPageRoute(builder: (_) => PropertyListingScreen(authService: authService));
             
           case '/add_property':
             return MaterialPageRoute(builder: (_) => AddPropertyScreen(authService: authService));
@@ -155,48 +149,35 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => ContactScreen(authService: authService));
           case '/careers':
             return MaterialPageRoute(builder: (_) => CareersScreen(authService: authService));
-            
           case '/blogs':
-            // 🎯 DEEP LINKING FIX: Route /blogs/<slug>
-            if (parameter != null && parameter.isNotEmpty) {
-                // Deep link detected: /blogs/my-post-slug
-                final blogSlug = parameter;
-                
-                return MaterialPageRoute(
-                    builder: (_) => BlogViewScreen(
-                        authService: authService, 
-                        blogSlug: blogSlug, // Pass the slug
-                        blogPost: null, // No data pre-fetched
-                    )
-                );
-            }
-            // Normal route: /blogs
             return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
             
           case '/blog_view':
-            // LEGACY ROUTE FIX: Route /blog_view 
+            // 1. Internal Navigation
             if (settings.arguments is Map<String, dynamic>) {
                 final args = settings.arguments as Map<String, dynamic>;
-                return MaterialPageRoute(builder: (_) => BlogViewScreen(
+                return MaterialPageRoute(
+                  builder: (_) => BlogViewScreen(
                     blogPost: args, 
                     authService: authService,
-                    // Try to extract slug from internal arguments if available
-                    blogSlug: args['slug'] as String?, 
-                ));
+                    blogSlug: args['blogId'] as String?, 
+                  )
+                );
             } 
-            // Handle /blog_view/<slug> fallback
-            else if (parameter != null && parameter.isNotEmpty) {
-                // Treat parameter as slug for compatibility
-                return MaterialPageRoute(builder: (_) => BlogViewScreen(
-                    blogPost: null, // Force fetch
+            // 2. Deep Link
+            else if (parameter != null) {
+                return MaterialPageRoute(
+                  builder: (_) => BlogViewScreen(
                     authService: authService,
-                    blogSlug: parameter,
-                ));
+                    blogSlug: parameter, 
+                    blogPost: null, 
+                  )
+                );
+            } else {
+                return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
             }
-            // Fallback for an incomplete link (e.g., just /blog_view)
-            return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
             
-          case '/create_blog': // New route for the create blog screen
+          case '/create_blog':
             return MaterialPageRoute(builder: (_) => CreateBlogScreen(authService: authService));
           case '/testimonials':
             return MaterialPageRoute(builder: (_) => TestimonialsScreen(authService: authService));

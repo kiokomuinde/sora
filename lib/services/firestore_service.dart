@@ -7,7 +7,11 @@ class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // NEW: Method to add a contact message to Firestore
+  // =========================================================================
+  // 1. CONTACT AND NEWSLETTER MANAGEMENT
+  // =========================================================================
+
+  /// Adds a contact message to the 'contactMessages' collection.
   Future<bool> addContactMessage(String name, String email, String message) async {
     try {
       await _firestore.collection('contactMessages').add({
@@ -16,7 +20,6 @@ class FirestoreService {
         'message': message,
         'timestamp': FieldValue.serverTimestamp(),
       });
-      print('Contact message sent to Firestore successfully!');
       return true;
     } catch (e) {
       print('Error sending contact message: $e');
@@ -24,58 +27,106 @@ class FirestoreService {
     }
   }
 
+  /// Adds a newsletter subscriber's email to Firestore.
+  Future<bool> addNewsletterSubscriber(String email) async {
+    try {
+      await _firestore.collection('newsletterSubscribers').doc(email).set({
+        'email': email,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      print('Error adding newsletter subscriber: $e');
+      return false;
+    }
+  }
+
+  // =========================================================================
+  // 2. PROPERTY LISTING MANAGEMENT 
+  // =========================================================================
+
+  /// Adds a new property listing to the 'properties' collection.
   Future<bool> addProperty(Map<String, dynamic> propertyData) async {
     final user = _auth.currentUser;
     if (user == null) {
-      print('User is not authenticated.');
+      print('Error: User must be logged in to add a property.');
       return false;
     }
-
-    // Add the user's ID and a timestamp to the property data
-    propertyData['userId'] = user.uid;
-    propertyData['timestamp'] = FieldValue.serverTimestamp();
-    // NEW: Add a default status of 'Pending' for new properties
-    propertyData['status'] = 'Pending';
 
     try {
-      await _firestore.collection('properties').add(propertyData);
-      print('Property added to Firestore successfully!');
-      return true;
-    } catch (e) {
-      print('Error adding property to Firestore: $e');
-      return false;
-    }
-  }
-
-  // NEW: Method to update an existing property in Firestore
-  Future<bool> updateProperty(String propertyId, Map<String, dynamic> propertyData) async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      print('User is not authenticated.');
-      return false;
-    }
-
-    // NEW: Add a timestamp to the property data
-    propertyData['updatedAt'] = FieldValue.serverTimestamp();
-
-    try {
-      await _firestore.collection('properties').doc(propertyId).update(propertyData);
-      print('Property updated in Firestore successfully!');
-      return true;
-    } catch (e) {
-      print('Error updating property in Firestore: $e');
-      return false;
-    }
-  }
-
-  // NEW: Method to update a single property field
-  Future<bool> updatePropertyStatus(String propertyId, String newStatus) async {
-    try {
-      await _firestore.collection('properties').doc(propertyId).update({
-        'status': newStatus,
-        'updatedAt': FieldValue.serverTimestamp(),
+      await _firestore.collection('properties').add({
+        ...propertyData,
+        'userId': user.uid,
+        'status': 'Pending', 
+        'timestamp': FieldValue.serverTimestamp(),
       });
-      print('Property status updated to $newStatus successfully!');
+      return true;
+    } catch (e) {
+      print('Error adding property: $e');
+      return false;
+    }
+  }
+
+  /// Gets a real-time stream of all approved properties.
+  Stream<QuerySnapshot> getPropertiesStream() {
+    return _firestore
+        .collection('properties')
+        .where('status', isEqualTo: 'Approved')
+        .orderBy('timestamp', descending: true)
+        .snapshots(); 
+  }
+
+  /// Get properties listed by a specific user. (Used in my_listings_screen.dart)
+  Stream<QuerySnapshot> getPropertiesForUser(String userId) { 
+    if (userId.isEmpty) {
+      return const Stream.empty();
+    }
+
+    return _firestore
+        .collection('properties')
+        .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots(); 
+  }
+
+  /// Gets a list of approved properties filtered by listing type. (Used in view_property_screen.dart)
+  Future<List<Map<String, dynamic>>> getPropertiesByListingType(String listingType) async { 
+     try {
+      final QuerySnapshot snapshot = await _firestore
+          .collection('properties')
+          .where('status', isEqualTo: 'Approved')
+          .where('listingType', isEqualTo: listingType)
+          .orderBy('timestamp', descending: true)
+          .limit(10) 
+          .get();
+      
+      return snapshot.docs.map((doc) {
+        return {'id': doc.id, ...doc.data() as Map<String, dynamic>};
+      }).toList();
+    } catch (e) {
+      print('Error getting properties by listing type "$listingType": $e');
+      return [];
+    }
+  }
+
+  /// Get a single property by its ID.
+  Future<Map<String, dynamic>?> getPropertyById(String propertyId) async {
+    try {
+      final doc = await _firestore.collection('properties').doc(propertyId).get();
+      if (doc.exists) {
+        return {'id': doc.id, ...doc.data() as Map<String, dynamic>};
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching property by ID: $e');
+      return null;
+    }
+  }
+  
+  /// Updates the status of a property. (Used in my_listings_screen.dart)
+  Future<bool> updatePropertyStatus(String propertyId, String newStatus) async { 
+    try {
+      await _firestore.collection('properties').doc(propertyId).update({'status': newStatus});
       return true;
     } catch (e) {
       print('Error updating property status: $e');
@@ -83,33 +134,10 @@ class FirestoreService {
     }
   }
 
-  // Method to get a real-time stream of properties for a specific user
-  Stream<QuerySnapshot> getPropertiesForUser(String userId) {
-    return _firestore
-        .collection('properties')
-        .where('userId', isEqualTo: userId)
-        .snapshots();
-  }
-
-  // NEW: Method to get properties by a specific listing type
-  Future<List<Map<String, dynamic>>> getPropertiesByListingType(String listingType) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection('properties')
-          .where('listingType', isEqualTo: listingType)
-          .get();
-      return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
-    } catch (e) {
-      print('Error fetching properties by listing type: $e');
-      return [];
-    }
-  }
-
-  // Method to delete a property from Firestore
-  Future<bool> deleteProperty(String propertyId) async {
+  /// Deletes a property. (Used in my_listings_screen.dart)
+  Future<bool> deleteProperty(String propertyId) async { 
     try {
       await _firestore.collection('properties').doc(propertyId).delete();
-      print('Property deleted from Firestore successfully!');
       return true;
     } catch (e) {
       print('Error deleting property: $e');
@@ -117,112 +145,193 @@ class FirestoreService {
     }
   }
 
-  /// Adds a property to a user's favorites list.
-  Future<void> addFavorite(String userId, String propertyId) async {
+
+  // =========================================================================
+  // 3. USER PROFILE MANAGEMENT
+  // =========================================================================
+
+  /// Sets or updates a user's profile data.
+  Future<void> setUserProfile(String userId, Map<String, dynamic> profileData) async {
     try {
-      await _firestore
-          .collection('favorites')
-          .doc(userId)
-          .collection('userFavorites')
-          .doc(propertyId)
-          .set({'addedAt': FieldValue.serverTimestamp()});
-      print('Property $propertyId added to favorites for user $userId');
+      await _firestore.collection('userProfiles').doc(userId).set(
+        profileData,
+        SetOptions(merge: true),
+      );
     } catch (e) {
-      print('Error adding favorite: $e');
+      print('Error setting user profile: $e');
     }
   }
 
-  /// Removes a property from a user's favorites list.
-  Future<void> removeFavorite(String userId, String propertyId) async {
-    try {
-      await _firestore
-          .collection('favorites')
-          .doc(userId)
-          .collection('userFavorites')
-          .doc(propertyId)
-          .delete();
-      print('Property $propertyId removed from favorites for user $userId');
-    } catch (e) {
-      print('Error removing favorite: $e');
-    }
+  /// Gets a user's profile data.
+  Stream<Map<String, dynamic>?> getUserProfile(String userId) {
+    return _firestore.collection('userProfiles').doc(userId).snapshots().map((doc) {
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>;
+      }
+      return null;
+    });
   }
 
-  /// Checks if a property is in a user's favorites list.
-  Future<bool> isFavorite(String userId, String propertyId) async {
+  // =========================================================================
+  // 4. FAVORITES MANAGEMENT (Two positional arguments)
+  // =========================================================================
+
+  /// Checks if a property is in the user's favorites.
+  Future<bool> isFavorite(String userId, String propertyId) async { 
+    if (userId.isEmpty) return false;
+
     try {
-      final docSnapshot = await _firestore
-          .collection('favorites')
+      final doc = await _firestore
+          .collection('users')
           .doc(userId)
-          .collection('userFavorites')
+          .collection('favorites')
           .doc(propertyId)
           .get();
-      return docSnapshot.exists;
+      return doc.exists;
     } catch (e) {
       print('Error checking favorite status: $e');
       return false;
     }
   }
 
-  // NEW: Method to add a new blog post to Firestore
+  /// Adds a property to the user's favorites.
+  Future<void> addFavorite(String userId, String propertyId) async { 
+    if (userId.isEmpty) return;
+
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('favorites')
+          .doc(propertyId)
+          .set({
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error adding favorite: $e');
+    }
+  }
+
+  /// Removes a property from the user's favorites.
+  Future<void> removeFavorite(String userId, String propertyId) async { 
+    if (userId.isEmpty) return;
+
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('favorites')
+          .doc(propertyId)
+          .delete();
+    } catch (e) {
+      print('Error removing favorite: $e');
+    }
+  }
+
+  /// Get a stream of the current user's favorite property IDs.
+  Stream<List<String>> getFavoritePropertyIdsStream() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value([]);
+    }
+
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('favorites')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => doc.id).toList());
+  }
+
+  // =========================================================================
+  // 5. BLOG MANAGEMENT
+  // =========================================================================
+
+  /// Adds a new blog post.
   Future<bool> addBlog(Map<String, dynamic> blogData) async {
     final user = _auth.currentUser;
     if (user == null) {
-      print('User is not authenticated.');
+      print('Error: User must be logged in to add a blog.');
       return false;
     }
 
-    // Add the user's ID and a timestamp to the blog data
-    blogData['userId'] = user.uid;
-    blogData['timestamp'] = FieldValue.serverTimestamp();
-
     try {
-      await _firestore.collection('blogs').add(blogData);
-      print('Blog post added to Firestore successfully!');
+      await _firestore.collection('blogs').add({
+        ...blogData,
+        'authorId': user.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
       return true;
     } catch (e) {
-      print('Error adding blog post to Firestore: $e');
+      print('Error adding blog: $e');
       return false;
     }
   }
-  
-  // 🎯 NEW: Method to get a blog post by its unique slug for deep linking
-  Future<Map<String, dynamic>?> getBlogPostBySlug(String slug) async {
-    try {
-      final querySnapshot = await _firestore.collection('blogs')
-          .where('slug', isEqualTo: slug)
-          .limit(1)
-          .get();
 
-      if (querySnapshot.docs.isNotEmpty) {
-        final data = querySnapshot.docs.first.data() as Map<String, dynamic>;
-        data['blogId'] = querySnapshot.docs.first.id; // Include the document ID
-        return data;
+  /// Get a stream of all blog posts, ordered by timestamp.
+  Stream<QuerySnapshot> getBlogs({int limit = 100}) { 
+    return _firestore
+        .collection('blogs')
+        .orderBy('timestamp', descending: true)
+        .limit(limit)
+        .snapshots();
+  }
+
+
+  /// Get a single blog by its slug or ID.
+  Future<Map<String, dynamic>?> getBlogBySlugOrId(String identifier) async {
+    try {
+      final doc = await _firestore.collection('blogs').doc(identifier).get();
+      if (doc.exists) {
+        // Ensure the document ID is mapped to 'blogId' for consistency
+        return {'blogId': doc.id, ...doc.data() as Map<String, dynamic>}; 
       }
-      return null; // Post not found
+      return null;
     } catch (e) {
-      print('Error getting blog post by slug: $e');
+      print('Error fetching blog by identifier: $e');
       return null;
     }
   }
+  
+  /// Get a list of related blog posts (by category), excluding the current one.
+  Future<List<Map<String, dynamic>>> getRelatedBlogs(
+    String category, 
+    String currentBlogId, 
+    {int limit = 3}
+  ) async {
+    if (category.isEmpty || currentBlogId.isEmpty) {
+      print('DEBUG: Category or currentBlogId is empty, cannot fetch related blogs.');
+      return [];
+    }
+    
+    final String cleanCurrentBlogId = currentBlogId.trim();
 
-
-  // NEW: Method to get a real-time stream of all blog posts
-  Stream<QuerySnapshot> getBlogs() {
-    return _firestore.collection('blogs').snapshots();
-  }
-
-  // CORRECTED: Method to add a newsletter subscriber's email to Firestore
-  Future<bool> addNewsletterSubscriber(String email) async {
     try {
-      await _firestore.collection('newsletterSubscribers').add({
-        'email': email,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      print('Newsletter email added to Firestore successfully!');
-      return true;
+      // **CRITICAL:** This query requires the Composite Index on ['category', 'timestamp']
+      final QuerySnapshot querySnapshot = await _firestore
+          .collection('blogs')
+          .where('category', isEqualTo: category) 
+          .orderBy('timestamp', descending: true)
+          .limit(limit + 1)
+          .get();
+      
+      final List<Map<String, dynamic>> blogs = querySnapshot.docs.map((doc) {
+        return {'blogId': doc.id, ...doc.data() as Map<String, dynamic>}; 
+      }).toList();
+
+      // Filter out the currently viewed blog post using its ID
+      final relatedBlogs = blogs.where((blog) {
+        final docId = blog['blogId'] as String?;
+        final isMatch = docId != null && docId.trim() == cleanCurrentBlogId;
+        
+        return !isMatch; 
+      }).toList();
+      
+      return relatedBlogs.take(limit).toList();
+
     } catch (e) {
-      print('Error adding newsletter email: $e');
-      return false;
+      print('Error fetching related blogs: $e');
+      return [];
     }
   }
 }
