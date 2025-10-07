@@ -6,6 +6,7 @@ import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:share_plus/share_plus.dart'; // <--- NEW IMPORT
 
 class BlogViewScreen extends StatefulWidget {
   final Map<String, dynamic>? blogPost; 
@@ -76,6 +77,32 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     }
     return 'Date Unavailable';
   }
+
+  // --- UPDATED SHARING METHOD FOR SPECIFIC FORMAT ---
+  void _shareBlog() {
+    // 1. Get the blog ID and Title
+    final blogId = widget.blogSlug ?? _currentBlogPost?['blogId'] ?? _currentBlogPost?['id'];
+    final blogTitle = _currentBlogPost?['title'] ?? 'A New Blog Post from Sora Properties';
+    
+    // 2. Define the base URL using your domain
+    const String baseDomain = 'https://soraproperties.co.ke/';
+
+    // 3. Construct the full URL for the blog post
+    final String shareUrl = blogId != null 
+        ? '$baseDomain#/blog_view/$blogId' 
+        : baseDomain; // Fallback to homepage if ID is missing
+
+    // 4. Create the final share message with line breaks (\n)
+    final String shareMessage = '$blogTitle\n\nRead more here: $shareUrl';
+
+    // 5. Execute the share dialog
+    // The subject is optional, but often used by email/messaging apps.
+    Share.share(
+      shareMessage, 
+      subject: blogTitle,
+    ); 
+  }
+  // ----------------------------------------------------
 
   Widget _buildSubtopic(Map<String, dynamic> subtopic, {String? imageUrl}) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -381,6 +408,16 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // --- SHARE ICON PLACEMENT ---
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        icon: const Icon(Icons.share, color: Color(0xFF1E90FF), size: 30),
+                        onPressed: _shareBlog, // Calls the method with the specific format
+                        tooltip: 'Share this post',
+                      ),
+                    ),
+                    // ----------------------------
                     Text(
                       currentBlogPost['title'] ?? 'No Title',
                       style: const TextStyle(
