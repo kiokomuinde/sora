@@ -6,7 +6,7 @@ import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:share_plus/share_plus.dart'; // <--- NEW IMPORT
+import 'package:share_plus/share_plus.dart'; 
 
 class BlogViewScreen extends StatefulWidget {
   final Map<String, dynamic>? blogPost; 
@@ -78,25 +78,24 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     return 'Date Unavailable';
   }
 
-  // --- UPDATED SHARING METHOD FOR SPECIFIC FORMAT ---
+  // --- UPDATED SHARING METHOD FOR CLEANER HASH URL ---
   void _shareBlog() {
     // 1. Get the blog ID and Title
     final blogId = widget.blogSlug ?? _currentBlogPost?['blogId'] ?? _currentBlogPost?['id'];
     final blogTitle = _currentBlogPost?['title'] ?? 'A New Blog Post from Sora Properties';
     
-    // 2. Define the base URL using your domain
-    const String baseDomain = 'https://soraproperties.co.ke/';
+    // 2. Define the base URL without a trailing slash
+    const String baseDomain = 'https://soraproperties.co.ke'; 
 
-    // 3. Construct the full URL for the blog post
+    // 3. Construct the full URL: [DOMAIN]/#[ROUTE]/[ID]
     final String shareUrl = blogId != null 
-        ? '$baseDomain#/blog_view/$blogId' 
-        : baseDomain; // Fallback to homepage if ID is missing
+        ? '$baseDomain/#/blog_view/$blogId' 
+        : '$baseDomain/#/'; // Fallback to homepage hash route
 
     // 4. Create the final share message with line breaks (\n)
     final String shareMessage = '$blogTitle\n\nRead more here: $shareUrl';
 
     // 5. Execute the share dialog
-    // The subject is optional, but often used by email/messaging apps.
     Share.share(
       shareMessage, 
       subject: blogTitle,

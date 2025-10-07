@@ -9,7 +9,7 @@ import 'package:sora_app/services/auth_service.dart';
 import 'dart:html' as html;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 // 🎯 CRITICAL: Import for PathUrlStrategy
-import 'package:flutter_web_plugins/url_strategy.dart'; 
+// import 'package:flutter_web_plugins/url_strategy.dart'; // <-- COMMENTED OUT
 
 // New screens
 import 'screens/splash_screen.dart';
@@ -50,9 +50,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  if (kIsWeb) {
-    usePathUrlStrategy();
-  }
+  // if (kIsWeb) { // <-- REMOVED: Reverting to default Hash URL Strategy
+  //   usePathUrlStrategy();
+  // }
 
   final AuthService authService = AuthService(firebaseAuth: FirebaseAuth.instance);
   runApp(MyApp(authService: authService));
@@ -164,7 +164,7 @@ class MyApp extends StatelessWidget {
                   )
                 );
             } 
-            // 2. Deep Link
+            // 2. Deep Link - This now correctly handles the path received after the hash
             else if (parameter != null) {
                 return MaterialPageRoute(
                   builder: (_) => BlogViewScreen(
