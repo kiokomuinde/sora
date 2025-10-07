@@ -7,6 +7,7 @@ import 'package:sora_app/services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart'; 
+import 'dart:ui'; // Import for BackdropFilter
 
 class BlogViewScreen extends StatefulWidget {
   final Map<String, dynamic>? blogPost; 
@@ -78,19 +79,19 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     return 'Date Unavailable';
   }
 
-  // --- UPDATED SHARING METHOD FOR CLEANER HASH URL ---
+  // --- SHARING METHOD ---
   void _shareBlog() {
     // 1. Get the blog ID and Title
     final blogId = widget.blogSlug ?? _currentBlogPost?['blogId'] ?? _currentBlogPost?['id'];
     final blogTitle = _currentBlogPost?['title'] ?? 'A New Blog Post from Sora Properties';
     
-    // 2. Define the base URL without a trailing slash
-    const String baseDomain = 'https://soraproperties.co.ke'; 
+    // 2. Define the base URL using your domain
+    const String baseDomain = 'https://soraproperties.co.ke';
 
-    // 3. Construct the full URL: [DOMAIN]/#[ROUTE]/[ID]
+    // 3. Construct the full URL for the blog post
     final String shareUrl = blogId != null 
         ? '$baseDomain/#/blog_view/$blogId' 
-        : '$baseDomain/#/'; // Fallback to homepage hash route
+        : '$baseDomain/#/'; 
 
     // 4. Create the final share message with line breaks (\n)
     final String shareMessage = '$blogTitle\n\nRead more here: $shareUrl';
@@ -101,7 +102,7 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
       subject: blogTitle,
     ); 
   }
-  // ----------------------------------------------------
+  // ----------------------
 
   Widget _buildSubtopic(Map<String, dynamic> subtopic, {String? imageUrl}) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -313,7 +314,17 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     );
   }
 
+  // --- UPDATED LEFT COLUMN WITH LIGHTER GRADIENT AND BOLDER TEXT ---
   Widget _buildLeftColumn() {
+    // Define the colors used in the middle column for consistency
+    const Color darkBlueTitle = Color(0xFF0A66C2);
+    const Color primaryBlue = Color(0xFF1E90FF);
+    
+    // Define new colors for the gradient
+    const Color deepPurple = Color(0xFF8A2BE2);
+    const Color lightBlue = Color(0xFF87CEEB); 
+    const Color lightPurple = Color(0xFFDDA0DD); 
+
     return StreamBuilder<QuerySnapshot>(
       stream: _firestoreService.getBlogs(),
       builder: (context, snapshot) {
@@ -331,42 +342,89 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
           final category = data['category'] ?? 'Uncategorized';
           categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
         }
-
-        return Container(
-          color: Colors.grey[100],
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Blog Categories',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E90FF),
+        
+        // Wrap content in Padding, ClipRRect, and BackdropFilter for the effect
+        return Padding( 
+          padding: const EdgeInsets.all(16.0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20), // Rounded corners
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0), // Blur remains the same
+              child: Container(
+                // Use a much lighter transparent gradient for the background
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      primaryBlue.withOpacity(0.1),    // Blue - Reduced opacity
+                      deepPurple.withOpacity(0.1),     // Purple - Reduced opacity
+                      lightBlue.withOpacity(0.1),      // Light Blue - Reduced opacity
+                      lightPurple.withOpacity(0.1),    // Light Purple - Reduced opacity
+                      Colors.white.withOpacity(0.05),  // White - Reduced opacity
+                    ],
+                    stops: const [0.0, 0.3, 0.6, 0.8, 1.0],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  // White border for definition
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.6), 
+                    width: 1.5,
+                  ),
+                  // Subtle shadow
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05), // Lighter shadow
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: ListView(
-                  children: _categories.map((category) {
-                    final count = categoryCounts[category] ?? 0;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Text(
-                        '$category ($count)',
-                        style: const TextStyle(fontSize: 16),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Blog Categories',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900, // <-- VERY BOLD
+                        color: darkBlueTitle, 
+                        // Text shadow for clarity
+                        shadows: [
+                          Shadow(color: Colors.white.withOpacity(0.8), blurRadius: 5, offset: Offset(1, 1)) 
+                        ],
                       ),
-                    );
-                  }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    Expanded(
+                      child: ListView(
+                        children: _categories.map((category) {
+                          final count = categoryCounts[category] ?? 0;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              '$category ($count)',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: primaryBlue, 
+                                fontWeight: FontWeight.w700, // <-- BOLD
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         );
       },
     );
   }
+  // ----------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
