@@ -3,9 +3,9 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"assets/AssetManifest.bin": "3c9ba839519a2aadcd8270eec0fc20b7",
-"assets/AssetManifest.bin.json": "6f97285d35d248fe9b58202a26aa05f6",
-"assets/AssetManifest.json": "aff8fce64798d943217bc0ad5d9c54f0",
+const RESOURCES = {"assets/AssetManifest.bin": "8c92133e5d43efad4ebf72b6c46563cd",
+"assets/AssetManifest.bin.json": "1dedfc1a146c988ea72ef0f2ea6aab9b",
+"assets/AssetManifest.json": "afe9177d5cbfaa42ab38ac6231ae47ee",
 "assets/assets/images/hero_image.webp": "8c1cc201aa44dbb7c912ae675dad555f",
 "assets/assets/images/image1.jpeg": "4b64508127f2f4a0c6037a0f2f7ff6ba",
 "assets/assets/images/image10.webp": "6f539d71b8d1dd7b7a7cc51459998baf",
@@ -197,6 +197,7 @@ const RESOURCES = {"assets/AssetManifest.bin": "3c9ba839519a2aadcd8270eec0fc20b7
 "assets/assets/images/image9_4.webp": "ab2cab038dcda9a446d94573d4c2b739",
 "assets/assets/images/image9_5.webp": "358555c8d62f505fff0c709240dcfa69",
 "assets/assets/images/kioko_pro.png": "2ea7c8be7a43c64abe15581a6a2e2a56",
+"assets/assets/images/kioko_pro.webp": "6d7c14115347d53d6c3593543a46dc2b",
 "assets/assets/images/real_estate_hero_2.webp": "3ed638e792aebd2274f7f7c9cf6b6cc5",
 "assets/assets/images/real_estate_hero_3.webp": "b257ec719cefa6204681ea92b6d32443",
 "assets/assets/images/real_estate_hero_4.webp": "eb8eac470b36b43a16961479f950921a",
@@ -209,6 +210,7 @@ const RESOURCES = {"assets/AssetManifest.bin": "3c9ba839519a2aadcd8270eec0fc20b7
 "assets/assets/images/rental7.webp": "f03c35980a34a9582d5ec28d1387a364",
 "assets/assets/images/rental8.webp": "f8d5332dadcd9239279e38be6c1c16ba",
 "assets/assets/images/riki_pro.png": "cd8f1217c07fa263f9977e5200028bb4",
+"assets/assets/images/riki_pro.webp": "05d8b165b035941ae38e5dc820742a68",
 "assets/assets/images/sora_logo.png": "fb00e6be2a83d149084d790eb5b2092a",
 "assets/assets/images/voke_pro.png": "b80e17b131459cb68360efea556c0c21",
 "assets/env.txt": "caa48324f8d1c3fcc5e8ab62424019f0",
@@ -235,14 +237,14 @@ const RESOURCES = {"assets/AssetManifest.bin": "3c9ba839519a2aadcd8270eec0fc20b7
 "CNAME": "e1387523602c19a789f63aef496c64ed",
 "favicon.png": "b73dfb25a7a73361cca712dbd918df06",
 "flutter.js": "888483df48293866f9f41d3d9274a779",
-"flutter_bootstrap.js": "a25261967f7897cdf77cef4440760c39",
+"flutter_bootstrap.js": "69610dcbfea19200d3bdaaf0f8b14849",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
 "icons/Icon-maskable-192.png": "c457ef57daa1d16f64b27b786ec2ea3c",
 "icons/Icon-maskable-512.png": "301a7604d45b3e739efc881eb04896ea",
 "index.html": "aa13e9dc757e01054c55768e2ea3892b",
 "/": "aa13e9dc757e01054c55768e2ea3892b",
-"main.dart.js": "e73e35b1f7abfc4a288d73297cf55a79",
+"main.dart.js": "82d193980b2f175b47d38cf3e4c19a53",
 "manifest.json": "e2d8aacf924b8886c558ef3a42acc6ec",
 "version.json": "b75bad869b2040f1993e54d13f3df6c6"};
 // The application shell files that are downloaded before a service worker can
