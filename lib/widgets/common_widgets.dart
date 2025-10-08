@@ -528,15 +528,19 @@ class CommonWidgets {
                       spacing: 16.0,
                       runSpacing: 8.0,
                       children: [
+                        // UPDATED SOCIAL MEDIA LINKS
                         _buildSocialButton(FontAwesomeIcons.xTwitter, 'https://x.com'),
-                        _buildSocialButton(FontAwesomeIcons.facebookF, 'https://facebook.com'),
-                        _buildSocialButton(FontAwesomeIcons.instagram, 'https://instagram.com'),
+                        _buildSocialButton(FontAwesomeIcons.facebookF, 'https://www.facebook.com/share/1C3bVnrGCW/'),
+                        _buildSocialButton(FontAwesomeIcons.instagram, 'https://www.instagram.com/sora.properties?igsh=MTFzM2dhOXZ5Z3E2eA=='),
                         _buildSocialButton(FontAwesomeIcons.linkedinIn, 'https://linkedin.com'),
-                        _buildSocialButton(FontAwesomeIcons.youtube, 'https://youtube.com'),
-                        _buildSocialButton(FontAwesomeIcons.whatsapp, 'https://whatsapp.com'),
-                        _buildSocialButton(FontAwesomeIcons.tiktok, 'https://tiktok.com'),
+                        _buildSocialButton(FontAwesomeIcons.youtube, 'https://youtube.com/@soraproperties?si=F3sQtcRZoBZL8Llv'),
+                        // WhatsApp link updated to use the provided number for 'wa.me'
+                        _buildSocialButton(FontAwesomeIcons.whatsapp, 'https://wa.me/+25493999591'),
+                        // TikTok link corrected with 'https://' prefix
+                        _buildSocialButton(FontAwesomeIcons.tiktok, 'https://tiktok.com/@sora_properties.l'),
                         _buildSocialButton(FontAwesomeIcons.pinterest, 'https://pinterest.com'),
-                        _buildSocialButton(FontAwesomeIcons.google, 'https://google.com/business'),
+                        // Google link corrected with 'https://' prefix
+                        _buildSocialButton(FontAwesomeIcons.google, 'https://business.google.com'),
                       ],
                     ),
                   ],
@@ -673,8 +677,13 @@ class CommonWidgets {
       padding: const EdgeInsets.only(right: 16.0),
       child: IconButton(
         icon: FaIcon(icon, color: Colors.white),
-        onPressed: () {
-          // Launch URL
+        onPressed: () async {
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            // Log error or show a snackbar to the user
+          }
         },
       ),
     );

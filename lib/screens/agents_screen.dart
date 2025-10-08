@@ -89,7 +89,7 @@ class _AgentsScreenState extends State<AgentsScreen> {
     {
       'name': 'Erick Ntongai',
       'title': 'Senior Real Estate Agent',
-      'image': 'assets/images/riki_pro.png',
+      'image': 'assets/images/riki_pro.webp', // Updated from .png to .webp
       'phone': '+254702778897',
       'email': 'soraproperties001@gmail.com',
       'bio': 'Erick specializes in luxury residential properties and has over 10 years of experience in the Nairobi market. She is dedicated to providing exceptional service and finding the perfect home for her clients.',
@@ -97,7 +97,7 @@ class _AgentsScreenState extends State<AgentsScreen> {
     {
       'name': 'Kioko Muinde',
       'title': 'Commercial Property Specialist',
-      'image': 'assets/images/kioko_pro.png',
+      'image': 'assets/images/kioko_pro.webp', // Updated from .png to .webp
       'phone': '+254712529637',
       'email': 'kiokomuinde022soraproperties001@gmail.com',
       'bio': 'Kioko is an expert in commercial real estate, assisting businesses with office spaces, retail locations, and industrial properties across Kenya. His analytical approach ensures optimal investment decisions.',

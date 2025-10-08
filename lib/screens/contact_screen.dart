@@ -438,15 +438,17 @@ class _ContactScreenState extends State<ContactScreen> {
                             spacing: 15.0,
                             runSpacing: 15.0,
                             children: [
-                              _buildSocialIcon(FontAwesomeIcons.facebookF, 'Facebook', const Color(0xFF1877F2)),
-                              _buildSocialIcon(FontAwesomeIcons.linkedinIn, 'LinkedIn', const Color(0xFF0A66C2)),
-                              _buildSocialIcon(FontAwesomeIcons.xTwitter, 'X (Twitter)', Colors.black),
-                              _buildSocialIcon(FontAwesomeIcons.youtube, 'YouTube', const Color(0xFFFF0000)),
-                              _buildSocialIcon(FontAwesomeIcons.whatsapp, 'WhatsApp', const Color(0xFF25D366)),
-                              _buildSocialIcon(FontAwesomeIcons.tiktok, 'TikTok', Colors.black),
-                              _buildSocialIcon(FontAwesomeIcons.pinterest, 'Pinterest', const Color(0xFFE60023)),
-                              _buildSocialIcon(FontAwesomeIcons.google, 'Google Business', const Color(0xFF4285F4)),
-                              _buildSocialIcon(FontAwesomeIcons.instagram, 'Instagram', const Color(0xFFE1306C)),
+                              _buildSocialIcon(FontAwesomeIcons.facebookF, 'Facebook', const Color(0xFF1877F2), 'https://www.facebook.com/share/1C3bVnrGCW/'),
+                              _buildSocialIcon(FontAwesomeIcons.linkedinIn, 'LinkedIn', const Color(0xFF0A66C2), 'https://linkedin.com'),
+                              _buildSocialIcon(FontAwesomeIcons.xTwitter, 'X (Twitter)', Colors.black, 'https://x.com'),
+                              _buildSocialIcon(FontAwesomeIcons.youtube, 'YouTube', const Color(0xFFFF0000), 'https://youtube.com/@soraproperties?si=F3sQtcRZoBZL8Llv'),
+                              // WhatsApp link using wa.me with the phone number
+                              _buildSocialIcon(FontAwesomeIcons.whatsapp, 'WhatsApp', const Color(0xFF25D366), 'https://wa.me/+25493999591'),
+                              // TikTok link corrected with 'https://' prefix
+                              _buildSocialIcon(FontAwesomeIcons.tiktok, 'TikTok', Colors.black, 'https://tiktok.com/@sora_properties.l'),
+                              _buildSocialIcon(FontAwesomeIcons.pinterest, 'Pinterest', const Color(0xFFE60023), 'https://pinterest.com'),
+                              _buildSocialIcon(FontAwesomeIcons.google, 'Google Business', const Color(0xFF4285F4), 'https://business.google.com'),
+                              _buildSocialIcon(FontAwesomeIcons.instagram, 'Instagram', const Color(0xFFE1306C), 'https://www.instagram.com/sora.properties?igsh=MTFzM2dhOXZ5Z3E2eA=='),
                             ],
                           ),
                         ],
@@ -581,13 +583,18 @@ class _ContactScreenState extends State<ContactScreen> {
     );
   }
 
-  Widget _buildSocialIcon(IconData icon, String socialMediaName, Color color) {
+  // UPDATED: The function now takes a URL and launches it
+  Widget _buildSocialIcon(IconData icon, String socialMediaName, Color color, String url) {
     return IconButton(
       icon: FaIcon(icon, size: 28, color: color),
-      onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Opening $socialMediaName page (link not active)')),
-        );
+      onPressed: () async {
+        final uri = Uri.parse(url);
+        // Use canLaunchUrl and LaunchMode.externalApplication for robustness
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          _showColoredSnackBar('Could not open $socialMediaName page.', Colors.red);
+        }
       },
       tooltip: 'Visit our $socialMediaName page',
     );
