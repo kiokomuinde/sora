@@ -2,13 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'dart:ui'; // Required for ImageFilter
+import 'dart:async'; // Required for Timer
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:sora_app/services/firestore_service.dart'; // NEW: Import the Firestore service
-
-// Removed the _mockPropertiesData list
+import 'package:sora_app/services/firestore_service.dart';
+import 'package:share_plus/share_plus.dart'; 
 
 class ViewPropertyScreen extends StatefulWidget {
   final Map<String, dynamic> propertyData;
@@ -27,10 +27,11 @@ class ViewPropertyScreen extends StatefulWidget {
 class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   late CommonWidgets commonWidgets;
   final PageController _pageController = PageController();
-  // New: A variable to track the current page for button visibility
   int _currentPage = 0;
-  // NEW: Initialize FirestoreService
   late final FirestoreService _firestoreService;
+
+  bool _isFavorite = false; 
+  String? _userId; // Added to store the logged-in user's ID
 
   // A helper method to format the price
   String _formatPrice(dynamic price) {
@@ -52,6 +53,98 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     return 'KSH ${price.toString()}';
   }
 
+  // UPDATED: Custom SnackBar Widget with required isFavoriteAction 
+  void _showCustomSnackBar(String message, {required bool isFavoriteAction}) {
+    // Define colors and duration
+    const Color lightBlue = Color(0xFFE3F2FD); // Light blue initial background
+    const Color darkGreen = Color(0xFF1B5E20); // Deep/Dark Green blinking color
+    const Duration shortDuration = Duration(seconds: 2); // SnackBar duration
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: _BlinkingSnackBarContent(
+          message: message,
+          initialColor: lightBlue, 
+          blinkColor: darkGreen,
+          initialTextColor: Colors.blue[900]!,
+          blinkTextColor: Colors.white,
+          isFavoriteAction: isFavoriteAction, // Passed to control blinking
+        ),
+        duration: shortDuration,
+        backgroundColor: Colors.transparent, // Make SnackBar background transparent
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: EdgeInsets.zero, 
+        elevation: 0, 
+      ),
+    );
+  }
+
+  // NEW: Method to check initial favorite status from Firestore
+  void _checkInitialFavoriteStatus() async {
+    final user = widget.authService.getCurrentUser();
+    final propertyId = widget.propertyData['id'];
+
+    if (user == null || propertyId == null) {
+      return;
+    }
+
+    _userId = user.uid;
+    
+    final isFav = await _firestoreService.isFavorite(_userId!, propertyId);
+    if (mounted) {
+      setState(() {
+        _isFavorite = isFav;
+      });
+    }
+  }
+
+  // UPDATED: Logic to toggle favorite status and interact with Firestore
+  void _toggleFavorite() async {
+    final user = widget.authService.getCurrentUser();
+    if (user == null) {
+      // User is not logged in, prompt for login
+      commonWidgets.showLoginSignupDialog();
+      return;
+    }
+
+    final propertyId = widget.propertyData['id'];
+    if (propertyId == null) {
+      return; 
+    }
+
+    _userId = user.uid;
+    final newFavoriteStatus = !_isFavorite;
+    
+    try {
+      if (newFavoriteStatus) {
+        // Add to favorites
+        await _firestoreService.addFavorite(_userId!, propertyId);
+      } else {
+        // Remove from favorites
+        await _firestoreService.removeFavorite(_userId!, propertyId);
+      }
+
+      // After successful operation, update the state and show the snackbar
+      setState(() {
+        _isFavorite = newFavoriteStatus;
+      });
+
+      String message = newFavoriteStatus
+          ? 'Property added to Favorites!' 
+          : 'Property removed from Favorites.';
+          
+      _showCustomSnackBar(message, isFavoriteAction: newFavoriteStatus); 
+    } catch (e) {
+      // Handle potential errors (e.g., network, permissions)
+      // Revert state if the operation failed (or just don't update the state yet)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update favorite status: $e')),
+      );
+    }
+  }
+
   // Updated function to fetch similar properties from Firestore
   Future<List<Map<String, dynamic>>> _fetchSimilarProperties(Map<String, dynamic> currentProperty) async {
     final currentListingType = currentProperty['listingType'];
@@ -61,10 +154,8 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
       return [];
     }
 
-    // Fetch properties from Firestore that share the same listingType
     final allProperties = await _firestoreService.getPropertiesByListingType(currentListingType);
     
-    // Filter out the current property from the list
     final similarProperties = allProperties.where((property) {
       return property['id'] != currentPropertyId;
     }).toList();
@@ -119,12 +210,33 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     }
   }
 
+  // Method for sharing property
+  void _shareProperty() {
+    final propertyId = widget.propertyData['id']; 
+    final propertyTitle = widget.propertyData['title'] ?? 'A Property from Sora Properties';
+    
+    const String baseDomain = 'https://soraproperties.co.ke';
+
+    final String shareUrl = propertyId != null && propertyId.isNotEmpty
+        ? '$baseDomain/#/view_property/$propertyId' 
+        : '$baseDomain/#/'; 
+
+    final String shareMessage = '$propertyTitle\n\nView this property here: $shareUrl';
+
+    Share.share(
+      shareMessage, 
+      subject: propertyTitle,
+    ); 
+
+    // UPDATED: Use the positive action style for sharing
+    _showCustomSnackBar('Link copied and ready to share!', isFavoriteAction: true);
+  }
+
   @override
   void initState() {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
-    _firestoreService = FirestoreService(); // NEW: Instantiate the service
-    // New: Add a listener to the page controller to track the current page
+    _firestoreService = FirestoreService();
     _pageController.addListener(() {
       int next = _pageController.page?.round() ?? 0;
       if (_currentPage != next) {
@@ -133,6 +245,9 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
         });
       }
     });
+
+    // NEW: Check initial favorite status when the screen loads
+    _checkInitialFavoriteStatus();
   }
 
   @override
@@ -155,15 +270,11 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
             ? property['airbnbDetails'] ?? {}
             : {};
 
-    final contactInfo = property['contactInfo'] ?? {};
-
-    // Combine cover image with additional images for the carousel
     final List<String> imageUrls = [
       if (property['coverImageUrl'] != null) property['coverImageUrl'],
       ...(property['additionalImageUrls']?.cast<String>() ?? []),
     ];
 
-    // Define the list of property details dynamically based on property type
     final List<Map<String, dynamic>> propertyDetails = [
       {'icon': Icons.home_work, 'label': 'Property Type', 'value': property['propertyType'] ?? 'N/A'},
       {'icon': Icons.format_size, 'label': 'Size', 'value': '${property['size'] ?? 'N/A'} ${property['sizeUnit'] ?? ''}'},
@@ -185,7 +296,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Responsive content container to control width on large screens
             Container(
               padding: EdgeInsets.symmetric(
                 horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
@@ -194,7 +304,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Section 1: Image Carousel and Highlights
                   if (isLargeScreen)
                     _buildDesktopLayout(property, imageUrls, details)
                   else
@@ -202,7 +311,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                   
                   const SizedBox(height: 40),
 
-                  // Section 2: Description
                   _buildSectionCard(
                     title: 'Description',
                     child: Text(
@@ -212,19 +320,16 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Section 3: Property Details
                   _buildSectionCard(
                     title: 'Property Details',
-                    // Changed from GridView.count to GridView.builder for better responsiveness
                     child: GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: propertyDetails.length,
                       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 300.0, // Adjusts number of columns based on screen width
+                        maxCrossAxisExtent: 300.0,
                         mainAxisSpacing: 20,
                         crossAxisSpacing: 20,
-                        // Adjusted childAspectRatio to give the cards more vertical room and prevent overflow.
                         mainAxisExtent: 150.0,
                       ),
                       itemBuilder: (context, index) {
@@ -235,7 +340,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Section 4: Amenities and Features
                   if (property['amenities'] != null && property['amenities'].isNotEmpty) ...[
                     _buildSectionCard(
                       title: 'Amenities Nearby',
@@ -251,20 +355,17 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                     const SizedBox(height: 40),
                   ],
 
-                  // Section 5: Contact Information
                   _buildSectionCard(
                     title: 'Contact Information',
-                    // Wrap the child in a GestureDetector to make the whole section clickable
                     child: GestureDetector(
                       onTap: _handleContactTap,
                       child: widget.authService.getCurrentUser() != null
-                          ? _buildContactInfo(contactInfo)
-                          : _buildBlurredContactInfo(contactInfo),
+                          ? _buildContactInfo(widget.propertyData['contactInfo'] ?? {})
+                          : _buildBlurredContactInfo(widget.propertyData['contactInfo'] ?? {}),
                     ),
                   ),
                   const SizedBox(height: 40),
 
-                  // Section 6: Similar Properties
                   _buildSectionCard(
                     title: 'Similar Properties',
                     child: _buildSimilarPropertiesList(),
@@ -272,7 +373,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                 ],
               ),
             ),
-            // --- Footer ---
             commonWidgets.buildFooter(),
           ],
         ),
@@ -284,13 +384,11 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Image carousel on the left
         Expanded(
           flex: 2,
           child: _buildImageCarousel(imageUrls),
         ),
         const SizedBox(width: 40),
-        // Details on the right
         Expanded(
           flex: 1,
           child: _buildPropertyHighlights(property, details),
@@ -310,7 +408,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // Widget to build a section with a card
   Widget _buildSectionCard({required String title, required Widget child}) {
     return Card(
       elevation: 5,
@@ -340,6 +437,26 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
       );
     }
 
+    // Dynamic icon and color for the favorite button
+    final Icon favoriteIcon = _isFavorite
+        ? const Icon(Icons.favorite, size: 30, color: Colors.red) 
+        : const Icon(Icons.favorite_border, size: 30, color: Colors.redAccent); 
+
+    // Dynamic style for the favorite button
+    final ButtonStyle favoriteButtonStyle = _isFavorite
+        ? IconButton.styleFrom(
+            backgroundColor: Colors.transparent, 
+            shape: const CircleBorder(),
+            padding: const EdgeInsets.all(8),
+            elevation: 0, 
+          )
+        : IconButton.styleFrom(
+            backgroundColor: Colors.white.withOpacity(0.7), 
+            shape: const CircleBorder(),
+            padding: const EdgeInsets.all(8),
+            elevation: 5, 
+          );
+
     return Card(
       elevation: 5,
       shape: RoundedRectangleBorder(
@@ -365,7 +482,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
               },
             ),
           ),
-          // New: Previous button
+          // Navigation Buttons
           Positioned(
             left: 10,
             child: Visibility(
@@ -387,7 +504,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
               ),
             ),
           ),
-          // New: Next button
           Positioned(
             right: 10,
             child: Visibility(
@@ -409,14 +525,39 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
               ),
             ),
           ),
+          // Favorite and Share Buttons
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Row(
+              children: [
+                // Favorite Button
+                IconButton(
+                  icon: favoriteIcon,
+                  onPressed: _toggleFavorite, // Linked to the new logic
+                  style: favoriteButtonStyle, 
+                ),
+                const SizedBox(width: 8),
+                // Share Button
+                IconButton(
+                  icon: const Icon(Icons.share, size: 30, color: Color(0xFF0A66C2)),
+                  onPressed: _shareProperty,
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.7),
+                    shape: const CircleBorder(),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // Widget to build the property highlights section
   Widget _buildPropertyHighlights(Map<String, dynamic> property, Map<String, dynamic> details) {
-    final contactInfo = property['contactInfo'] ?? {};
+    final contactInfo = widget.propertyData['contactInfo'] ?? {};
     final propertyType = property['propertyType'];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,12 +596,9 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
         Center(
           child: ElevatedButton.icon(
             onPressed: () {
-              // Check if the user is logged in
               if (widget.authService.getCurrentUser() != null) {
-                // If logged in, show contact information
                 _showContactDialog(contactInfo);
               } else {
-                // If not logged in, prompt to log in/sign up
                 commonWidgets.showLoginSignupDialog();
               }
             },
@@ -500,7 +638,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // Widget to build a professional-looking detail card
   Widget _buildDetailCard(IconData icon, String label, String value) {
     return Card(
       elevation: 2,
@@ -513,7 +650,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
           children: [
             Icon(icon, size: 28, color: const Color(0xFF0A66C2)),
             const SizedBox(height: 8),
-            Expanded( // Use Expanded to prevent text overflow
+            Expanded(
               child: Text(
                 label,
                 style: const TextStyle(fontSize: 14, color: Colors.grey),
@@ -522,7 +659,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            Expanded( // Use Expanded to prevent text overflow
+            Expanded(
               child: Text(
                 value,
                 style: const TextStyle(
@@ -540,7 +677,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // Widget to build a similar property card
   Widget _buildSimilarPropertyCard(Map<String, dynamic> property) {
     return Container(
       width: 300,
@@ -553,7 +689,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
-            // Navigate to the property details screen when card is tapped
             Navigator.of(context).pushNamed('/view_property', arguments: property);
           },
           child: Column(
@@ -608,7 +743,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // Widget to build a list of similar properties
   Widget _buildSimilarPropertiesList() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _fetchSimilarProperties(widget.propertyData),
@@ -636,7 +770,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // Widget to build a section title
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
@@ -648,7 +781,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // Widget to build tags (amenities/features)
   Widget _buildTags(List<dynamic> tags) {
     return Wrap(
       spacing: 8.0,
@@ -665,7 +797,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // Widget to build contact information
   Widget _buildContactInfo(Map<String, dynamic> contactInfo) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -677,11 +808,9 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // New widget to build a blurred/obscured contact info section
   Widget _buildBlurredContactInfo(Map<String, dynamic> contactInfo) {
     return Stack(
       children: [
-        // The blurred version of the contact info
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -690,7 +819,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
             _buildContactDetail(Icons.email, 'Email', '******************'),
           ],
         ),
-        // The blurring and overlay
         Positioned.fill(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(10),
@@ -761,6 +889,121 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// UPDATED CLASS: Custom SnackBar Content for Conditional Blinking
+class _BlinkingSnackBarContent extends StatefulWidget {
+  final String message;
+  final Color initialColor;
+  final Color blinkColor;
+  final Color initialTextColor;
+  final Color blinkTextColor;
+  final bool isFavoriteAction; // NEW: Flag to control blinking
+
+  const _BlinkingSnackBarContent({
+    required this.message,
+    required this.initialColor,
+    required this.blinkColor,
+    required this.initialTextColor,
+    required this.blinkTextColor,
+    required this.isFavoriteAction, // NEW
+  });
+
+  @override
+  _BlinkingSnackBarContentState createState() => _BlinkingSnackBarContentState();
+}
+
+class _BlinkingSnackBarContentState extends State<_BlinkingSnackBarContent> with SingleTickerProviderStateMixin {
+  late Color _currentColor;
+  late Color _currentTextColor;
+  late BoxBorder _currentBorder;
+  Timer? _blinkTimer;
+
+  // Function to change the colors and border state for the blinking animation
+  void _toggleColorState({required bool isBlinking}) {
+    setState(() {
+      if (isBlinking) {
+        _currentColor = widget.blinkColor;
+        _currentTextColor = widget.blinkTextColor;
+        _currentBorder = Border.all(color: Colors.transparent, width: 0); // Remove border
+      } else {
+        _currentColor = widget.initialColor;
+        _currentTextColor = widget.initialTextColor;
+        _currentBorder = Border.all(color: Colors.blue, width: 1); // Restore border
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    
+    if (widget.isFavoriteAction) {
+      // Logic for ADDING (existing blinking logic)
+      _currentColor = widget.initialColor;
+      _currentTextColor = widget.initialTextColor;
+      _currentBorder = Border.all(color: Colors.blue, width: 1); 
+
+      // Start the blinking sequence:
+      // SnackBar duration is 2.0 seconds.
+
+      // 1. Blink ON: Go dark green at 0.5 seconds
+      _blinkTimer = Timer(const Duration(milliseconds: 500), () {
+        if (mounted) _toggleColorState(isBlinking: true);
+      });
+
+      // 2. Blink OFF: Go back to light blue at 1.0 seconds
+      _blinkTimer = Timer(const Duration(milliseconds: 1000), () {
+        if (mounted) _toggleColorState(isBlinking: false);
+      });
+      
+      // 3. Blink ON (Final Blink): Go dark green at 1.25 seconds
+      _blinkTimer = Timer(const Duration(milliseconds: 1250), () {
+        if (mounted) _toggleColorState(isBlinking: true);
+      });
+      
+    } else {
+      // Logic for REMOVING (No blinking, red text/icon, light blue background)
+      _currentColor = widget.initialColor; // Keep light blue background
+      _currentTextColor = Colors.red[700]!; // Set red text color for disselect
+      _currentBorder = Border.all(color: Colors.red[700]!, width: 1); // Red border for contrast
+    }
+  }
+
+  @override
+  void dispose() {
+    _blinkTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300), // Slower animation for a professional look
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: _currentColor,
+        borderRadius: BorderRadius.circular(10),
+        border: _currentBorder, // Dynamic border
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_outline, color: _currentTextColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              widget.message,
+              style: TextStyle(
+                color: _currentTextColor, // Dynamic text color
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

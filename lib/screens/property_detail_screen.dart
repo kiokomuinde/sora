@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart'; // For PointerDeviceKind
 import 'package:url_launcher/url_launcher.dart'; // For launching calls, emails, etc.
-import 'package:share_plus/share_plus.dart'; // For sharing functionality
+// import 'package:share_plus/share_plus.dart'; // Temporarily removed for diagnostic
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // For social icons like WhatsApp
 
 class PropertyDetailScreen extends StatefulWidget {
@@ -14,55 +14,38 @@ class PropertyDetailScreen extends StatefulWidget {
 }
 
 class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
-  bool _isFavorite = false;
-  int _currentPage = 0; // Track current page of the carousel
+  late bool _isFavorite;
+  int _currentPage = 0; 
   late PageController _pageController;
   bool _showSwipeInstruction = true;
   late ScrollController _similarPropertiesScrollController;
 
-  // Image captions for the carousel
-  final List<String> _imageCaptions = const [
-    "Elegant exterior design with lush landscaping",
-    "Spacious living area, perfect for entertaining guests",
-    "Gourmet kitchen with state_of_the_art appliances",
-    "Luxurious master suite offering serene comfort",
-    "Private backyard oasis with swimming pool",
-    "Cozy guest bedroom with ample natural light",
-    "Dedicated home office with built-in shelving",
-    "Modern bathroom with walk-in shower and soaking tub",
-    "Panoramic city views from the rooftop terrace",
-    "Inviting dining area for family meals",
-  ];
+  // Image captions, features, etc. remain the same
 
-  // Icons for property feature items
+  // Map of feature keys to icons
   final Map<String, IconData> _featureIcons = {
-    'Year Built': Icons.calendar_today,
-    'Parking': Icons.local_parking,
-    'Heating': Icons.thermostat,
-    'Cooling': Icons.ac_unit,
-    'Flooring': Icons.texture,
-    'Lot Size': Icons.aspect_ratio,
-    'Property Type': Icons.home_work,
-    'Pets Allowed': Icons.pets,
+    'Year Built': Icons.calendar_today_outlined,
+    'Parking': Icons.local_parking_outlined,
+    'AC': Icons.ac_unit_outlined,
+    'Pool': Icons.pool_outlined,
+    'Security': Icons.security_outlined,
+    'Fireplace': Icons.fireplace_outlined,
   };
 
   @override
   void initState() {
     super.initState();
     _isFavorite = widget.property['isFavorite'] ?? false;
-    _pageController = PageController(initialPage: _currentPage);
+    _pageController = PageController();
     _similarPropertiesScrollController = ScrollController();
 
+    // Hide the swipe instruction after a short delay
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
           _showSwipeInstruction = false;
         });
       }
-    });
-
-    _similarPropertiesScrollController.addListener(() {
-      setState(() {});
     });
   }
 
@@ -73,530 +56,179 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     super.dispose();
   }
 
+  // --- Core Logic Methods ---
+
   void _toggleFavorite() {
     setState(() {
       _isFavorite = !_isFavorite;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isFavorite ? 'Added to favorites!' : 'Removed from favorites.'),
-          duration: const Duration(milliseconds: 800),
-        ),
-      );
     });
-  }
 
-  void _shareProperty() {
-    final String propertyTitle = widget.property['title'] ?? 'Property Details';
-    final String propertyId = widget.property['id']?.toString() ?? '123';
-    final String propertyUrl = "https://example.com/properties/detail?id=$propertyId";
-    Share.share('Check out this amazing property: $propertyTitle\n$propertyUrl');
-  }
-
-  // Helper: Build image widget (network or asset)
-  Widget _buildImage(String imagePath) {
-    final bool isNetwork = imagePath.startsWith('http');
-    return isNetwork
-        ? Image.network(
-            imagePath,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Center(
-                child: CircularProgressIndicator(
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                      : null,
-                  color: Theme.of(context).primaryColor,
-                ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
-          )
-        : Image.asset(
-            imagePath,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
-          );
-  }
-
-  Widget _buildErrorImage() {
-    return Container(
-      color: Colors.grey[200],
-      child: Center(
-        child: Icon(Icons.broken_image, color: Colors.grey[400], size: 40),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isFavorite ? 'Added to favorites!' : 'Removed from favorites.'),
+        duration: const Duration(milliseconds: 1500),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  // Helper: Build thumbnail image
-  Widget _buildThumbnailImage(String imagePath) {
-    final bool isNetwork = imagePath.startsWith('http');
-    return isNetwork
-        ? Image.network(
-            imagePath,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _buildErrorThumbnail(),
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                      : null,
-                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
-                ),
-              );
-            },
-          )
-        : Image.asset(
-            imagePath,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _buildErrorThumbnail(),
-          );
-  }
+  /*
+  void _shareProperty() async {
+    // TEMPORARILY REMOVED for diagnostic simplification
+    final propertyId = widget.property['id'] ?? 'unknown';
+    final title = widget.property['title'] ?? 'This Amazing Property';
+    final shareLink = 'https://example.com/properties/detail?id=$propertyId';
 
-  // Error widget for thumbnails
-  Widget _buildErrorThumbnail() {
-    return Container(
-      color: Colors.grey[300],
-      child: const Icon(Icons.broken_image, color: Colors.grey, size: 16),
+    await Share.share(
+      'Check out $title: $shareLink',
+      subject: 'Property Listing: $title',
     );
   }
+  */
 
-  void _goToPage(int index) {
-    setState(() {
-      _currentPage = index;
-      _showSwipeInstruction = false;
-    });
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
+  void _handleContactAction(String actionType, String value) async {
+    String url;
+    String errorMessage = 'Could not perform $actionType action.';
 
-  Future<void> _handleContactAction(String action, String value, String agentName) async {
-    String uriString = '';
-    switch (action) {
+    switch (actionType) {
       case 'Call':
-        uriString = 'tel:$value';
+        url = 'tel:$value';
         break;
       case 'WhatsApp':
-        final formattedValue = value.replaceAll(RegExp(r'[^\d]'), '');
-        uriString = 'https://wa.me/$formattedValue';
+        // Note: Use https://wa.me/ for a direct link
+        url = 'https://wa.me/$value';
         break;
       case 'Email':
-        uriString = 'mailto:$value?subject=Inquiry about property ${widget.property['title']}';
+        url = 'mailto:$value';
         break;
       case 'SMS':
-        uriString = 'sms:$value';
+        url = 'sms:$value';
         break;
       default:
         return;
     }
 
-    final Uri uri = Uri.parse(uriString);
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not launch $action for $agentName.'),
-            backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error launching $action: $e'),
+          content: Text('$errorMessage Please check the agent contact details.'),
           backgroundColor: Colors.redAccent,
-          duration: const Duration(seconds: 3),
         ),
       );
     }
   }
+  
+  // --- UI Builder Methods ---
 
-  @override
-  Widget build(BuildContext context) {
-    final property = widget.property;
-    final bool isLargeScreen = MediaQuery.of(context).size.width > 768;
-    final double carouselHeight = MediaQuery.of(context).size.height * 0.7;
+  // EXTREME CENTRAL CONTACT BUTTON (Now positioned at the top of the body for guaranteed visibility)
+  Widget _buildExtremeCentralContactButton(BuildContext context) {
+    final agentPhone = '1234567890'; 
+    final propertyPrice = widget.property['price'] ?? '\$1,200,000';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(property['title'] ?? 'Property Details'),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: _isFavorite ? Colors.redAccent : null,
-            ),
-            onPressed: _toggleFavorite,
-            tooltip: _isFavorite ? 'Remove from favorites' : 'Add to favorites',
-          ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: _shareProperty,
-            tooltip: 'Share property',
-          ),
-        ],
-        elevation: 0,
+    return ElevatedButton.icon(
+      onPressed: () => _handleContactAction('Call', agentPhone),
+      icon: const Icon(Icons.phone, size: 20),
+      label: Text(
+        'Contact Agent - $propertyPrice', 
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        physics: const ClampingScrollPhysics(),
-        children: [
-          _buildImageCarousel(property, carouselHeight, isLargeScreen),
-          const SizedBox(height: 16),
-          _buildPropertyOverview(property),
-          const SizedBox(height: 20),
-          _buildDescriptionSection(property),
-          const SizedBox(height: 20),
-          _buildPropertyFeaturesSection(property, isLargeScreen),
-          const SizedBox(height: 20),
-          _buildAmenitiesSection(isLargeScreen),
-          const SizedBox(height: 24),
-          _buildContactAgentsSection(context, isLargeScreen),
-          const SizedBox(height: 30),
-          _buildSimilarPropertiesSection(),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  // === IMAGE CAROUSEL SECTION ===
-  Widget _buildImageCarousel(Map<String, dynamic> property, double carouselHeight, bool isLargeScreen) {
-    final List<dynamic> images = property['images'] ?? [];
-    return SizedBox(
-      height: carouselHeight,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: isLargeScreen ? 1024 : double.infinity,
-          ),
-          child: Stack(
-            children: [
-              ScrollConfiguration(
-                behavior: MyCustomScrollBehavior(),
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: images.length,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                      _showSwipeInstruction = false;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    String imagePath = images[index] ?? 'assets/placeholders/image_error.png';
-                    return Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isLargeScreen ? 24.0 : 8.0,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            _buildImage(imagePath),
-                            _buildImageCaptionOverlay(index, images.length),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              if (_showSwipeInstruction) _buildSwipeInstructionOverlay(),
-              _buildThumbnailNavigationButtons(images),
-              // Left navigation button
-              Positioned(
-                left: isLargeScreen ? 32 : 16,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: FloatingActionButton(
-                    heroTag: 'leftBtn',
-                    mini: true,
-                    elevation: 4,
-                    backgroundColor: Theme.of(context).cardColor,
-                    onPressed: _currentPage > 0
-                        ? () => _pageController.previousPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            )
-                        : null,
-                    child: Icon(
-                      Icons.arrow_back_ios_new,
-                      color: _currentPage > 0 ? Theme.of(context).primaryColor : Colors.grey,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-              // Right navigation button
-              Positioned(
-                right: isLargeScreen ? 32 : 16,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: FloatingActionButton(
-                    heroTag: 'rightBtn',
-                    mini: true,
-                    elevation: 4,
-                    backgroundColor: Theme.of(context).cardColor,
-                    onPressed: _currentPage < images.length - 1
-                        ? () => _pageController.nextPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            )
-                        : null,
-                    child: Icon(
-                      Icons.arrow_forward_ios,
-                      color: _currentPage < images.length - 1 ? Theme.of(context).primaryColor : Colors.grey,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-              _buildCarouselPageIndicators(images.length),
-            ],
-          ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.lightBlue, 
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
         ),
+        elevation: 10,
       ),
     );
   }
 
-  // Carousel page indicators
-  Widget _buildCarouselPageIndicators(int itemCount) {
-    return Positioned(
-      bottom: 80,
-      left: 0,
-      right: 0,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(itemCount, (index) {
-          return GestureDetector(
-            onTap: () => _goToPage(index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              margin: const EdgeInsets.symmetric(horizontal: 4.0),
-              height: 8.0,
-              width: _currentPage == index ? 24.0 : 8.0,
-              decoration: BoxDecoration(
-                color: _currentPage == index ? Colors.white : Colors.white.withOpacity(0.4),
-                borderRadius: BorderRadius.circular(4.0),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
+  // >>> REMOVED: _buildImageCarousel is temporarily removed for diagnostic <<<
 
-  // Caption overlay on each image
-  Widget _buildImageCaptionOverlay(int index, int totalImages) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
+  Widget _buildInfoChip({required String label, required String value, required IconData icon}) {
+    return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [Colors.black.withOpacity(0.7), Colors.transparent],
-          ),
+          color: Colors.blueGrey[50],
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              index < _imageCaptions.length ? _imageCaptions[index] : "Property image ${index + 1}",
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Icon(icon, color: Colors.lightBlue, size: 20),
             const SizedBox(height: 4),
-            Text(
-              "Image ${index + 1} of $totalImages",
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
-                fontSize: 12,
-              ),
-            ),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 10)),
           ],
         ),
       ),
     );
   }
 
-  // Swipe instruction overlay
-  Widget _buildSwipeInstructionOverlay() {
-    return Positioned.fill(
-      child: Container(
-        color: Colors.black.withOpacity(0.3),
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.swipe, color: Colors.black87),
-                SizedBox(width: 8),
-                Text(
-                  "Swipe to view more images",
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Thumbnail navigation buttons below the carousel
-  Widget _buildThumbnailNavigationButtons(List<dynamic> images) {
-    return Positioned(
-      bottom: 8,
-      left: 0,
-      right: 0,
-      child: Container(
-        height: 60,
-        alignment: Alignment.center,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              images.length,
-              (index) => GestureDetector(
-                onTap: () => _goToPage(index),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.white,
-                      width: _currentPage == index ? 3 : 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        _buildThumbnailImage(images[index]),
-                        if (_currentPage != index)
-                          Container(
-                            color: Colors.black.withOpacity(0.4),
-                          ),
-                        Positioned(
-                          bottom: 2,
-                          right: 2,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.7),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              "${index + 1}",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Property Overview Section
   Widget _buildPropertyOverview(Map<String, dynamic> property) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      // Added top padding to push content down past the floating button
+      padding: const EdgeInsets.fromLTRB(24.0, 70.0, 24.0, 16.0), 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            property['price'] ?? 'Price N/A',
+            property['title'] ?? 'Luxury Residential Villa',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.green[700],
+                  color: Colors.black87,
                 ),
           ),
           const SizedBox(height: 4),
           Row(
             children: [
-              Icon(Icons.location_on, size: 18, color: Colors.grey[600]),
-              const SizedBox(width: 8),
+              const Icon(Icons.location_on, size: 16, color: Colors.grey),
+              const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  property['location'] ?? 'Location N/A',
+                  property['location'] ?? 'Beverly Hills, CA, USA',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.grey[700],
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[700]),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
+          // Price kept here for scrolling context visibility
+          Text(
+            property['price'] ?? '\$1,200,000',
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: Colors.lightBlue,
+                ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildInfoChip(Icons.bed, "${property['bedrooms'] ?? 'N/A'} Beds"),
-              _buildInfoChip(Icons.bathtub, "${property['bathrooms'] ?? 'N/A'} Baths"),
-              _buildInfoChip(Icons.square_foot, "${property['area'] ?? 'N/A'} sqft"),
-              _buildInfoChip(Icons.home_work, property['type'] ?? 'Property'),
+              _buildInfoChip(
+                  label: 'Beds',
+                  value: property['beds']?.toString() ?? '4',
+                  icon: Icons.king_bed_outlined),
+              _buildInfoChip(
+                  label: 'Baths',
+                  value: property['baths']?.toString() ?? '3',
+                  icon: Icons.bathtub_outlined),
+              _buildInfoChip(
+                  label: 'Area',
+                  value: '${property['area'] ?? 2500} ft²',
+                  icon: Icons.square_foot_outlined),
+              _buildInfoChip(
+                  label: 'Type',
+                  value: property['type'] ?? 'House',
+                  icon: Icons.house_outlined),
             ],
           ),
         ],
@@ -604,24 +236,21 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     );
   }
 
-  // Description Section
   Widget _buildDescriptionSection(Map<String, dynamic> property) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Description",
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+            'Description',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
-            property['description'] ?? 'No description available for this property.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5, color: Colors.black87),
+            property['description'] ??
+                'This stunning villa boasts panoramic city views and a private, gated entrance. With high-end finishes throughout, including marble floors and custom cabinetry, this property is the definition of luxury. The open-concept design seamlessly connects the indoor and outdoor living spaces, perfect for both relaxing and grand-scale entertaining. Located in a prime area with easy access to fine dining and shopping.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
             textAlign: TextAlign.justify,
           ),
         ],
@@ -629,30 +258,64 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     );
   }
 
-  // Property Features Section
+  Widget _buildFeatureCard(String feature, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.lightBlue, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  feature,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                ),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPropertyFeaturesSection(Map<String, dynamic> property, bool isLargeScreen) {
-    final Map<String, String> features = {
-      'Year Built': property['yearBuilt']?.toString() ?? 'N/A',
-      'Parking': property['parking'] ?? 'Available',
-      'Heating': property['heating'] ?? 'Central',
-      'Cooling': property['cooling'] ?? 'Central A/C',
-      'Flooring': property['flooring'] ?? 'Hardwood',
-      'Lot Size': property['lotSize'] ?? 'N/A',
-      'Property Type': property['propertyType'] ?? 'House',
-      'Pets Allowed': property['petsAllowed']?.toString() == 'true' ? 'Yes' : 'No',
-    };
+    final features = property['features'] ??
+        {
+          'Year Built': '2018',
+          'Parking': '3 Spaces',
+          'AC': 'Central',
+          'Pool': 'Private',
+          'Security': 'Gated',
+          'Fireplace': '2',
+        };
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Property Features",
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+            'Key Features',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           GridView.builder(
@@ -660,15 +323,16 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: isLargeScreen ? 3 : 2,
-              childAspectRatio: isLargeScreen ? 3.5 : 4.0,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
+              childAspectRatio: 3.0,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
             ),
             itemCount: features.length,
             itemBuilder: (context, index) {
-              final entry = features.entries.elementAt(index);
-              final icon = _featureIcons[entry.key] ?? Icons.info_outline;
-              return _buildFeatureCard(icon, entry.key, entry.value);
+              final featureKey = features.keys.elementAt(index);
+              final featureValue = features.values.elementAt(index);
+              final icon = _featureIcons[featureKey] ?? Icons.info_outline;
+              return _buildFeatureCard(featureKey, featureValue.toString(), icon);
             },
           ),
         ],
@@ -676,41 +340,139 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     );
   }
 
-  // Feature card
-  Widget _buildFeatureCard(IconData icon, String title, String value) {
+  Widget _buildAmenityCard(String amenity, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.only(right: 8, bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.lightBlue[50],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.lightBlue[100]!),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.lightBlue, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            amenity,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.lightBlue),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmenitiesSection(Map<String, dynamic> property) {
+    final amenities = (property['amenities'] as List<dynamic>?)?.cast<String>() ??
+        ['School Nearby', 'Supermarket', 'Gym Access', 'Public Transport', 'Park Area', 'Hospital'];
+
+    final amenityIcons = {
+      'School Nearby': Icons.school_outlined,
+      'Supermarket': Icons.shopping_cart_outlined,
+      'Gym Access': Icons.fitness_center_outlined,
+      'Public Transport': Icons.train_outlined,
+      'Park Area': Icons.park_outlined,
+      'Hospital': Icons.local_hospital_outlined,
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Nearby Amenities',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            children: amenities
+                .map((amenity) => _buildAmenityCard(amenity, amenityIcons[amenity] ?? Icons.place_outlined))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAgentCard(Map<String, dynamic> agent, bool isLargeScreen) {
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           children: [
-            Icon(icon, size: 20, color: Theme.of(context).primaryColor),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundImage: NetworkImage(agent['image'] ?? 'https://placehold.co/60x60/808080/FFFFFF?text=A'),
+                  onBackgroundImageError: (exception, stackTrace) =>
+                      const Icon(Icons.person, size: 30, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        agent['name'] ?? 'John Doe',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        agent['title'] ?? 'Listing Agent',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 14),
+                          Text('${agent['rating'] ?? 4.8}', style: Theme.of(context).textTheme.bodySmall),
+                          const SizedBox(width: 4),
+                          Text('(${agent['reviews'] ?? 120} reviews)',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[500])),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                // Call
+                _buildContactButton(
+                  icon: Icons.phone,
+                  label: 'Call',
+                  color: Colors.lightBlue,
+                  onTap: () => _handleContactAction('Call', agent['phone'] ?? '1234567890'),
+                ),
+                // WhatsApp
+                _buildContactButton(
+                  icon: FontAwesomeIcons.whatsapp,
+                  label: 'WhatsApp',
+                  color: Colors.green,
+                  onTap: () => _handleContactAction('WhatsApp', agent['phone'] ?? '1234567890'),
+                ),
+                // Email
+                _buildContactButton(
+                  icon: Icons.mail_outline,
+                  label: 'Email',
+                  color: Colors.redAccent,
+                  onTap: () => _handleContactAction('Email', agent['email'] ?? 'agent@example.com'),
+                ),
+                // Message (SMS)
+                _buildContactButton(
+                  icon: Icons.message_outlined,
+                  label: 'SMS',
+                  color: Colors.deepPurple,
+                  onTap: () => _handleContactAction('SMS', agent['phone'] ?? '1234567890'),
+                ),
+              ],
             ),
           ],
         ),
@@ -718,176 +480,82 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     );
   }
 
-  // Amenities Section
-  Widget _buildAmenitiesSection(bool isLargeScreen) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Nearby Amenities",
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: _buildAmenityList(isLargeScreen),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Amenity list
-  List<Widget> _buildAmenityList(bool isLargeScreen) {
-    final List<Map<String, dynamic>> amenities = const [
-      {"icon": Icons.school, "title": "School", "subtitle": "2 km away"},
-      {"icon": Icons.church, "title": "Church", "subtitle": "1.5 km away"},
-      {"icon": Icons.shopping_cart, "title": "Supermarket", "subtitle": "500 m away"},
-      {"icon": Icons.local_hospital, "title": "Hospital", "subtitle": "3 km away"},
-      {"icon": Icons.park, "title": "Park", "subtitle": "1 km away"},
-      {"icon": Icons.restaurant, "title": "Restaurant", "subtitle": "800 m away"},
-      {"icon": Icons.directions_bus, "title": "Bus Stop", "subtitle": "100 m away"},
-      {"icon": Icons.train, "title": "Train Station", "subtitle": "4 km away"},
-    ];
-    return amenities.map((amenity) => _buildAmenityCard(
-          amenity["icon"] as IconData,
-          amenity["title"] as String,
-          amenity["subtitle"] as String,
-          isLargeScreen,
-        )).toList();
-  }
-
-  // Amenity card
-  Widget _buildAmenityCard(IconData icon, String title, String subtitle, bool isLargeScreen) {
-    double cardWidth = isLargeScreen ? 170.0 : 150.0;
-    return SizedBox(
-      width: cardWidth,
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(icon, size: 20, color: Theme.of(context).primaryColor),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+  Widget _buildContactButton(
+      {required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 4),
+            Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ],
         ),
       ),
     );
   }
 
-  // Contact Agents Section
-  Widget _buildContactAgentsSection(BuildContext context, bool isLargeScreen) {
+  Widget _buildContactAgentsSection(bool isLargeScreen) {
+    // Hardcoded multiple agents for demonstration
+    final List<Map<String, dynamic>> agents = [
+      {
+        'name': 'Sarah Connor',
+        'title': 'Senior Broker',
+        'rating': 4.9,
+        'reviews': 210,
+        'phone': '1234567890',
+        'email': 'sarah@example.com',
+        'image': 'https://placehold.co/60x60/3CB371/FFFFFF?text=SC',
+      },
+      {
+        'name': 'Michael Scott',
+        'title': 'Property Specialist',
+        'rating': 4.7,
+        'reviews': 85,
+        'phone': '0987654321',
+        'email': 'michael@example.com',
+        'image': 'https://placehold.co/60x60/87CEEB/FFFFFF?text=MS',
+      },
+    ];
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Contact Agents",
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+            'Meet the Agents',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth > 600) {
-                return GridView.count(
-                  crossAxisCount: 2,
-                  childAspectRatio: 2.5,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                // Large Screen: Use GridView for 2-column layout
+                return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildAgentCard(
-                      name: "Eric Ntingai",
-                      title: "Senior Real Estate Agent",
-                      rating: "4.9",
-                      reviews: "120",
-                      avatarAsset: 'assets/avatars/agent1.jpg',
-                      onCallPressed: () => _handleContactAction('Call', '+1234567890', 'Eric Ntingai'),
-                      onWhatsAppPressed: () => _handleContactAction('WhatsApp', '+1234567890', 'Eric Ntingai'),
-                      onEmailPressed: () => _handleContactAction('Email', 'eric.ntingai@example.com', 'Eric Ntingai'),
-                      onMessagePressed: () => _handleContactAction('SMS', '+1234567890', 'Eric Ntingai'),
-                    ),
-                    _buildAgentCard(
-                      name: "Kioko Muinde",
-                      title: "Senior Real Estate Agent",
-                      rating: "4.8",
-                      reviews: "98",
-                      avatarAsset: 'assets/avatars/agent2.jpg',
-                      onCallPressed: () => _handleContactAction('Call', '+1987654321', 'Kioko Muinde'),
-                      onWhatsAppPressed: () => _handleContactAction('WhatsApp', '+1987654321', 'Kioko Muinde'),
-                      onEmailPressed: () => _handleContactAction('Email', 'kioko.muinde@example.com', 'Kioko Muinde'),
-                      onMessagePressed: () => _handleContactAction('SMS', '+1987654321', 'Kioko Muinde'),
-                    ),
-                  ],
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 3.5,
+                  ),
+                  itemCount: agents.length,
+                  itemBuilder: (context, index) => _buildAgentCard(agents[index], isLargeScreen),
                 );
               } else {
+                // Small Screen: Use vertical Column
                 return Column(
-                  children: [
-                    _buildAgentCard(
-                      name: "Eric Ntingai",
-                      title: "Senior Real Estate Agent",
-                      rating: "4.9",
-                      reviews: "120",
-                      avatarAsset: 'assets/avatars/agent1.jpg',
-                      onCallPressed: () => _handleContactAction('Call', '+254702778897', 'Eric Ntingai'),
-                      onWhatsAppPressed: () => _handleContactAction('WhatsApp', '+254702778897', 'Eric Ntingai'),
-                      onEmailPressed: () => _handleContactAction('Email', 'soraproperties001@gmail.com', 'Eric Ntingai'),
-                      onMessagePressed: () => _handleContactAction('SMS', '+254702778897', 'Eric Ntingai'),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildAgentCard(
-                      name: "Kioko Muinde",
-                      title: "Senior Real Estate Agent",
-                      rating: "4.8",
-                      reviews: "98",
-                      avatarAsset: 'assets/avatars/agent2.jpg',
-                      onCallPressed: () => _handleContactAction('Call', '+254712529637', 'Kioko Muinde'),
-                      onWhatsAppPressed: () => _handleContactAction('WhatsApp', '+254712529637', 'Kioko Muinde'),
-                      onEmailPressed: () => _handleContactAction('Email', 'kiokomuinde022@gmail.com', 'Kioko Muinde'),
-                      onMessagePressed: () => _handleContactAction('SMS', '+254712529637', 'Kioko Muinde'),
-                    ),
-                  ],
+                  children: agents
+                      .map((agent) => Padding(
+                            padding: const EdgeInsets.only(bottom: 16.0),
+                            child: _buildAgentCard(agent, isLargeScreen),
+                          ))
+                      .toList(),
                 );
               }
             },
@@ -897,339 +565,247 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     );
   }
 
-  // Agent card
-  Widget _buildAgentCard({
-    required String name,
-    required String title,
-    required String rating,
-    required String reviews,
-    String? avatarAsset,
-    required VoidCallback onCallPressed,
-    required VoidCallback onWhatsAppPressed,
-    required VoidCallback onEmailPressed,
-    required VoidCallback onMessagePressed,
-  }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                  backgroundImage: avatarAsset != null ? AssetImage(avatarAsset) : null,
-                  child: avatarAsset == null
-                      ? Icon(Icons.person, size: 36, color: Theme.of(context).primaryColor)
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[700],
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.star, size: 16, color: Colors.amber),
-                          const SizedBox(width: 4),
-                          Text(
-                            "$rating ($reviews reviews)",
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey[700],
-                                ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildContactIconButton(icon: Icons.phone, color: Colors.green, onPressed: onCallPressed, tooltip: 'Call'),
-                _buildContactIconButton(icon: FontAwesomeIcons.whatsapp, color: const Color(0xFF25D366), onPressed: onWhatsAppPressed, tooltip: 'WhatsApp'),
-                _buildContactIconButton(icon: Icons.email, color: Colors.red, onPressed: onEmailPressed, tooltip: 'Email'),
-                _buildContactIconButton(icon: Icons.message, color: Theme.of(context).primaryColor, onPressed: onMessagePressed, tooltip: 'Message'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Contact icon button
-  Widget _buildContactIconButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-    required String tooltip,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(30),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 22),
-        ),
-      ),
-    );
-  }
-
-  // Info chip
-  Widget _buildInfoChip(IconData icon, String label) {
+  Widget _buildSimilarPropertyCard(Map<String, dynamic> property) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      width: 250,
+      margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(25),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+            color: Colors.grey.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 14, color: Colors.grey[700]),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: Image.network(
+              property['image'] ?? 'https://placehold.co/250x150/EEEEEE/333333?text=Property',
+              height: 120,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                height: 120,
+                color: Colors.grey[200],
+                child: const Center(child: Icon(Icons.apartment, size: 40, color: Colors.grey)),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  property['title'] ?? 'Modern Apartment',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        property['location'] ?? 'Location N/A',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  property['price'] ?? '\$500,000',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.lightBlue,
+                      ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Similar Properties Section
   Widget _buildSimilarPropertiesSection() {
+    // Hardcoded similar properties
     final List<Map<String, dynamic>> similarProperties = [
       {
-        'id': 'sim_1',
-        'title': 'Spacious Family Home',
-        'price': '\$480,000',
-        'location': 'Springfield, IL',
-        'images': ['https://picsum.photos/seed/1/200/300'],
-        'bedrooms': 4,
-        'bathrooms': 2,
-        'area': '2200',
+        'title': 'Luxury Penthouse',
+        'location': 'Downtown, NY',
+        'price': '\$3,500,000',
+        'image': 'https://placehold.co/250x150/6495ED/FFFFFF?text=PH',
       },
       {
-        'id': 'sim_2',
-        'title': 'Cozy Apartment Downtown',
-        'price': '\$250,000',
-        'location': 'Metropolis, NY',
-        'images': ['https://picsum.photos/seed/2/200/300'],
-        'bedrooms': 2,
-        'bathrooms': 1,
-        'area': '1000',
+        'title': 'Cozy Townhouse',
+        'location': 'Suburban Area',
+        'price': '\$850,000',
+        'image': 'https://placehold.co/250x150/FFD700/333333?text=TH',
+      },
+      {
+        'title': 'Waterfront Condo',
+        'location': 'Miami Beach, FL',
+        'price': '\$1,100,000',
+        'image': 'https://placehold.co/250x150/FFA07A/FFFFFF?text=WC',
+      },
+      {
+        'title': 'Family Home',
+        'location': 'Quiet Neighborhood',
+        'price': '\$720,000',
+        'image': 'https://placehold.co/250x150/20B2AA/FFFFFF?text=FH',
       },
     ];
 
-    bool canScrollLeft =
-        _similarPropertiesScrollController.hasClients && _similarPropertiesScrollController.position.pixels > 0;
-    bool canScrollRight = _similarPropertiesScrollController.hasClients &&
-        _similarPropertiesScrollController.position.pixels <
-            _similarPropertiesScrollController.position.maxScrollExtent;
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 16.0, bottom: 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Similar Properties",
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+            'Similar Properties',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            height: 220,
-            child: Stack(
-              children: [
-                ListView.builder(
-                  controller: _similarPropertiesScrollController,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: similarProperties.length,
-                  itemBuilder: (context, index) {
-                    final property = similarProperties[index];
-                    return _buildSimilarPropertyCard(property);
-                  },
-                ),
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Center(
-                    child: FloatingActionButton(
-                      heroTag: 'similarLeftBtn',
-                      mini: true,
-                      backgroundColor: Colors.white.withOpacity(0.8),
-                      onPressed: canScrollLeft
-                          ? () {
-                              _similarPropertiesScrollController.animateTo(
-                                _similarPropertiesScrollController.position.pixels - 200,
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeOut,
-                              );
-                            }
-                          : null,
-                      child: Icon(
-                        Icons.arrow_back_ios_new,
-                        color: canScrollLeft ? Theme.of(context).primaryColor : Colors.grey,
-                        size: 20,
-                      ),
+          Row(
+            children: [
+              // Scroll Left Button
+              _buildScrollButton(
+                icon: Icons.arrow_back_ios_new,
+                onTap: () {
+                  _similarPropertiesScrollController.animateTo(
+                    _similarPropertiesScrollController.offset - 200,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                },
+              ),
+              Expanded(
+                child: SizedBox(
+                  height: 220, // Height to accommodate the card
+                  child: ScrollConfiguration(
+                    behavior: MyCustomScrollBehavior(),
+                    child: ListView.builder(
+                      controller: _similarPropertiesScrollController,
+                      scrollDirection: Axis.horizontal,
+                      itemCount: similarProperties.length,
+                      itemBuilder: (context, index) {
+                        return _buildSimilarPropertyCard(similarProperties[index]);
+                      },
                     ),
                   ),
                 ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Center(
-                    child: FloatingActionButton(
-                      heroTag: 'similarRightBtn',
-                      mini: true,
-                      backgroundColor: Colors.white.withOpacity(0.8),
-                      onPressed: canScrollRight
-                          ? () {
-                              _similarPropertiesScrollController.animateTo(
-                                _similarPropertiesScrollController.position.pixels + 200,
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeOut,
-                              );
-                            }
-                          : null,
-                      child: Icon(
-                        Icons.arrow_forward_ios,
-                        color: canScrollRight ? Theme.of(context).primaryColor : Colors.grey,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              // Scroll Right Button
+              _buildScrollButton(
+                icon: Icons.arrow_forward_ios,
+                onTap: () {
+                  _similarPropertiesScrollController.animateTo(
+                    _similarPropertiesScrollController.offset + 200,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                },
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // Similar property card
-  Widget _buildSimilarPropertyCard(Map<String, dynamic> property) {
-    return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Viewing similar property: ${property['title']}')),
-        );
-      },
-      child: Container(
-        width: 180,
-        margin: const EdgeInsets.only(right: 16),
-        child: Card(
-          elevation: 3,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 3,
-                child: _buildImage(property['images']?.first),
+  Widget _buildScrollButton({required IconData icon, required VoidCallback onTap}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4.0),
+      decoration: BoxDecoration(
+        color: Colors.lightBlue.withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.lightBlue, size: 16),
+        onPressed: onTap,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final property = widget.property;
+
+    return Scaffold(
+      // AppBar is kept simple without actions, as the top is clipped.
+      appBar: AppBar(
+        title: const Text('Property Details', style: TextStyle(color: Colors.black87)), 
+        backgroundColor: Colors.white,
+        elevation: 1, 
+      ),
+      
+      // Main Content is now a Stack to allow for fixed positioning of the button.
+      body: Stack(
+        children: [
+          // 1. Scrollable Content Layer (The entire page)
+          SingleChildScrollView(
+            child: Padding(
+              // The bottom padding ensures content doesn't get cut off.
+              padding: const EdgeInsets.only(bottom: 100), 
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // >>> REMOVED: Image Carousel <<<
+                  
+                  // Main Property Overview (Title, Location, Price, Key Stats)
+                  // NOTE: This function now contains a large top padding (70.0) 
+                  // to avoid overlap with the fixed Contact button.
+                  _buildPropertyOverview(property),
+                  
+                  // Description
+                  _buildDescriptionSection(property),
+
+                  // Key Features Grid
+                  _buildPropertyFeaturesSection(property, false), // isLargeScreen set to false for simplicity
+                  
+                  // Nearby Amenities
+                  _buildAmenitiesSection(property),
+
+                  // Agent Contact Cards
+                  _buildContactAgentsSection(false), // isLargeScreen set to false for simplicity
+
+                  // Similar Properties Carousel
+                  _buildSimilarPropertiesSection(),
+                ],
               ),
-              Expanded(
-                flex: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(6.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        property['price'] ?? 'Price N/A',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
-                            ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        property['title'] ?? 'Property',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, size: 12, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              property['location'] ?? 'Location N/A',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+
+          // 2. >>> Fixed Button Overlay Layer (FORCED TOP VISIBILITY) <<<
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 10, // Positioned right under the AppBar
+            child: Center(
+              child: _buildExtremeCentralContactButton(context),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// Custom scroll behavior
+// Custom scroll behavior to enable mouse/trackpad drag on the PageView/ListView
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
@@ -1237,10 +813,4 @@ class MyCustomScrollBehavior extends MaterialScrollBehavior {
         PointerDeviceKind.mouse,
         PointerDeviceKind.trackpad,
       };
-}
-
-extension GradientBox on Gradient {
-  BoxDecoration toBoxDecoration({BorderRadius? radius}) {
-    return BoxDecoration(gradient: this, borderRadius: radius);
-  }
 }
