@@ -20,6 +20,13 @@ class AuthService {
   User? getCurrentUser() {
     return _auth.currentUser;
   }
+  
+  // ADDED METHOD: Required by dashboard_screen.dart for data fetching
+  /// Returns the UID of the currently logged-in user.
+  /// Returns null if no user is signed in.
+  String? getCurrentUserUid() {
+    return _auth.currentUser?.uid;
+  }
 
   /// Signs in a user with their email and password.
   /// Throws a [FirebaseAuthException] if authentication fails.

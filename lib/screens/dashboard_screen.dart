@@ -3,9 +3,14 @@
 import 'package:flutter/material.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
+// Import the actual Firestore service
+import 'package:sora_app/services/firestore_service.dart'; 
 
 class DashboardScreen extends StatefulWidget {
   final AuthService authService;
+  
+  // NOTE: If you are using dependency injection, you should also pass FirestoreService here.
+  // For simplicity, we initialize it in initState.
 
   const DashboardScreen({Key? key, required this.authService}) : super(key: key);
 
@@ -15,12 +20,64 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late CommonWidgets commonWidgets;
+  
+  // State variables for dynamic data
+  int _listingCount = 0;
+  int _favoritesCount = 0;
+  bool _isLoading = true; // Tracks the data fetching state
+
+  // Initialize the Firestore service
+  final FirestoreService _firestoreService = FirestoreService(); 
 
   @override
   void initState() {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
+    _fetchDashboardData();
   }
+  
+  // Data Fetching Method
+  Future<void> _fetchDashboardData() async {
+    // 1. Get the current user's ID
+    // NOTE: Ensure your AuthService has a working getCurrentUserUid() method.
+    final String? userId = widget.authService.getCurrentUserUid();
+
+    if (userId == null) {
+      print('User ID is null. Cannot fetch dashboard data.');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      // 2. Fetch data concurrently using Future.wait
+      final Future<int> listingsFuture = _firestoreService.getMyListingsCount(userId);
+      final Future<int> favoritesFuture = _firestoreService.getFavoritesCount(userId);
+
+      final List<int> results = await Future.wait([listingsFuture, favoritesFuture]);
+
+      // 3. Update state with fetched data
+      if (mounted) {
+        setState(() {
+          _listingCount = results[0];
+          _favoritesCount = results[1];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching dashboard data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Stop loading even if there's an error
+        });
+        // Optionally show a user-friendly error message
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +137,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 children: [
                   // Quick Stats Cards
-                  GridView.count(
+                  // Show loading indicator while data is being fetched
+                  _isLoading 
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: CircularProgressIndicator(color: Color(0xFF0A66C2)),
+                      ),
+                    )
+                  : GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: isLargeScreen ? 4 : (isMediumScreen ? 2 : 1),
@@ -90,14 +155,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       _buildStatCard(
                         'My Listings',
-                        '5',
+                        // AUTOMATED VALUE
+                        _listingCount.toString(), 
                         Icons.add_home_work,
                         Color(0xFF0A66C2),
                         () => Navigator.pushNamed(context, '/my_listings'),
                       ),
                       _buildStatCard(
                         'Favorites',
-                        '12',
+                        // AUTOMATED VALUE
+                        _favoritesCount.toString(), 
                         Icons.favorite,
                         Colors.red,
                         () => Navigator.pushNamed(context, '/my_favorites'),

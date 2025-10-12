@@ -334,4 +334,46 @@ class FirestoreService {
       return [];
     }
   }
+  
+  // =========================================================================
+  // 6. DASHBOARD STATS
+  // =========================================================================
+
+  /// Gets the count of properties listed by the current user. (For 'My Listings' card)
+  Future<int> getMyListingsCount(String userId) async {
+    if (userId.isEmpty) return 0;
+
+    try {
+      final querySnapshot = await _firestore
+          .collection('properties')
+          .where('userId', isEqualTo: userId)
+          .count()
+          .get();
+      // FIX: Use ?? 0 to convert nullable int? to non-nullable int
+      return querySnapshot.count ?? 0; 
+    } catch (e) {
+      print('Error fetching my listings count: $e');
+      return 0;
+    }
+  }
+
+  /// Gets the count of favorite properties for the current user. (For 'Favorites' card)
+  Future<int> getFavoritesCount(String userId) async {
+    if (userId.isEmpty) return 0;
+
+    try {
+      // Assumes 'users/{userId}/favorites' subcollection structure based on existing favorite methods.
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('favorites')
+          .count()
+          .get();
+      // FIX: Use ?? 0 to convert nullable int? to non-nullable int
+      return querySnapshot.count ?? 0; 
+    } catch (e) {
+      print('Error fetching favorites count: $e');
+      return 0;
+    }
+  }
 }
