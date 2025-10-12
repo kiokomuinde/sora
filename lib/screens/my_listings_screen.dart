@@ -15,6 +15,7 @@ import 'package:sora_app/services/mpesa_service.dart';
 class MyListingsScreen extends StatefulWidget {
   final AuthService authService;
 
+  // FIX: Changed 'required this: authService' to 'required this.authService'
   const MyListingsScreen({Key? key, required this.authService}) : super(key: key);
 
   @override
@@ -139,6 +140,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       return;
     }
 
+    // NOTE: In a production app, the actual payment gateway (M-Pesa) logic would go here
+    // before updating the status to 'Active'. For now, we simulate the activation.
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -148,7 +152,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(width: 20),
-              Text("Activating properties..."),
+              Text("Processing activation..."),
             ],
           ),
         );
@@ -156,6 +160,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     );
 
     int successfulActivations = 0;
+    // For this simulation, we'll set the status to 'Active'
     for (String listingId in _selectedListingIds) {
       bool success = await _firestoreService.updatePropertyStatus(listingId, 'Active');
       if (success) {
@@ -204,15 +209,21 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // START OF UPDATED ADVERT-LIKE HEADER SECTION (Blue, Gold, Purple Theme)
             Container(
               width: double.infinity,
               padding: EdgeInsets.symmetric(
                 vertical: isLargeScreen ? 80 : (isMediumScreen ? 60 : 40),
                 horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
               ),
+              // Gradient: Blue, Purple, Gold
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF0A66C2), Color(0xFF1E90FF)],
+                  colors: [
+                    Color(0xFF0A66C2), // Deep Blue
+                    Color(0xFF8A2BE2), // Blue Violet (Purple)
+                    Color(0xFFFFD700), // Gold
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -221,33 +232,83 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'My Listings',
+                    'LIST YOUR PROPERTY FOR FREE! 🤩', // Title updated: "LIST YOUR PROPERTY..."
                     style: TextStyle(
                       fontSize: isLargeScreen ? 48 : (isMediumScreen ? 38 : 28),
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
                       color: Colors.white,
+                      shadows: const [
+                        Shadow(
+                          offset: Offset(2.0, 2.0),
+                          blurRadius: 3.0,
+                          color: Color.fromARGB(150, 0, 0, 0),
+                        ),
+                      ],
                     ),
                   ),
                   SizedBox(height: isLargeScreen ? 20 : 10),
                   Text(
-                    'Manage your property listings and track their performance.',
+                    'Homes, Land, Commercial—All Property Types, Zero Listing Cost. Publish Your Ad Instantly!', // Catchy tagline
                     style: TextStyle(
                       fontSize: isLargeScreen ? 18 : (isMediumScreen ? 16 : 14),
-                      color: Colors.white70,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 24),
-                  commonWidgets.buildCallToActionButton(
-                    text: 'Add a Property',
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/add_property');
-                    },
-                    icon: Icons.add_home_work,
-                    color: Colors.green,
+                  // CTA Button updated with a custom Dark Shiny Gold gradient
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          spreadRadius: 2,
+                          blurRadius: 5,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                      // Custom dark shiny gold gradient
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFFB8860B), // Darker Gold (Goldenrod)
+                          Color(0xFFFFDF00), // Lighter Gold (Bright Gold)
+                          Color(0xFFDAA520), // Mid Gold (Golden Rod)
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    // FIX: Wrap in DefaultTextStyle to force black text/icon color,
+                    // and set button color to transparent to see the gradient.
+                    child: DefaultTextStyle(
+                      style: const TextStyle(color: Colors.black),
+                      child: commonWidgets.buildCallToActionButton(
+                        text: 'List Your Property NOW (It\'s FREE!)',
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/add_property');
+                        },
+                        icon: Icons.star,
+                        // Set the button's background color to transparent
+                        color: Colors.transparent, 
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // My Current Listings title
+                   Text(
+                    'My Current Listings',
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 24 : (isMediumScreen ? 20 : 18),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'Inter',
+                    ),
                   ),
                 ],
               ),
             ),
+            // END OF UPDATED ADVERT-LIKE HEADER SECTION
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
@@ -278,27 +339,49 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
                   final allListings = snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
-                    // FIX: Removed the hardcoded 'Pending' status
                     return {'data': data, 'id': doc.id};
                   }).toList();
 
+                  // START - UPDATED FILTERING LOGIC
                   final filteredListings = allListings.where((listing) {
                     final listingData = listing['data'] as Map<String, dynamic>;
-                    // Use the status directly from the Firestore data
-                    return _selectedStatusFilter == 'All' || listingData['status'] == _selectedStatusFilter;
+                    final status = listingData['status'] as String? ?? 'Pending';
+                    // Safely get isApproved, defaulting to false if null/missing
+                    final isApproved = listingData['isApproved'] as bool? ?? false;
+
+                    if (_selectedStatusFilter == 'All') {
+                      return true;
+                    } else if (_selectedStatusFilter == 'Active') {
+                      return status == 'Active';
+                    } else if (_selectedStatusFilter == 'Inactive') {
+                      // Show inactive only if it was approved at some point
+                      return status == 'Inactive' && isApproved;
+                    } else if (_selectedStatusFilter == 'Ready for Activation') {
+                      // Approved by admin, waiting for user payment (status is still Pending)
+                      return status == 'Pending' && isApproved;
+                    } else if (_selectedStatusFilter == 'Pending Review') {
+                      // Created by user, waiting for admin approval
+                      return status == 'Pending' && !isApproved;
+                    }
+                    return false;
                   }).toList();
+                  // END - UPDATED FILTERING LOGIC
 
                   final listingsCount = filteredListings.length;
 
-                  final hasPendingOrInactiveSelected = allListings.any((listing) {
+                  // START - UPDATED ACTIVATION BUTTON VISIBILITY LOGIC
+                  // The button should ONLY appear if a listing is selected AND it is APPROVED but NOT YET Active
+                  final shouldShowActivateButton = allListings.any((listing) {
                     final listingId = listing['id'];
                     final listingData = listing['data'] as Map<String, dynamic>;
-                    final status = listingData['status'];
-                    return _selectedListingIds.contains(listingId) && (status == 'Pending' || status == 'Inactive');
-                  });
+                    final status = listingData['status'] as String? ?? 'Pending';
+                    final isApproved = listingData['isApproved'] as bool? ?? false;
 
-                  // The button should only appear if a pending or inactive property is selected.
-                  final shouldShowActivateButton = hasPendingOrInactiveSelected;
+                    return _selectedListingIds.contains(listingId) &&
+                        isApproved && // MUST be approved
+                        status != 'Active'; // MUST NOT be active
+                  });
+                  // END - UPDATED ACTIVATION BUTTON VISIBILITY LOGIC
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,8 +451,15 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     );
   }
 
+  // START - UPDATED STATUS FILTER TABS
   Widget _buildStatusFilterTabs() {
-    final statusOptions = ['All', 'Pending', 'Active', 'Inactive'];
+    final statusOptions = [
+      'All',
+      'Active',
+      'Inactive',
+      'Ready for Activation',
+      'Pending Review'
+    ];
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: SingleChildScrollView(
@@ -405,6 +495,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       ),
     );
   }
+  // END - UPDATED STATUS FILTER TABS
 
   // A new method to show the pricing plan dialog
   void _showPricingDialog(Set<String> listingIds) {
@@ -576,19 +667,27 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
   // Added a parameter to indicate selection status
   Widget _buildListingCard(Map<String, dynamic> listing, String listingId, bool isSelected) {
+    // START - UPDATED STATUS LOGIC FOR CARD DISPLAY
+    final status = listing['status'] as String? ?? 'Pending';
+    final isApproved = listing['isApproved'] as bool? ?? false;
+
     Color statusColor;
-    switch (listing['status']) {
-      case 'Active':
-        statusColor = Colors.green[600]!;
-        break;
-      case 'Inactive':
-        statusColor = Colors.red[600]!;
-        break;
-      case 'Pending':
-      default:
-        statusColor = Colors.orange[600]!;
-        break;
+    String displayStatus;
+
+    if (status == 'Active') {
+      statusColor = Colors.green[600]!;
+      displayStatus = 'Active';
+    } else if (status == 'Inactive') {
+      statusColor = Colors.red[600]!;
+      displayStatus = 'Inactive';
+    } else if (status == 'Pending' && isApproved) {
+      statusColor = Colors.blue[600]!;
+      displayStatus = 'Ready to Activate'; // Approved, waiting for payment
+    } else { // status == 'Pending' && !isApproved
+      statusColor = Colors.orange[600]!;
+      displayStatus = 'Pending Review'; // Waiting for admin
     }
+    // END - UPDATED STATUS LOGIC FOR CARD DISPLAY
 
     String imageUrl = listing['coverImageUrl'] ?? '';
 
@@ -596,10 +695,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     final residentialDetails = listing['residentialDetails'] as Map<String, dynamic>?;
 
     final isActive = listing['status'] == 'Active';
+    // Only allow selection if the status is NOT Active
+    final canBeSelected = !isActive;
 
     return GestureDetector(
       onTap: () {
-        if (!isActive) {
+        if (canBeSelected) {
           _toggleSelection(listingId);
         }
       },
@@ -661,7 +762,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              listing['status'] ?? 'Pending',
+                              displayStatus, // Use the new differentiated status
                               style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -730,8 +831,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                         ],
                       ),
                     ),
-                    // Checkbox for selection, only visible if not active
-                    if (!isActive)
+                    // Checkbox for selection, only visible if canBeSelected (not Active)
+                    if (canBeSelected)
                       Positioned(
                         bottom: 8,
                         left: 8,
