@@ -34,7 +34,7 @@ import 'screens/events_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'screens/cookie_policy_screen.dart';
 import 'screens/add_property_screen.dart';
-import 'screens/view_property_screen.dart';
+import 'screens/view_property_screen.dart'; // Ensure this is imported
 import 'screens/my_favorites_screen.dart';
 import 'screens/my_listings_screen.dart';
 import 'screens/profile_settings_screen.dart';
@@ -129,11 +129,27 @@ class MyApp extends StatelessWidget {
             ));
             
           case '/view_property':
+            // 1. Internal Navigation (Full data is passed via arguments)
             if (settings.arguments is Map<String, dynamic>) {
                 final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
-                return MaterialPageRoute(builder: (_) => ViewPropertyScreen(authService: authService, propertyData: args));
+                return MaterialPageRoute(builder: (_) => ViewPropertyScreen(
+                  authService: authService, 
+                  propertyData: args,
+                  propertyId: args['id'] as String?, // Pass ID if available in data
+                ));
+            } 
+            // 2. Deep Link Navigation (Only ID is available in the URL path parameter)
+            else if (parameter != null && parameter.isNotEmpty) {
+                // FIX: Pass the ID from the URL path, the screen will fetch the data
+                return MaterialPageRoute(builder: (_) => ViewPropertyScreen(
+                  authService: authService,
+                  propertyId: parameter, 
+                ));
             }
-            return MaterialPageRoute(builder: (_) => PropertyListingScreen(authService: authService));
+            // 3. Fallback: If no args or ID, go to the generic listing screen
+            else {
+                return MaterialPageRoute(builder: (_) => PropertyListingScreen(authService: authService));
+            }
             
           case '/add_property':
             return MaterialPageRoute(builder: (_) => AddPropertyScreen(authService: authService));

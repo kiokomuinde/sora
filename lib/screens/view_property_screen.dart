@@ -11,12 +11,16 @@ import 'package:sora_app/services/firestore_service.dart';
 import 'package:share_plus/share_plus.dart'; 
 
 class ViewPropertyScreen extends StatefulWidget {
-  final Map<String, dynamic> propertyData;
+  // Made propertyData nullable for deep-linking. It will be passed internally.
+  final Map<String, dynamic>? propertyData; 
+  // NEW: propertyId is passed when deep-linking from the URL parameter.
+  final String? propertyId;
   final AuthService authService;
 
   const ViewPropertyScreen({
     Key? key,
-    required this.propertyData,
+    this.propertyData, // No longer required as it might be fetched via propertyId
+    this.propertyId, // New parameter for deep linking
     required this.authService,
   }) : super(key: key);
 
@@ -30,8 +34,12 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   int _currentPage = 0;
   late final FirestoreService _firestoreService;
 
+  // NEW: State to hold property data, either passed in or fetched.
+  Map<String, dynamic>? _fetchedPropertyData;
+  bool _isLoading = true; // NEW: Loading state for data fetch
+
   bool _isFavorite = false; 
-  String? _userId; // Added to store the logged-in user's ID
+  String? _userId;
 
   // A helper method to format the price
   String _formatPrice(dynamic price) {
@@ -56,9 +64,9 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   // UPDATED: Custom SnackBar Widget with required isFavoriteAction 
   void _showCustomSnackBar(String message, {required bool isFavoriteAction}) {
     // Define colors and duration
-    const Color lightBlue = Color(0xFFE3F2FD); // Light blue initial background
-    const Color darkGreen = Color(0xFF1B5E20); // Deep/Dark Green blinking color
-    const Duration shortDuration = Duration(seconds: 2); // SnackBar duration
+    const Color lightBlue = Color(0xFFE3F2FD); 
+    const Color darkGreen = Color(0xFF1B5E20); 
+    const Duration shortDuration = Duration(seconds: 2); 
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -69,10 +77,10 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
           blinkColor: darkGreen,
           initialTextColor: Colors.blue[900]!,
           blinkTextColor: Colors.white,
-          isFavoriteAction: isFavoriteAction, // Passed to control blinking
+          isFavoriteAction: isFavoriteAction, 
         ),
         duration: shortDuration,
-        backgroundColor: Colors.transparent, // Make SnackBar background transparent
+        backgroundColor: Colors.transparent, 
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         padding: EdgeInsets.zero, 
@@ -81,10 +89,41 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // NEW: Method to check initial favorite status from Firestore
+  // NEW: Method to fetch property data if only the ID is available
+  Future<void> _fetchPropertyData() async {
+    // 1. Check if data was passed internally (from another screen), if so, use it.
+    if (widget.propertyData != null && widget.propertyData!.isNotEmpty) {
+      _fetchedPropertyData = widget.propertyData;
+      _isLoading = false;
+      return;
+    }
+    
+    // 2. If only the ID is available (deep link)
+    if (widget.propertyId != null && widget.propertyId!.isNotEmpty) {
+      setState(() { _isLoading = true; });
+      final data = await _firestoreService.getPropertyById(widget.propertyId!);
+      if (mounted) {
+        setState(() {
+          _fetchedPropertyData = data;
+          _isLoading = false;
+        });
+      }
+    } else {
+      // 3. No data or ID provided, show error/empty state
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _fetchedPropertyData = null; 
+        });
+      }
+    }
+  }
+
+  // UPDATED: Method to check initial favorite status from Firestore
   void _checkInitialFavoriteStatus() async {
     final user = widget.authService.getCurrentUser();
-    final propertyId = widget.propertyData['id'];
+    // Use the ID from the fetched data
+    final propertyId = _fetchedPropertyData?['id']; 
 
     if (user == null || propertyId == null) {
       return;
@@ -104,12 +143,12 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   void _toggleFavorite() async {
     final user = widget.authService.getCurrentUser();
     if (user == null) {
-      // User is not logged in, prompt for login
       commonWidgets.showLoginSignupDialog();
       return;
     }
-
-    final propertyId = widget.propertyData['id'];
+    
+    // Use the ID from the fetched data
+    final propertyId = _fetchedPropertyData?['id'];
     if (propertyId == null) {
       return; 
     }
@@ -119,14 +158,11 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     
     try {
       if (newFavoriteStatus) {
-        // Add to favorites
         await _firestoreService.addFavorite(_userId!, propertyId);
       } else {
-        // Remove from favorites
         await _firestoreService.removeFavorite(_userId!, propertyId);
       }
 
-      // After successful operation, update the state and show the snackbar
       setState(() {
         _isFavorite = newFavoriteStatus;
       });
@@ -137,16 +173,18 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
           
       _showCustomSnackBar(message, isFavoriteAction: newFavoriteStatus); 
     } catch (e) {
-      // Handle potential errors (e.g., network, permissions)
-      // Revert state if the operation failed (or just don't update the state yet)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update favorite status: $e')),
       );
     }
   }
 
-  // Updated function to fetch similar properties from Firestore
-  Future<List<Map<String, dynamic>>> _fetchSimilarProperties(Map<String, dynamic> currentProperty) async {
+  // UPDATED: Function to fetch similar properties from Firestore
+  Future<List<Map<String, dynamic>>> _fetchSimilarProperties() async {
+    // Use the data from the state
+    final currentProperty = _fetchedPropertyData;
+    if (currentProperty == null) return [];
+    
     final currentListingType = currentProperty['listingType'];
     final currentPropertyId = currentProperty['id'];
 
@@ -201,19 +239,24 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
   
-  // New method to handle the login check and show dialog
+  // UPDATED: Method to handle the login check and show dialog
   void _handleContactTap() {
+    // Check if data is available
+    final contactInfo = _fetchedPropertyData?['contactInfo'] ?? {};
+    if (contactInfo.isEmpty) return;
+    
     if (widget.authService.getCurrentUser() != null) {
-      _showContactDialog(widget.propertyData['contactInfo'] ?? {});
+      _showContactDialog(contactInfo);
     } else {
       commonWidgets.showLoginSignupDialog();
     }
   }
 
-  // Method for sharing property
+  // UPDATED: Method for sharing property
   void _shareProperty() {
-    final propertyId = widget.propertyData['id']; 
-    final propertyTitle = widget.propertyData['title'] ?? 'A Property from Sora Properties';
+    // Use the ID from the fetched data
+    final propertyId = _fetchedPropertyData?['id']; 
+    final propertyTitle = _fetchedPropertyData?['title'] ?? 'A Property from Sora Properties';
     
     const String baseDomain = 'https://soraproperties.co.ke';
 
@@ -237,6 +280,14 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
     _firestoreService = FirestoreService();
+    
+    // NEW: Handle initial data load logic
+    _fetchPropertyData().then((_) {
+      if (_fetchedPropertyData != null) {
+        _checkInitialFavoriteStatus();
+      }
+    });
+    
     _pageController.addListener(() {
       int next = _pageController.page?.round() ?? 0;
       if (_currentPage != next) {
@@ -245,9 +296,6 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
         });
       }
     });
-
-    // NEW: Check initial favorite status when the screen loads
-    _checkInitialFavoriteStatus();
   }
 
   @override
@@ -258,11 +306,39 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    final property = _fetchedPropertyData;
+    if (property == null) {
+      return Scaffold(
+        appBar: commonWidgets.buildAppBar(),
+        endDrawer: commonWidgets.buildDrawer(),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 60, color: Colors.red),
+              const SizedBox(height: 20),
+              const Text(
+                'Property Not Found or Invalid Link.',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              if (widget.propertyId != null) 
+                Text('ID: ${widget.propertyId}', style: const TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth >= 1000;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
 
-    final property = widget.propertyData;
     final propertyType = property['propertyType'];
     final Map<String, dynamic> details = propertyType == 'Residential'
         ? property['residentialDetails'] ?? {}
@@ -360,8 +436,8 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                     child: GestureDetector(
                       onTap: _handleContactTap,
                       child: widget.authService.getCurrentUser() != null
-                          ? _buildContactInfo(widget.propertyData['contactInfo'] ?? {})
-                          : _buildBlurredContactInfo(widget.propertyData['contactInfo'] ?? {}),
+                          ? _buildContactInfo(property['contactInfo'] ?? {})
+                          : _buildBlurredContactInfo(property['contactInfo'] ?? {}),
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -557,7 +633,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   }
 
   Widget _buildPropertyHighlights(Map<String, dynamic> property, Map<String, dynamic> details) {
-    final contactInfo = widget.propertyData['contactInfo'] ?? {};
+    final contactInfo = property['contactInfo'] ?? {};
     final propertyType = property['propertyType'];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -745,7 +821,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
 
   Widget _buildSimilarPropertiesList() {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _fetchSimilarProperties(widget.propertyData),
+      future: _fetchSimilarProperties(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -901,7 +977,7 @@ class _BlinkingSnackBarContent extends StatefulWidget {
   final Color blinkColor;
   final Color initialTextColor;
   final Color blinkTextColor;
-  final bool isFavoriteAction; // NEW: Flag to control blinking
+  final bool isFavoriteAction; 
 
   const _BlinkingSnackBarContent({
     required this.message,
@@ -909,7 +985,7 @@ class _BlinkingSnackBarContent extends StatefulWidget {
     required this.blinkColor,
     required this.initialTextColor,
     required this.blinkTextColor,
-    required this.isFavoriteAction, // NEW
+    required this.isFavoriteAction, 
   });
 
   @override
