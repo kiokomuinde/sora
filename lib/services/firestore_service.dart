@@ -71,7 +71,7 @@ class FirestoreService {
   Stream<QuerySnapshot> getPropertiesStream() {
     return _firestore
         .collection('properties')
-        .where('status', isEqualTo: 'Approved')
+        .where('status', isEqualTo: 'Active') // FIX: Changed to 'Active'
         .orderBy('timestamp', descending: true)
         .snapshots(); 
   }
@@ -94,10 +94,10 @@ class FirestoreService {
      try {
       final QuerySnapshot snapshot = await _firestore
           .collection('properties')
-          .where('status', isEqualTo: 'Approved')
+          .where('status', isEqualTo: 'Active') // CRITICAL FIX: Changed to 'Active'
           .where('listingType', isEqualTo: listingType)
           .orderBy('timestamp', descending: true)
-          .limit(10) 
+          .limit(20) 
           .get();
       
       return snapshot.docs.map((doc) {

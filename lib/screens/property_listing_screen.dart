@@ -7,6 +7,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sora_app/widgets/property_card.dart';
 import 'package:sora_app/services/firestore_service.dart';
 
+// Assuming StringCasingExtension is defined in common_widgets.dart or another imported file.
+
 class PropertyListingScreen extends StatefulWidget {
   final AuthService authService;
   final String listingType;
@@ -163,6 +165,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     final bool isLargeScreen = screenWidth >= 1000;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: commonWidgets.buildAppBar(
         currentListingTypeFilter: _currentListingTypeFilter,
       ),
@@ -171,8 +174,8 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
-            _buildFilterAndSortSection(),
+            _buildHeader(), 
+            _buildFilterAndSortSection(isLargeScreen),
             FutureBuilder<List<Map<String, dynamic>>>(
               future: _fetchProperties(),
               builder: (context, snapshot) {
@@ -198,8 +201,21 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A66C2).withOpacity(0.8), 
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF0A66C2).withOpacity(0.8), 
+            const Color(0xFF5B21B6).withOpacity(0.8), 
+          ],
+          stops: const [0.8, 1.0], 
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -208,17 +224,19 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
                 ? '${widget.listingType.toCapitalized()} Properties'
                 : 'All Properties',
             style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0A66C2),
+              fontSize: 48, 
+              fontWeight: FontWeight.w800, 
+              color: Colors.white, 
+              letterSpacing: 1.5,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Explore our exclusive collection of properties tailored to your needs.',
+          const SizedBox(height: 16),
+          Text(
+            'Explore our exclusive collection of properties tailored to your needs. Your dream home awaits.',
             style: TextStyle(
-              fontSize: 16,
-              color: Colors.black54,
+              fontSize: 20,
+              color: Colors.white.withOpacity(0.95), 
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],
@@ -226,67 +244,156 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     );
   }
 
-  Widget _buildFilterAndSortSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        alignment: WrapAlignment.center,
-        children: [
-          SizedBox(
-            width: 250,
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by title or town...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+  Widget _buildFilterAndSortSection(bool isLargeScreen) {
+    Widget content = isLargeScreen
+        ? Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // INCREASED WIDTH FOR LARGE SCREEN (from 350 to 450)
+              SizedBox(
+                width: 450, 
+                child: _buildSearchField(),
               ),
-            ),
-          ),
-          DropdownButton<String>(
-            value: _currentSortOption,
-            icon: const Icon(Icons.sort),
-            elevation: 16,
-            style: const TextStyle(color: Colors.black),
-            onChanged: (String? newValue) {
-              setState(() {
-                _currentSortOption = newValue!;
-              });
-            },
-            items: <String>[
-              'price_low_to_high',
-              'price_high_to_low',
-              'bedrooms_asc',
-              'bedrooms_desc'
-            ].map<DropdownMenuItem<String>>((String value) {
-              String displayText;
-              switch (value) {
-                case 'price_low_to_high':
-                  displayText = 'Price: Low to High';
-                  break;
-                case 'price_high_to_low':
-                  displayText = 'Price: High to Low';
-                  break;
-                case 'bedrooms_asc':
-                  displayText = 'Bedrooms: Ascending';
-                  break;
-                case 'bedrooms_desc':
-                  displayText = 'Bedrooms: Descending';
-                  break;
-                default:
-                  displayText = '';
-              }
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(displayText),
-              );
-            }).toList(),
+              _buildSortDropdown(),
+            ],
+          )
+        : Wrap(
+            spacing: 15,
+            runSpacing: 15,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.center,
+            children: [
+              // INCREASED WIDTH FOR SMALL/MEDIUM SCREEN (from 280 to 320)
+              SizedBox(
+                width: 320, 
+                child: _buildSearchField(),
+              ),
+              _buildSortDropdown(),
+            ],
+          );
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: isLargeScreen ? 40 : 20,
+        vertical: 25,
+      ),
+      child: content,
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0A66C2), Color(0xFF5B21B6)], 
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0A66C2).withOpacity(0.3),
+            blurRadius: 10.0,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      padding: const EdgeInsets.all(2),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Search by title or town...',
+          hintStyle: const TextStyle(color: Colors.black45, fontSize: 16),
+          prefixIcon: const Icon(Icons.search, color: Color(0xFF0A66C2), size: 24),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none, 
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+          fillColor: Colors.white,
+          filled: true,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortDropdown() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0A66C2), Color(0xFF5B21B6)], 
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0A66C2).withOpacity(0.3),
+            blurRadius: 10.0,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(2), 
+      child: Container(
+        height: 56, 
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Center(
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _currentSortOption,
+              icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF0A66C2)),
+              elevation: 0, 
+              style: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w500),
+              dropdownColor: Colors.white,
+              onChanged: (String? newValue) {
+                setState(() {
+                  _currentSortOption = newValue!;
+                });
+              },
+              items: <String>[
+                'price_low_to_high',
+                'price_high_to_low',
+                'bedrooms_asc',
+                'bedrooms_desc'
+              ].map<DropdownMenuItem<String>>((String value) {
+                String displayText;
+                switch (value) {
+                  case 'price_low_to_high':
+                    displayText = 'Price: Low to High';
+                    break;
+                  case 'price_high_to_low':
+                    displayText = 'Price: High to Low';
+                    break;
+                  case 'bedrooms_asc':
+                    displayText = 'Bedrooms: Ascending';
+                    break;
+                  case 'bedrooms_desc':
+                    displayText = 'Bedrooms: Descending';
+                    break;
+                  default:
+                    displayText = '';
+                }
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(displayText),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -304,15 +411,15 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     }
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 100 : 20, vertical: 20),
+      padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 40 : 20, vertical: 20),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 0.75, // Adjusted to make the cards slightly shorter
+          crossAxisSpacing: 15,
+          mainAxisSpacing: 15,
+          childAspectRatio: 0.75,
         ),
         itemCount: properties.length,
         itemBuilder: (context, index) {

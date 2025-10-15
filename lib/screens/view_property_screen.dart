@@ -32,6 +32,8 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   late CommonWidgets commonWidgets;
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  // NEW: Scroll Controller for Similar Properties carousel
+  final ScrollController _similarPropertiesScrollController = ScrollController();
   late final FirestoreService _firestoreService;
 
   // NEW: State to hold property data, either passed in or fetched.
@@ -40,6 +42,36 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
 
   bool _isFavorite = false; 
   String? _userId;
+
+  // Custom Gradient Definition for Price Text (Blue-to-Purple)
+  final Gradient _priceGradient = const LinearGradient(
+    colors: [Color(0xFF0A66C2), Color(0xFF673AB7)], // Blue to Purple
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // NEW: Light Blue color for location icon and other UI elements
+  static const Color _lightBlueColor = Color(0xFF4FC3F7); 
+  
+  // =========================================================================
+  // LISTING TYPE HELPER
+  // =========================================================================
+
+  /// Maps the database listing type to a user-friendly display tag.
+  String _getListingTag(String? listingType) {
+    if (listingType == null || listingType.isEmpty) return 'N/A';
+    if (listingType == 'Staycation') return 'Airbnb';
+    if (listingType == 'For Sale') return 'Buy';
+    // For 'For Rent' or 'For Lease', strip the 'For ' prefix.
+    if (listingType.startsWith('For ')) {
+      return listingType.substring(4); 
+    }
+    return listingType;
+  }
+  
+  // =========================================================================
+  // UTILITY METHODS
+  // =========================================================================
 
   // A helper method to format the price
   String _formatPrice(dynamic price) {
@@ -61,11 +93,11 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     return 'KSH ${price.toString()}';
   }
 
-  // UPDATED: Custom SnackBar Widget with required isFavoriteAction 
+  // Custom SnackBar Widget with required isFavoriteAction 
   void _showCustomSnackBar(String message, {required bool isFavoriteAction}) {
     // Define colors and duration
     const Color lightBlue = Color(0xFFE3F2FD); 
-    const Color darkGreen = Color(0xFF1B5E20); 
+    const Color deepPurple = Color(0xFF673AB7); 
     const Duration shortDuration = Duration(seconds: 2); 
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -74,7 +106,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
         content: _BlinkingSnackBarContent(
           message: message,
           initialColor: lightBlue, 
-          blinkColor: darkGreen,
+          blinkColor: deepPurple, 
           initialTextColor: Colors.blue[900]!,
           blinkTextColor: Colors.white,
           isFavoriteAction: isFavoriteAction, 
@@ -89,7 +121,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  // NEW: Method to fetch property data if only the ID is available
+  // Method to fetch property data if only the ID is available
   Future<void> _fetchPropertyData() async {
     // 1. Check if data was passed internally (from another screen), if so, use it.
     if (widget.propertyData != null && widget.propertyData!.isNotEmpty) {
@@ -119,7 +151,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     }
   }
 
-  // UPDATED: Method to check initial favorite status from Firestore
+  // Method to check initial favorite status from Firestore
   void _checkInitialFavoriteStatus() async {
     final user = widget.authService.getCurrentUser();
     // Use the ID from the fetched data
@@ -139,7 +171,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     }
   }
 
-  // UPDATED: Logic to toggle favorite status and interact with Firestore
+  // Logic to toggle favorite status and interact with Firestore
   void _toggleFavorite() async {
     final user = widget.authService.getCurrentUser();
     if (user == null) {
@@ -179,29 +211,64 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     }
   }
 
-  // UPDATED: Function to fetch similar properties from Firestore
+  // Function to fetch similar properties from Firestore
   Future<List<Map<String, dynamic>>> _fetchSimilarProperties() async {
     // Use the data from the state
     final currentProperty = _fetchedPropertyData;
     if (currentProperty == null) return [];
     
-    final currentListingType = currentProperty['listingType'];
-    final currentPropertyId = currentProperty['id'];
+    // Ensure explicit casting and check for null/empty string for safety
+    final String? currentListingType = currentProperty['listingType'] as String?;
+    final String? currentPropertyId = currentProperty['id'] as String?;
 
-    if (currentListingType == null) {
+    if (currentListingType == null || currentListingType.isEmpty) {
       return [];
+    }
+    
+    if (currentPropertyId == null || currentPropertyId.isEmpty) {
+      return []; 
     }
 
     final allProperties = await _firestoreService.getPropertiesByListingType(currentListingType);
     
+    // Filter out the currently viewed property using its ID
     final similarProperties = allProperties.where((property) {
-      return property['id'] != currentPropertyId;
+      final fetchedPropertyId = property['id'] as String?;
+      
+      // Filter: Exclude the current property (by matching ID) and any property with a missing ID.
+      return fetchedPropertyId != null && fetchedPropertyId != currentPropertyId;
     }).toList();
     
     return similarProperties;
   }
+  
+  // Logic to scroll the Similar Properties List
+  void _scrollSimilarProperties(bool isForward) {
+    // Card width (300) + Container margin (20) = 320.0
+    const double cardStep = 320.0; 
+    final double currentOffset = _similarPropertiesScrollController.offset;
+    double newOffset;
 
-  // New method to show contact information to a logged-in user
+    if (isForward) {
+      newOffset = currentOffset + cardStep;
+    } else {
+      newOffset = currentOffset - cardStep;
+    }
+
+    // Clamp the offset to prevent overscrolling errors
+    newOffset = newOffset.clamp(
+      _similarPropertiesScrollController.position.minScrollExtent, 
+      _similarPropertiesScrollController.position.maxScrollExtent,
+    );
+
+    _similarPropertiesScrollController.animateTo(
+      newOffset,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  // Method to show contact information to a logged-in user
   void _showContactDialog(Map<String, dynamic> contactInfo) {
     showDialog(
       context: context,
@@ -239,7 +306,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
   
-  // UPDATED: Method to handle the login check and show dialog
+  // Method to handle the login check and show dialog
   void _handleContactTap() {
     // Check if data is available
     final contactInfo = _fetchedPropertyData?['contactInfo'] ?? {};
@@ -252,7 +319,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     }
   }
 
-  // UPDATED: Method for sharing property
+  // Method for sharing property
   void _shareProperty() {
     // Use the ID from the fetched data
     final propertyId = _fetchedPropertyData?['id']; 
@@ -271,7 +338,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
       subject: propertyTitle,
     ); 
 
-    // UPDATED: Use the positive action style for sharing
+    // Use the positive action style for sharing
     _showCustomSnackBar('Link copied and ready to share!', isFavoriteAction: true);
   }
 
@@ -281,7 +348,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
     _firestoreService = FirestoreService();
     
-    // NEW: Handle initial data load logic
+    // Handle initial data load logic
     _fetchPropertyData().then((_) {
       if (_fetchedPropertyData != null) {
         _checkInitialFavoriteStatus();
@@ -301,6 +368,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _similarPropertiesScrollController.dispose(); // DISPOSE similar properties controller
     super.dispose();
   }
 
@@ -362,6 +430,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
         {'icon': Icons.people, 'label': 'Guests', 'value': details['guests']?.toString() ?? 'N/A'},
       ],
       {'icon': Icons.date_range, 'label': 'Year Built', 'value': property['yearBuilt'] ?? 'N/A'},
+      // Note: Location detail is handled via _buildDetailRow in _buildPropertyHighlights
       {'icon': Icons.location_on, 'label': 'Location', 'value': property['location']?['town'] ?? 'N/A'},
     ];
 
@@ -632,6 +701,24 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
+  Widget _buildPriceText(String price, {required double fontSize}) {
+    return ShaderMask(
+      shaderCallback: (bounds) {
+        return _priceGradient.createShader(
+          Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+        );
+      },
+      child: Text(
+        price,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+          color: Colors.white, // Color is masked by the shader
+        ),
+      ),
+    );
+  }
+
   Widget _buildPropertyHighlights(Map<String, dynamic> property, Map<String, dynamic> details) {
     final contactInfo = property['contactInfo'] ?? {};
     final propertyType = property['propertyType'];
@@ -647,16 +734,19 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
+        // Replaced Colors.green with gradient
+        _buildPriceText(
           _formatPrice(property['price']),
-          style: TextStyle(
-            fontSize: MediaQuery.of(context).size.width >= 1000 ? 30 : 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.green[700],
-          ),
+          fontSize: MediaQuery.of(context).size.width >= 1000 ? 30 : 24,
         ),
         const SizedBox(height: 20),
-        _buildDetailRow(Icons.pin_drop, 'Location', property['location']?['town'] ?? 'N/A'),
+        // UPDATED: Location with Icons.location_on and light blue color
+        _buildDetailRow(
+          Icons.location_on, 
+          'Location', 
+          property['location']?['town'] ?? 'N/A',
+          iconColor: _lightBlueColor, // Apply light blue color
+        ),
         const SizedBox(height: 10),
         _buildDetailRow(Icons.apartment, 'Type', property['propertyType'] ?? 'N/A'),
         if (propertyType == 'Residential') ...[
@@ -693,10 +783,12 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  // UPDATED: Added optional iconColor parameter
+  Widget _buildDetailRow(IconData icon, String label, String value, {Color? iconColor}) {
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF0A66C2), size: 20),
+        // Use the passed iconColor, or default to deep blue
+        Icon(icon, color: iconColor ?? const Color(0xFF0A66C2), size: 20), 
         const SizedBox(width: 10),
         Text(
           '$label:',
@@ -744,7 +836,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                   color: Colors.black87,
                 ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                  overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -752,7 +844,39 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
       ),
     );
   }
+  
+  // UPDATED: Widget to build the listing type tag with UNCONDITIONAL gradient background
+  Widget _buildListingTag(String? listingType) {
+    final tagText = _getListingTag(listingType);
+    
+    // Apply the blue/purple gradient to ALL listing types (including Airbnb)
+    final Decoration decoration = BoxDecoration(
+      gradient: _priceGradient, // Uses the blue-to-purple gradient
+      borderRadius: BorderRadius.circular(8),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          blurRadius: 3,
+          offset: const Offset(0, 1),
+        ),
+      ],
+    );
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: decoration,
+      child: Text(
+        tagText.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
 
+  // UPDATED: Added Row for location icon and text
   Widget _buildSimilarPropertyCard(Map<String, dynamic> property) {
     return Container(
       width: 300,
@@ -765,60 +889,86 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
+            // Note: This will push a new screen, potentially stacking them. 
+            // Consider using pushReplacement or Navigator.of(context).pushNamedAndRemoveUntil 
+            // if property deep links are used to prevent deep nesting.
             Navigator.of(context).pushNamed('/view_property', arguments: property);
           },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack( // <--- START STACK HERE
             children: [
-              Expanded(
-                child: property['coverImageUrl'] != null
-                    ? Image.network(
-                        property['coverImageUrl'],
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Center(child: Icon(Icons.image_not_supported)),
-                      )
-                    : const Center(child: Icon(Icons.house_siding)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: property['coverImageUrl'] != null
+                        ? Image.network(
+                            property['coverImageUrl'],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Center(child: Icon(Icons.image_not_supported)),
+                          )
+                        : const Center(child: Icon(Icons.house_siding)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          property['title'] ?? 'N/A',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Color(0xFF0A66C2),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        // START: New Row for Location Icon and Text
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on,
+                              size: 16, // Appropriate size for a card
+                              color: _lightBlueColor, // The requested light blue color
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                property['location']?['town'] ?? 'N/A',
+                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        // END: New Row for Location Icon and Text
+                        const SizedBox(height: 8),
+                        // Replaced Colors.green with gradient
+                        _buildPriceText(
+                          _formatPrice(property['price']),
+                          fontSize: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      property['title'] ?? 'N/A',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF0A66C2),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      property['location']?['town'] ?? 'N/A',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _formatPrice(property['price']),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
+              // NEW: Listing Type Tag positioned on the top left
+              Positioned(
+                top: 10,
+                left: 10,
+                child: _buildListingTag(property['listingType'] as String?),
               ),
             ],
-          ),
+          ), // <--- END STACK HERE
         ),
       ),
     );
   }
 
+  // UPDATED: Added ScrollController and arrows inside a Stack
   Widget _buildSimilarPropertiesList() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _fetchSimilarProperties(),
@@ -831,16 +981,56 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
         }
 
         final similarProperties = snapshot.data!;
-        return SizedBox(
-          height: 300,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: similarProperties.length,
-            itemBuilder: (context, index) {
-              final similarProperty = similarProperties[index];
-              return _buildSimilarPropertyCard(similarProperty);
-            },
-          ),
+        
+        // Return a Stack to overlay arrows on the horizontally scrollable list
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              height: 300,
+              child: ListView.builder(
+                controller: _similarPropertiesScrollController, // Attach controller
+                scrollDirection: Axis.horizontal,
+                itemCount: similarProperties.length,
+                itemBuilder: (context, index) {
+                  final similarProperty = similarProperties[index];
+                  return _buildSimilarPropertyCard(similarProperty);
+                },
+              ),
+            ),
+            
+            // Left Arrow
+            Positioned(
+              left: 0,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios, size: 30),
+                color: const Color(0xFF0A66C2),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.9),
+                  shape: const CircleBorder(),
+                  padding: const EdgeInsets.all(8),
+                  elevation: 5,
+                ),
+                onPressed: () => _scrollSimilarProperties(false),
+              ),
+            ),
+            
+            // Right Arrow
+            Positioned(
+              right: 0,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_forward_ios, size: 30),
+                color: const Color(0xFF0A66C2),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.9),
+                  shape: const CircleBorder(),
+                  padding: const EdgeInsets.all(8),
+                  elevation: 5,
+                ),
+                onPressed: () => _scrollSimilarProperties(true),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -970,7 +1160,7 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
   }
 }
 
-// UPDATED CLASS: Custom SnackBar Content for Conditional Blinking
+// Custom SnackBar Content for Conditional Blinking
 class _BlinkingSnackBarContent extends StatefulWidget {
   final String message;
   final Color initialColor;
@@ -1024,19 +1214,14 @@ class _BlinkingSnackBarContentState extends State<_BlinkingSnackBarContent> with
       _currentBorder = Border.all(color: Colors.blue, width: 1); 
 
       // Start the blinking sequence:
-      // SnackBar duration is 2.0 seconds.
-
-      // 1. Blink ON: Go dark green at 0.5 seconds
       _blinkTimer = Timer(const Duration(milliseconds: 500), () {
         if (mounted) _toggleColorState(isBlinking: true);
       });
 
-      // 2. Blink OFF: Go back to light blue at 1.0 seconds
       _blinkTimer = Timer(const Duration(milliseconds: 1000), () {
         if (mounted) _toggleColorState(isBlinking: false);
       });
       
-      // 3. Blink ON (Final Blink): Go dark green at 1.25 seconds
       _blinkTimer = Timer(const Duration(milliseconds: 1250), () {
         if (mounted) _toggleColorState(isBlinking: true);
       });
