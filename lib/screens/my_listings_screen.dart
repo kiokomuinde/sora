@@ -922,15 +922,30 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            _formatPrice(listing['price']),
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                              fontFamily: 'Inter',
+                          // START - MODIFIED PRICE TEXT WITH GRADIENT
+                          ShaderMask(
+                            shaderCallback: (bounds) {
+                              return const LinearGradient(
+                                colors: [
+                                  Color(0xFF0A66C2), // Deep Blue
+                                  Color(0xFF8A2BE2), // Blue Violet (Purple)
+                                ],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ).createShader(bounds);
+                            },
+                            child: Text(
+                              _formatPrice(listing['price']),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                // Color must be white for ShaderMask to work
+                                color: Colors.white, 
+                                fontFamily: 'Inter',
+                              ),
                             ),
                           ),
+                          // END - MODIFIED PRICE TEXT WITH GRADIENT
                         ],
                       ),
                     ],
