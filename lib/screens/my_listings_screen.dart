@@ -140,9 +140,6 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       return;
     }
 
-    // NOTE: In a production app, the actual payment gateway (M-Pesa) logic would go here
-    // before updating the status to 'Active'. For now, we simulate the activation.
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -160,9 +157,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     );
 
     int successfulActivations = 0;
-    // For this simulation, we'll set the status to 'Active'
+    // FIX: Set status to lowercase 'active' for consistency
     for (String listingId in _selectedListingIds) {
-      bool success = await _firestoreService.updatePropertyStatus(listingId, 'Active');
+      bool success = await _firestoreService.updatePropertyStatus(listingId, 'active');
       if (success) {
         successfulActivations++;
       }
@@ -342,46 +339,43 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                     return {'data': data, 'id': doc.id};
                   }).toList();
 
-                  // START - UPDATED FILTERING LOGIC
+                  // START - FIXED FILTERING LOGIC
                   final filteredListings = allListings.where((listing) {
                     final listingData = listing['data'] as Map<String, dynamic>;
-                    final status = listingData['status'] as String? ?? 'Pending';
-                    // Safely get isApproved, defaulting to false if null/missing
-                    final isApproved = listingData['isApproved'] as bool? ?? false;
-
+                    // FIX: Normalize and check only the status field
+                    final status = (listingData['status'] as String? ?? 'pending').toLowerCase();
+                    
                     if (_selectedStatusFilter == 'All') {
                       return true;
                     } else if (_selectedStatusFilter == 'Active') {
-                      return status == 'Active';
+                      return status == 'active';
                     } else if (_selectedStatusFilter == 'Inactive') {
-                      // Show inactive only if it was approved at some point
-                      return status == 'Inactive' && isApproved;
+                      return status == 'inactive';
                     } else if (_selectedStatusFilter == 'Ready for Activation') {
-                      // Approved by admin, waiting for user payment (status is still Pending)
-                      return status == 'Pending' && isApproved;
+                      // FIX: The property is now visible here because the status is 'ready'
+                      return status == 'ready'; 
                     } else if (_selectedStatusFilter == 'Pending Review') {
-                      // Created by user, waiting for admin approval
-                      return status == 'Pending' && !isApproved;
+                      // FIX: The initial status is 'pending'
+                      return status == 'pending';
                     }
                     return false;
                   }).toList();
-                  // END - UPDATED FILTERING LOGIC
+                  // END - FIXED FILTERING LOGIC
 
                   final listingsCount = filteredListings.length;
 
-                  // START - UPDATED ACTIVATION BUTTON VISIBILITY LOGIC
-                  // The button should ONLY appear if a listing is selected AND it is APPROVED but NOT YET Active
+                  // START - FIXED ACTIVATION BUTTON VISIBILITY LOGIC
+                  // The button should ONLY appear if a listing is selected AND its status is 'ready'
                   final shouldShowActivateButton = allListings.any((listing) {
                     final listingId = listing['id'];
                     final listingData = listing['data'] as Map<String, dynamic>;
-                    final status = listingData['status'] as String? ?? 'Pending';
-                    final isApproved = listingData['isApproved'] as bool? ?? false;
+                    // FIX: Check for the 'ready' status directly
+                    final status = (listingData['status'] as String? ?? 'pending').toLowerCase();
 
                     return _selectedListingIds.contains(listingId) &&
-                        isApproved && // MUST be approved
-                        status != 'Active'; // MUST NOT be active
+                        status == 'ready';
                   });
-                  // END - UPDATED ACTIVATION BUTTON VISIBILITY LOGIC
+                  // END - FIXED ACTIVATION BUTTON VISIBILITY LOGIC
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,34 +661,35 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
   // Added a parameter to indicate selection status
   Widget _buildListingCard(Map<String, dynamic> listing, String listingId, bool isSelected) {
-    // START - UPDATED STATUS LOGIC FOR CARD DISPLAY
-    final status = listing['status'] as String? ?? 'Pending';
-    final isApproved = listing['isApproved'] as bool? ?? false;
-
+    // START - FIXED STATUS LOGIC FOR CARD DISPLAY
+    // FIX: Normalize and check only the status field
+    final status = (listing['status'] as String? ?? 'pending').toLowerCase();
+    
     Color statusColor;
     String displayStatus;
 
-    if (status == 'Active') {
+    if (status == 'active') {
       statusColor = Colors.green[600]!;
       displayStatus = 'Active';
-    } else if (status == 'Inactive') {
+    } else if (status == 'inactive') {
       statusColor = Colors.red[600]!;
       displayStatus = 'Inactive';
-    } else if (status == 'Pending' && isApproved) {
+    } else if (status == 'ready') {
+      // FIX: This is the admin-approved status
       statusColor = Colors.blue[600]!;
-      displayStatus = 'Ready to Activate'; // Approved, waiting for payment
-    } else { // status == 'Pending' && !isApproved
+      displayStatus = 'Ready to Activate'; 
+    } else { // status == 'pending'
       statusColor = Colors.orange[600]!;
-      displayStatus = 'Pending Review'; // Waiting for admin
+      displayStatus = 'Pending Review'; 
     }
-    // END - UPDATED STATUS LOGIC FOR CARD DISPLAY
+    // END - FIXED STATUS LOGIC FOR CARD DISPLAY
 
     String imageUrl = listing['coverImageUrl'] ?? '';
 
     // Safely access nested data
     final residentialDetails = listing['residentialDetails'] as Map<String, dynamic>?;
 
-    final isActive = listing['status'] == 'Active';
+    final isActive = status == 'active';
     // Only allow selection if the status is NOT Active
     final canBeSelected = !isActive;
 

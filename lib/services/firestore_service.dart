@@ -57,7 +57,7 @@ class FirestoreService {
       await _firestore.collection('properties').add({
         ...propertyData,
         'userId': user.uid,
-        'status': 'Pending', 
+        'status': 'pending', 
         'timestamp': FieldValue.serverTimestamp(),
       });
       return true;
@@ -71,7 +71,7 @@ class FirestoreService {
   Stream<QuerySnapshot> getPropertiesStream() {
     return _firestore
         .collection('properties')
-        .where('status', isEqualTo: 'Active') // FIX: Changed to 'Active'
+        .where('status', whereIn: ['ready', 'active']) 
         .orderBy('timestamp', descending: true)
         .snapshots(); 
   }
@@ -94,7 +94,7 @@ class FirestoreService {
      try {
       final QuerySnapshot snapshot = await _firestore
           .collection('properties')
-          .where('status', isEqualTo: 'Active') // CRITICAL FIX: Changed to 'Active'
+          .where('status', whereIn: ['ready', 'active']) 
           .where('listingType', isEqualTo: listingType)
           .orderBy('timestamp', descending: true)
           .limit(20) 
@@ -126,7 +126,8 @@ class FirestoreService {
   /// Updates the status of a property. (Used in my_listings_screen.dart)
   Future<bool> updatePropertyStatus(String propertyId, String newStatus) async { 
     try {
-      await _firestore.collection('properties').doc(propertyId).update({'status': newStatus});
+      // Ensuring the status is always saved lowercase for consistency
+      await _firestore.collection('properties').doc(propertyId).update({'status': newStatus.toLowerCase()}); 
       return true;
     } catch (e) {
       print('Error updating property status: $e');
@@ -150,15 +151,38 @@ class FirestoreService {
   // 3. USER PROFILE MANAGEMENT
   // =========================================================================
 
-  /// Sets or updates a user's profile data.
-  Future<void> setUserProfile(String userId, Map<String, dynamic> profileData) async {
+  /// Creates a user profile document in 'userProfiles' collection after sign-up. (NEW METHOD)
+  Future<void> createUserProfile({
+    required String userId,
+    required String email,
+    bool isAdmin = false, // Default role
+  }) async {
+    try {
+      await _firestore.collection('userProfiles').doc(userId).set({
+        'email': email,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastSignIn': FieldValue.serverTimestamp(),
+        'isAdmin': isAdmin, 
+        'isPro': false, 
+      }, SetOptions(merge: true)); // Use merge: true just in case
+    } catch (e) {
+      print('Error creating user profile: $e');
+      // Re-throw or throw a structured exception if you want error handling higher up
+      throw Exception('Failed to create user profile in Firestore: $e'); 
+    }
+  }
+
+
+  /// Updates an existing user's profile data. (Renamed and merged from old setUserProfile)
+  Future<void> updateUserProfile(String userId, Map<String, dynamic> profileData) async {
     try {
       await _firestore.collection('userProfiles').doc(userId).set(
         profileData,
         SetOptions(merge: true),
       );
     } catch (e) {
-      print('Error setting user profile: $e');
+      print('Error updating user profile: $e');
+      throw Exception('Failed to update user profile: $e'); 
     }
   }
 
@@ -182,7 +206,7 @@ class FirestoreService {
 
     try {
       final doc = await _firestore
-          .collection('users')
+          .collection('users') 
           .doc(userId)
           .collection('favorites')
           .doc(propertyId)
@@ -307,7 +331,6 @@ class FirestoreService {
     final String cleanCurrentBlogId = currentBlogId.trim();
 
     try {
-      // **CRITICAL:** This query requires the Composite Index on ['category', 'timestamp']
       final QuerySnapshot querySnapshot = await _firestore
           .collection('blogs')
           .where('category', isEqualTo: category) 
@@ -335,6 +358,18 @@ class FirestoreService {
     }
   }
   
+  /// Deletes a blog post by ID.
+  Future<bool> deleteBlog(String blogId) async {
+    try {
+      await _firestore.collection('blogs').doc(blogId).delete();
+      return true;
+    } catch (e) {
+      print('Error deleting blog: $e');
+      return false;
+    }
+  }
+
+
   // =========================================================================
   // 6. DASHBOARD STATS
   // =========================================================================
@@ -349,7 +384,6 @@ class FirestoreService {
           .where('userId', isEqualTo: userId)
           .count()
           .get();
-      // FIX: Use ?? 0 to convert nullable int? to non-nullable int
       return querySnapshot.count ?? 0; 
     } catch (e) {
       print('Error fetching my listings count: $e');
@@ -369,11 +403,74 @@ class FirestoreService {
           .collection('favorites')
           .count()
           .get();
-      // FIX: Use ?? 0 to convert nullable int? to non-nullable int
       return querySnapshot.count ?? 0; 
     } catch (e) {
       print('Error fetching favorites count: $e');
       return 0;
+    }
+  }
+  
+  // =========================================================================
+  // 7. ADMIN MANAGEMENT
+  // =========================================================================
+
+  /// Checks if a user has admin privileges.
+  Future<bool> checkAdminStatus(String userId) async {
+    if (userId.isEmpty) return false;
+    try {
+      DocumentSnapshot userDoc = await _firestore.collection('userProfiles').doc(userId).get();
+      return userDoc.exists && userDoc.get('isAdmin') == true;
+    } catch (e) {
+      print('Error checking admin status: $e');
+      return false;
+    }
+  }
+
+  /// Gets a stream of all user profiles for admin management.
+  Stream<QuerySnapshot> streamUsers() {
+    return _firestore
+        .collection('userProfiles') 
+        .orderBy('timestamp', descending: true) 
+        .snapshots();
+  }
+
+  /// Gets a stream of all properties for admin management.
+  Stream<QuerySnapshot> streamAllProperties() {
+    return _firestore
+        .collection('properties')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Gets a stream of all contact messages for admin review.
+  Stream<QuerySnapshot> getContactMessages() {
+    return _firestore
+        .collection('contactMessages')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Gets a stream of all newsletter subscribers.
+  Stream<QuerySnapshot> getNewsletterSubscribers() {
+    return _firestore
+        .collection('newsletterSubscribers')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Gets a stream of all blog posts.
+  Stream<QuerySnapshot> streamAllBlogs() {
+    return getBlogs(limit: 500);
+  }
+
+  /// Deletes a user's profile data document.
+  Future<bool> deleteUserData(String userId) async {
+    try {
+      await _firestore.collection('userProfiles').doc(userId).delete();
+      return true;
+    } catch (e) {
+      print('Error deleting user data: $e');
+      return false;
     }
   }
 }

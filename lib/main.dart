@@ -41,6 +41,7 @@ import 'screens/profile_settings_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/recently_viewed_screen.dart';
 import 'screens/create_blog_screen.dart'; 
+import 'screens/admin_screen.dart'; // <<< ADMIN SCREEN IMPORT
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -221,6 +222,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => ProfileSettingsScreen(authService: authService));
           case '/dashboard':
             return MaterialPageRoute(builder: (_) => DashboardScreen(authService: authService));
+          case '/admin': // <<< ADMIN SCREEN ROUTE ADDED
+            return MaterialPageRoute(builder: (_) => AdminScreen(authService: authService));
           case '/recently_viewed':
             return MaterialPageRoute(builder: (_) => RecentlyViewedScreen(authService: authService));
           default:

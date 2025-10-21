@@ -8,6 +8,9 @@ import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/screens/home_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// === NEW IMPORT ===
+import 'package:sora_app/services/firestore_service.dart'; 
+
 // Extension for capitalizing first letter of a string
 extension StringExtension on String {
   String toCapitalized() =>
@@ -18,6 +21,9 @@ extension StringExtension on String {
 class CommonWidgets {
   final BuildContext context;
   final AuthService authService;
+  
+  // === NEW FIELD: Instantiate FirestoreService ===
+  final FirestoreService _firestoreService = FirestoreService(); 
 
   CommonWidgets({required this.context, required this.authService});
 
@@ -96,6 +102,7 @@ class CommonWidgets {
   AppBar buildAppBar({String? currentListingTypeFilter}) {
     final bool isLoggedIn = authService.getCurrentUser() != null;
     final User? user = authService.getCurrentUser();
+    final String? userId = user?.uid; // Get UID for admin check
     final String userEmail = user?.email ?? 'Guest';
     final String displayName = user?.displayName ?? userEmail.split('@')[0];
 
@@ -167,10 +174,23 @@ class CommonWidgets {
                 _buildAppBarButton('Contact Us', '/contact'),
                 const SizedBox(width: 20),
                 _buildAppBarButton('Blog', '/blogs'),
-                if (isLoggedIn) ...[
-                  const SizedBox(width: 20),
-                  _buildAppBarButton('Create Blog', '/create_blog')
-                ]
+                // === MODIFICATION: Check for Admin status for 'Create Blog' button ===
+                if (isLoggedIn && userId != null)
+                  FutureBuilder<bool>(
+                    future: _firestoreService.checkAdminStatus(userId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done && snapshot.data == true) {
+                        return Row(
+                          children: [
+                            const SizedBox(width: 20),
+                            _buildAppBarButton('Create Blog', '/create_blog')
+                          ],
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                // === END MODIFICATION ===
               ],
             )
           : null,
@@ -431,13 +451,27 @@ class CommonWidgets {
           ),
           const Divider(),
           if (isLoggedIn) ...[
-            ListTile(
-              leading: const FaIcon(FontAwesomeIcons.plus, size: 20),
-              title: const Text('Create Blog'),
-              onTap: () {
-                Navigator.pushNamed(context, '/create_blog');
-              },
-            ),
+            // This is the mobile drawer version of the button
+            // It should also respect the admin status
+            // === MODIFICATION: Check for Admin status for 'Create Blog' button in Drawer ===
+            if (authService.getCurrentUser()?.uid != null)
+              FutureBuilder<bool>(
+                future: _firestoreService.checkAdminStatus(authService.getCurrentUser()!.uid),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done && snapshot.data == true) {
+                    return ListTile(
+                      leading: const FaIcon(FontAwesomeIcons.plus, size: 20),
+                      title: const Text('Create Blog'),
+                      onTap: () {
+                        Navigator.pushNamed(context, '/create_blog');
+                      },
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            // === END MODIFICATION ===
+
             const Divider(),
             ListTile(
               leading: const Icon(Icons.add_home_work),
@@ -485,188 +519,244 @@ class CommonWidgets {
   // Common Footer for consistent UI
   Widget buildFooter() {
     final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
+    // Get the user ID here to check if they are logged in
+    final String? userId = authService.getCurrentUser()?.uid;
 
     return Container(
       color: const Color(0xFF0A66C2),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      // UPDATED: Wrap the Column in a Stack to position the FloatingActionButton
+      child: Stack(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Corrected image path to fix the asset loading error
-                        Image.asset('assets/images/sora_logo.png', height: 40),
-                        const SizedBox(width: 8),
+                        Row(
+                          children: [
+                            // Corrected image path to fix the asset loading error
+                            Image.asset('assets/images/sora_logo.png', height: 40),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'SORA',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
                         const Text(
-                          'SORA',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: 'Inter',
-                          ),
+                          'Sora is a leading platform for finding, buying, renting and leasing properties. We connect you to a vast network of listings and trusted agents.',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                        const SizedBox(height: 16),
+                        // Replaced Row with Wrap for responsive social media icons
+                        Wrap(
+                          spacing: 16.0,
+                          runSpacing: 8.0,
+                          children: [
+                            // UPDATED SOCIAL MEDIA LINKS
+                            _buildSocialButton(FontAwesomeIcons.xTwitter, 'https://x.com'),
+                            _buildSocialButton(FontAwesomeIcons.facebookF, 'https://www.facebook.com/share/1C3bVnrGCW/'),
+                            _buildSocialButton(FontAwesomeIcons.instagram, 'https://www.instagram.com/sora.properties?igsh=MTFzM2dhOXZ5Z3E2eA=='),
+                            _buildSocialButton(FontAwesomeIcons.linkedinIn, 'https://linkedin.com'),
+                            _buildSocialButton(FontAwesomeIcons.youtube, 'https://youtube.com/@soraproperties?si=F3sQtcRZoBZL8Llv'),
+                            // WhatsApp link updated to use the provided number for 'wa.me'
+                            _buildSocialButton(FontAwesomeIcons.whatsapp, 'https://wa.me/+25493999591'),
+                            // TikTok link corrected with 'https://' prefix
+                            _buildSocialButton(FontAwesomeIcons.tiktok, 'https://tiktok.com/@sora_properties.l'),
+                            _buildSocialButton(FontAwesomeIcons.pinterest, 'https://pinterest.com'),
+                            // Google link corrected with 'https://' prefix
+                            _buildSocialButton(FontAwesomeIcons.google, 'https://business.google.com'),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Sora is a leading platform for finding, buying, renting and leasing properties. We connect you to a vast network of listings and trusted agents.',
-                      style: TextStyle(color: Colors.white70),
+                  ),
+                  if (!isSmallScreen) ...[
+                    const SizedBox(width: 40),
+                    Expanded(
+                      flex: 1,
+                      child: _buildFooterColumn('Quick Links', [
+                        _buildFooterLink('Home', '/home'),
+                        // Add Airbnb after Home
+                        _buildFooterLink('Airbnb', '/airbnb'),
+                        // Add Buy, Rent, and Lease in place of Properties
+                        _buildFooterLink('Buy', '/buy'),
+                        _buildFooterLink('Rent', '/rent'),
+                        _buildFooterLink('Lease', '/lease'),
+                        _buildFooterLink('Agents', '/agents'),
+                        _buildFooterLink('Blog', '/blogs'),
+                        _buildFooterLink('Contact Us', '/contact'),
+                      ]),
                     ),
-                    const SizedBox(height: 16),
-                    // Replaced Row with Wrap for responsive social media icons
-                    Wrap(
-                      spacing: 16.0,
-                      runSpacing: 8.0,
-                      children: [
-                        // UPDATED SOCIAL MEDIA LINKS
-                        _buildSocialButton(FontAwesomeIcons.xTwitter, 'https://x.com'),
-                        _buildSocialButton(FontAwesomeIcons.facebookF, 'https://www.facebook.com/share/1C3bVnrGCW/'),
-                        _buildSocialButton(FontAwesomeIcons.instagram, 'https://www.instagram.com/sora.properties?igsh=MTFzM2dhOXZ5Z3E2eA=='),
-                        _buildSocialButton(FontAwesomeIcons.linkedinIn, 'https://linkedin.com'),
-                        _buildSocialButton(FontAwesomeIcons.youtube, 'https://youtube.com/@soraproperties?si=F3sQtcRZoBZL8Llv'),
-                        // WhatsApp link updated to use the provided number for 'wa.me'
-                        _buildSocialButton(FontAwesomeIcons.whatsapp, 'https://wa.me/+25493999591'),
-                        // TikTok link corrected with 'https://' prefix
-                        _buildSocialButton(FontAwesomeIcons.tiktok, 'https://tiktok.com/@sora_properties.l'),
-                        _buildSocialButton(FontAwesomeIcons.pinterest, 'https://pinterest.com'),
-                        // Google link corrected with 'https://' prefix
-                        _buildSocialButton(FontAwesomeIcons.google, 'https://business.google.com'),
-                      ],
+                    Expanded(
+                      flex: 1,
+                      child: _buildFooterColumn('Legal', [
+                        _buildFooterLink('Terms of Service', '/terms'),
+                        _buildFooterLink('Privacy Policy', '/privacy'),
+                        _buildFooterLink('Cookie Policy', '/cookies'),
+                      ]),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: _buildFooterColumn('Contact Us', [
+                        _buildContactInfo(Icons.location_on, '123 Real Estate Avenue, Nairobi, Kenya'),
+                        _buildContactInfo(
+                          Icons.phone,
+                          '+254702778897',
+                          onTap: () {
+                            launchUrl(Uri(scheme: 'tel', path: '+254702778897'));
+                          },
+                        ),
+                        _buildContactInfo(
+                          Icons.phone,
+                          '+254712529637',
+                          onTap: () {
+                            launchUrl(Uri(scheme: 'tel', path: '+254712529637'));
+                          },
+                        ),
+                        _buildContactInfo(
+                          Icons.email,
+                          'soraproperties002@gmail.com',
+                          onTap: () async {
+                            final email = 'soraproperties002@gmail.com';
+                            final url = kIsWeb
+                              ? Uri.parse('https://mail.google.com/mail/?view=cm&fs=1&to=$email')
+                              : Uri(scheme: 'mailto', path: email);
+                            if (!await launchUrl(url)) {
+                              // Handle error, e.g., show a snackbar
+                            }
+                          },
+                        ),
+                      ]),
                     ),
                   ],
-                ),
+                ],
               ),
-              if (!isSmallScreen) ...[
-                const SizedBox(width: 40),
-                Expanded(
-                  flex: 1,
-                  child: _buildFooterColumn('Quick Links', [
-                    _buildFooterLink('Home', '/home'),
-                    // Add Airbnb after Home
-                    _buildFooterLink('Airbnb', '/airbnb'),
-                    // Add Buy, Rent, and Lease in place of Properties
-                    _buildFooterLink('Buy', '/buy'),
-                    _buildFooterLink('Rent', '/rent'),
-                    _buildFooterLink('Lease', '/lease'),
-                    _buildFooterLink('Agents', '/agents'),
-                    _buildFooterLink('Blog', '/blogs'),
-                    _buildFooterLink('Contact Us', '/contact'),
-                  ]),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: _buildFooterColumn('Legal', [
-                    _buildFooterLink('Terms of Service', '/terms'),
-                    _buildFooterLink('Privacy Policy', '/privacy'),
-                    _buildFooterLink('Cookie Policy', '/cookies'),
-                  ]),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: _buildFooterColumn('Contact Us', [
-                    _buildContactInfo(Icons.location_on, '123 Real Estate Avenue, Nairobi, Kenya'),
-                    _buildContactInfo(
-                      Icons.phone,
-                      '+254702778897',
-                      onTap: () {
-                        launchUrl(Uri(scheme: 'tel', path: '+254702778897'));
-                      },
-                    ),
-                    _buildContactInfo(
-                      Icons.phone,
-                      '+254712529637',
-                      onTap: () {
-                        launchUrl(Uri(scheme: 'tel', path: '+254712529637'));
-                      },
-                    ),
-                    _buildContactInfo(
-                      Icons.email,
-                      'soraproperties002@gmail.com',
-                      onTap: () async {
-                        final email = 'soraproperties002@gmail.com';
-                        final url = kIsWeb
+              // Restructured the footer for small screens to use a Column to prevent overflow
+              if (isSmallScreen) ...[
+                const SizedBox(height: 20),
+                _buildFooterColumn('Quick Links', [
+                  _buildFooterLink('Home', '/home'),
+                  // Add Airbnb after Home
+                  _buildFooterLink('Airbnb', '/airbnb'),
+                  // Add Buy, Rent, and Lease in place of Properties
+                  _buildFooterLink('Buy', '/buy'),
+                  _buildFooterLink('Rent', '/rent'),
+                  _buildFooterLink('Lease', '/lease'),
+                  _buildFooterLink('Agents', '/agents'),
+                  _buildFooterLink('Blog', '/blogs'),
+                  _buildFooterLink('Contact Us', '/contact'),
+                ]),
+                const SizedBox(height: 20),
+                _buildFooterColumn('Legal', [
+                  _buildFooterLink('Terms of Service', '/terms'),
+                  _buildFooterLink('Privacy Policy', '/privacy'),
+                  _buildFooterLink('Cookie Policy', '/cookies'),
+                ]),
+                const SizedBox(height: 20),
+                _buildFooterColumn('Contact Us', [
+                  _buildContactInfo(Icons.location_on, '123 Real Estate Avenue, Nairobi, Kenya'),
+                  _buildContactInfo(
+                    Icons.phone,
+                    '+254702778897',
+                    onTap: () {
+                      launchUrl(Uri(scheme: 'tel', path: '+254702778897'));
+                    },
+                  ),
+                  _buildContactInfo(
+                    Icons.phone,
+                    '+254712529637',
+                    onTap: () {
+                      launchUrl(Uri(scheme: 'tel', path: '+254712529637'));
+                    },
+                  ),
+                  _buildContactInfo(
+                    Icons.email,
+                    'soraproperties002@gmail.com',
+                    onTap: () async {
+                      final email = 'soraproperties002@gmail.com';
+                      final url = kIsWeb
                           ? Uri.parse('https://mail.google.com/mail/?view=cm&fs=1&to=$email')
                           : Uri(scheme: 'mailto', path: email);
-                        if (!await launchUrl(url)) {
-                          // Handle error, e.g., show a snackbar
-                        }
-                      },
-                    ),
-                  ]),
-                ),
+                      if (!await launchUrl(url)) {
+                        // Handle error, e.g., show a snackbar
+                      }
+                    },
+                  ),
+                ]),
               ],
+              const Divider(color: Colors.white24, height: 40),
+              Center(
+                child: Text(
+                  '© ${DateTime.now().year} Sora Properties Ltd. All rights reserved.',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ),
             ],
           ),
-          // Restructured the footer for small screens to use a Column to prevent overflow
-          if (isSmallScreen) ...[
-            const SizedBox(height: 20),
-            _buildFooterColumn('Quick Links', [
-              _buildFooterLink('Home', '/home'),
-              // Add Airbnb after Home
-              _buildFooterLink('Airbnb', '/airbnb'),
-              // Add Buy, Rent, and Lease in place of Properties
-              _buildFooterLink('Buy', '/buy'),
-              _buildFooterLink('Rent', '/rent'),
-              _buildFooterLink('Lease', '/lease'),
-              _buildFooterLink('Agents', '/agents'),
-              _buildFooterLink('Blog', '/blogs'),
-              _buildFooterLink('Contact Us', '/contact'),
-            ]),
-            const SizedBox(height: 20),
-            _buildFooterColumn('Legal', [
-              _buildFooterLink('Terms of Service', '/terms'),
-              _buildFooterLink('Privacy Policy', '/privacy'),
-              _buildFooterLink('Cookie Policy', '/cookies'),
-            ]),
-            const SizedBox(height: 20),
-            _buildFooterColumn('Contact Us', [
-              _buildContactInfo(Icons.location_on, '123 Real Estate Avenue, Nairobi, Kenya'),
-              _buildContactInfo(
-                Icons.phone,
-                '+254702778897',
-                onTap: () {
-                  launchUrl(Uri(scheme: 'tel', path: '+254702778897'));
-                },
-              ),
-              _buildContactInfo(
-                Icons.phone,
-                '+254712529637',
-                onTap: () {
-                  launchUrl(Uri(scheme: 'tel', path: '+254712529637'));
-                },
-              ),
-              _buildContactInfo(
-                Icons.email,
-                'soraproperties002@gmail.com',
-                onTap: () async {
-                  final email = 'soraproperties002@gmail.com';
-                  final url = kIsWeb
-                      ? Uri.parse('https://mail.google.com/mail/?view=cm&fs=1&to=$email')
-                      : Uri(scheme: 'mailto', path: email);
-                  if (!await launchUrl(url)) {
-                    // Handle error, e.g., show a snackbar
+          // NEW: Floating Action Button for Admin Screen (visible only on Web)
+          // === Logic: Only visible if user is logged in AND is admin ===
+          if (kIsWeb && userId != null)
+            Positioned(
+              left: 20,
+              bottom: 20,
+              // Wrap the button container in a FutureBuilder to check the admin status
+              child: FutureBuilder<bool>(
+                // Fetch the admin status from Firestore
+                future: _firestoreService.checkAdminStatus(userId),
+                builder: (context, snapshot) {
+                  // Only render the button if the data is loaded and is true
+                  if (snapshot.connectionState == ConnectionState.done && snapshot.data == true) {
+                    return Container(
+                      // Added Container and Decoration to apply gradient
+                      width: 56.0, // Default FAB size
+                      height: 56.0, // Default FAB size
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(28.0), // Half of size for circle
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF1E90FF), // Blue
+                            Color(0xFF8A2BE2), // Blue Violet (Purple)
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: FloatingActionButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/admin');
+                        },
+                        // Set background color to transparent to show the gradient Container
+                        backgroundColor: Colors.transparent,
+                        // Remove shadow/elevation
+                        elevation: 0,
+                        // Ensure the splash effect is contained within the gradient
+                        highlightElevation: 0,
+                        tooltip: 'Admin Screen',
+                        child: const Icon(Icons.shield, color: Colors.white),
+                      ),
+                    );
                   }
+                  // If not logged in, not admin, or still loading, show nothing.
+                  return const SizedBox.shrink();
                 },
               ),
-            ]),
-          ],
-          const Divider(color: Colors.white24, height: 40),
-          Center(
-            child: Text(
-              '© ${DateTime.now().year} Sora Properties Ltd. All rights reserved.',
-              style: const TextStyle(color: Colors.white70),
             ),
-          ),
+          // === END MODIFICATION ===
         ],
       ),
     );

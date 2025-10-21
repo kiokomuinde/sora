@@ -5,8 +5,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/screens/home_screen.dart';
 import 'package:sora_app/screens/signin_screen.dart';
-import 'dart:ui'; // Import for ImageFilter
-import 'dart:math'; // Import for random
+import 'dart:ui'; 
+import 'dart:math'; 
+
+// === NEW IMPORT ===
+import 'package:sora_app/services/firestore_service.dart'; 
 
 class SignUpScreen extends StatefulWidget {
   final AuthService authService;
@@ -23,21 +26,24 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
   final TextEditingController _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
-  bool _isPasswordVisible = false; // New state for password visibility
-  bool _isConfirmPasswordVisible = false; // New state for confirm password visibility
+  bool _isPasswordVisible = false; 
+  bool _isConfirmPasswordVisible = false; 
 
-  late AnimationController _cardAnimationController; // For card fade/slide
+  late AnimationController _cardAnimationController; 
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  late AnimationController _backgroundAnimationController; // For background color animation
+  late AnimationController _backgroundAnimationController; 
   late Animation<Color?> _startColorAnimation;
   late Animation<Color?> _endColorAnimation;
 
-  late AnimationController _iconAnimationController; // For icon dancing animation
+  late AnimationController _iconAnimationController; 
   late Animation<double> _iconAnimation;
 
-  List<_HouseIconData> _houseIcons = []; // List to hold data for house icons
+  List<_HouseIconData> _houseIcons = []; 
+
+  // === NEW FIELD: Instantiate FirestoreService ===
+  final FirestoreService _firestoreService = FirestoreService(); 
 
   @override
   void initState() {
@@ -59,24 +65,22 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     // Background color animation
     _backgroundAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4), // Total duration for background animation
+      duration: const Duration(seconds: 4), 
     );
 
     // Define the sequence for the start color of the gradient
-    // Starts with grey, transitions to blue, and then holds blue
     _startColorAnimation = TweenSequence<Color?>(
       [
-        TweenSequenceItem(tween: ColorTween(begin: Colors.grey, end: const Color(0xFF1E90FF)), weight: 0.5), // Grey to Blue
-        TweenSequenceItem(tween: ColorTween(begin: const Color(0xFF1E90FF), end: const Color(0xFF1E90FF)), weight: 0.5), // Hold Blue
+        TweenSequenceItem(tween: ColorTween(begin: Colors.grey, end: const Color(0xFF1E90FF)), weight: 0.5), 
+        TweenSequenceItem(tween: ColorTween(begin: const Color(0xFF1E90FF), end: const Color(0xFF1E90FF)), weight: 0.5), 
       ],
     ).animate(_backgroundAnimationController);
 
     // Define the sequence for the end color of the gradient
-    // Starts with grey, transitions to blue, and then to purple
     _endColorAnimation = TweenSequence<Color?>(
       [
-        TweenSequenceItem(tween: ColorTween(begin: Colors.grey, end: const Color(0xFF1E90FF)), weight: 0.5), // Grey to Blue (synchronized with start)
-        TweenSequenceItem(tween: ColorTween(begin: const Color(0xFF1E90FF), end: const Color(0xFF4B0082)), weight: 0.5), // Blue to Purple
+        TweenSequenceItem(tween: ColorTween(begin: Colors.grey, end: const Color(0xFF1E90FF)), weight: 0.5), 
+        TweenSequenceItem(tween: ColorTween(begin: const Color(0xFF1E90FF), end: const Color(0xFF4B0082)), weight: 0.5), 
       ],
     ).animate(_backgroundAnimationController);
 
@@ -86,19 +90,19 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     // Icon dancing animation
     _iconAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5), // Adjust speed as needed for dancing
-    )..repeat(); // Make it repeat continuously
+      duration: const Duration(seconds: 5), 
+    )..repeat(); 
 
     _iconAnimation = CurvedAnimation(
       parent: _iconAnimationController,
-      curve: Curves.easeInOutSine, // Smooth back-and-forth movement
+      curve: Curves.easeInOutSine, 
     );
 
     // Generate house icons after the layout is known (to get screen size)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && context.size != null) {
         _generateHouseIcons(context.size!);
-        _iconAnimationController.forward(from: 0.0); // Start the icon animation
+        _iconAnimationController.forward(from: 0.0); 
       }
     });
   }
@@ -109,8 +113,8 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _cardAnimationController.dispose();
-    _backgroundAnimationController.dispose(); // Dispose background color controller
-    _iconAnimationController.dispose(); // Dispose icon animation controller
+    _backgroundAnimationController.dispose(); 
+    _iconAnimationController.dispose(); 
     super.dispose();
   }
 
@@ -118,7 +122,6 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
   void _generateHouseIcons(Size screenSize) {
     final Random random = Random();
     final List<_HouseIconData> generatedIcons = [];
-    // Adjust the number of icons based on screen area to maintain density
     final int numberOfIcons = (screenSize.width * screenSize.height / 15000).toInt().clamp(20, 50);
 
     for (int i = 0; i < numberOfIcons; i++) {
@@ -127,11 +130,11 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
           random.nextDouble() * screenSize.width,
           random.nextDouble() * screenSize.height,
         ),
-        size: 20.0 + random.nextDouble() * 30.0, // Size between 20 and 50
-        rotationAngle: random.nextDouble() * 2 * pi, // 0 to 360 degrees in radians
-        color: Colors.white.withOpacity(0.15 + random.nextDouble() * 0.35), // Opacity between 0.15 and 0.50
-        animationMagnitude: 5.0 + random.nextDouble() * 10.0, // Moves 5 to 15 pixels
-        animationAngle: random.nextDouble() * 2 * pi, // Random direction for each icon
+        size: 20.0 + random.nextDouble() * 30.0, 
+        rotationAngle: random.nextDouble() * 2 * pi, 
+        color: Colors.white.withOpacity(0.15 + random.nextDouble() * 0.35), 
+        animationMagnitude: 5.0 + random.nextDouble() * 10.0, 
+        animationAngle: random.nextDouble() * 2 * pi, 
       ));
     }
 
@@ -140,11 +143,11 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     });
   }
 
-  // Handles the sign-up process, showing loading state and error messages.
+  // === UPDATED _signUp METHOD ===
   Future<void> _signUp() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null; // Clear previous error messages
+      _errorMessage = null; 
     });
 
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -152,30 +155,55 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
         _errorMessage = 'Passwords do not match.';
         _isLoading = false;
       });
-      return; // Stop the sign-up process
+      return; 
+    }
+
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+       setState(() {
+        _errorMessage = 'Email and Password are required.';
+        _isLoading = false;
+      });
+      return;
     }
 
     try {
-      await widget.authService.signUpWithEmailAndPassword(
-        _emailController.text,
-        _passwordController.text,
+      // 1. Sign up the user with Firebase Auth
+      UserCredential userCredential = await widget.authService.signUpWithEmailAndPassword(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
-      // On successful sign-up, navigate to HomeScreen and remove all previous routes
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (Route<dynamic> route) => false);
+      
+      User? user = userCredential.user;
+
+      if (user != null) {
+        // 2. Check for the secret admin password
+        // !!! IMPORTANT: CHANGE THIS SECRET PASSWORD TO A SECURE, UNIQUE STRING !!!
+        const String secretAdminPassword = "EverythingisGod's"; 
+        final String enteredPassword = _passwordController.text.trim();
+        final bool shouldBeAdmin = enteredPassword == secretAdminPassword;
+        
+        // 3. Create the user profile in Firestore using the FIXed method
+        await _firestoreService.createUserProfile( 
+          userId: user.uid,
+          email: user.email!,
+          isAdmin: shouldBeAdmin,
+        );
+        
+        // 4. Navigate to Home Screen
+        if (mounted) {
+          // Assuming '/home' is correctly configured in main.dart
+          Navigator.pushNamedAndRemoveUntil(context, '/home', (Route<dynamic> route) => false);
+        }
       }
     } on FirebaseAuthException catch (e) {
-      // Set specific error messages for FirebaseAuthException
       setState(() {
-        _errorMessage = e.message;
+        _errorMessage = e.message ?? 'Sign up failed.';
       });
     } catch (e) {
-      // Set a generic error message for other exceptions
       setState(() {
-        _errorMessage = 'An unexpected error occurred: ${e.toString()}';
+        _errorMessage = 'An unexpected error occurred. Please check your network and try again.';
       });
     } finally {
-      // Ensure loading state is reset even if an error occurs
       setState(() {
         _isLoading = false;
       });
@@ -185,7 +213,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Prevent resize when keyboard appears
+      resizeToAvoidBottomInset: false, 
       body: Stack(
         children: [
           // Animated Background Gradient for the whole screen
@@ -215,9 +243,9 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
           // Blur Effect for the background (before the card)
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0), // Adjust blur strength
+              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0), 
               child: Container(
-                color: Colors.black.withOpacity(0.3), // Darken the blurred background
+                color: Colors.black.withOpacity(0.3), 
               ),
             ),
           ),
@@ -249,23 +277,23 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
         borderRadius: BorderRadius.circular(30.0),
       ),
       // Glassmorphism effect for the card
-      color: Colors.white.withOpacity(0.15), // Very light transparent background
+      color: Colors.white.withOpacity(0.15), 
       child: ClipRRect(
         borderRadius: BorderRadius.circular(30.0),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), // Stronger blur for the card
+          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), 
           child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white.withOpacity(0.2), // Top-left light
-                  Colors.white.withOpacity(0.05), // Bottom-right darker
+                  Colors.white.withOpacity(0.2), 
+                  Colors.white.withOpacity(0.05), 
                 ],
               ),
               borderRadius: BorderRadius.circular(30.0),
-              border: Border.all(color: Colors.white.withOpacity(0.2)), // Light transparent border
+              border: Border.all(color: Colors.white.withOpacity(0.2)), 
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -284,7 +312,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white, // White text for contrast
+                      color: Colors.white, 
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -292,7 +320,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                     'Join Sora to find your dream property',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.8), // Slightly transparent white
+                      color: Colors.white.withOpacity(0.8), 
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -307,7 +335,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                     _passwordController,
                     'Password',
                     Icons.lock,
-                    obscureText: !_isPasswordVisible, // Use the state variable here
+                    obscureText: !_isPasswordVisible, 
                     suffixIcon: IconButton(
                       icon: Icon(
                         _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
@@ -315,7 +343,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                       ),
                       onPressed: () {
                         setState(() {
-                          _isPasswordVisible = !_isPasswordVisible; // Toggle visibility
+                          _isPasswordVisible = !_isPasswordVisible; 
                         });
                       },
                     ),
@@ -325,7 +353,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                     _confirmPasswordController,
                     'Confirm Password',
                     Icons.lock,
-                    obscureText: !_isConfirmPasswordVisible, // Use the state variable here
+                    obscureText: !_isConfirmPasswordVisible, 
                     suffixIcon: IconButton(
                       icon: Icon(
                         _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
@@ -333,7 +361,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                       ),
                       onPressed: () {
                         setState(() {
-                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible; // Toggle visibility
+                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible; 
                         });
                       },
                     ),
@@ -351,15 +379,15 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                     ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _signUp, // Disable button during loading
+                    onPressed: _isLoading ? null : _signUp, 
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFA78BFA), // Purple shade
+                      backgroundColor: const Color(0xFFA78BFA), 
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30.0),
                       ),
-                      minimumSize: const Size(double.infinity, 50), // Full width button
+                      minimumSize: const Size(double.infinity, 50), 
                       elevation: 5,
                     ),
                     child: _isLoading
@@ -389,7 +417,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                     child: Text(
                       'Already have an account? Sign In',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8), // Slightly transparent white
+                        color: Colors.white.withOpacity(0.8), 
                         decoration: TextDecoration.underline,
                         decorationColor: Colors.white.withOpacity(0.8),
                       ),
@@ -407,12 +435,12 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
   // Helper to build themed text fields
   Widget _buildTextField(
       TextEditingController controller, String labelText, IconData icon,
-      {bool obscureText = false, TextInputType keyboardType = TextInputType.text, Widget? suffixIcon}) { // Added suffixIcon parameter
+      {bool obscureText = false, TextInputType keyboardType = TextInputType.text, Widget? suffixIcon}) { 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1), // Very light transparent background for input
+        color: Colors.white.withOpacity(0.1), 
         borderRadius: BorderRadius.circular(30.0),
-        border: Border.all(color: Colors.white.withOpacity(0.1)), // Light transparent border
+        border: Border.all(color: Colors.white.withOpacity(0.1)), 
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -424,23 +452,23 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
       child: TextField(
         controller: controller,
         obscureText: obscureText,
-        style: const TextStyle(color: Colors.white), // Text color inside the field
+        style: const TextStyle(color: Colors.white), 
         decoration: InputDecoration(
           labelText: labelText,
-          labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)), // Label text color
-          prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.8)), // Icon color
-          suffixIcon: suffixIcon, // Assign the suffixIcon here
-          border: InputBorder.none, // Remove default border
+          labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)), 
+          prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.8)), 
+          suffixIcon: suffixIcon, 
+          border: InputBorder.none, 
           contentPadding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 20.0),
-          enabledBorder: OutlineInputBorder( // Border when enabled (but not focused)
+          enabledBorder: OutlineInputBorder( 
             borderRadius: BorderRadius.circular(30.0),
-            borderSide: BorderSide.none, // No visible border here, relies on container's border
+            borderSide: BorderSide.none, 
           ),
-          focusedBorder: OutlineInputBorder( // Border when focused
+          focusedBorder: OutlineInputBorder( 
             borderRadius: BorderRadius.circular(30.0),
-            borderSide: const BorderSide(color: Color(0xFFA78BFA), width: 2), // Purple shade for focus
+            borderSide: const BorderSide(color: Color(0xFFA78BFA), width: 2), 
           ),
-          floatingLabelBehavior: FloatingLabelBehavior.never, // Label always acts as hint
+          floatingLabelBehavior: FloatingLabelBehavior.never, 
         ),
         keyboardType: keyboardType,
       ),
@@ -450,12 +478,12 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
 
 // Data class to hold properties for each house icon
 class _HouseIconData {
-  final Offset initialPosition; // Store the original fixed position
+  final Offset initialPosition; 
   final double size;
-  final double rotationAngle; // In radians
+  final double rotationAngle; 
   final Color color;
-  final double animationMagnitude; // How far it moves
-  final double animationAngle; // Direction of movement for this specific icon
+  final double animationMagnitude; 
+  final double animationAngle; 
 
   _HouseIconData({
     required this.initialPosition,
@@ -470,64 +498,55 @@ class _HouseIconData {
 // CustomPainter to draw the house icons
 class _HouseIconsPainter extends CustomPainter {
   final List<_HouseIconData> icons;
-  final Animation<double> animation; // The animation object
+  final Animation<double> animation; 
 
-  _HouseIconsPainter(this.icons, this.animation) : super(repaint: animation); // Repaint when animation changes
+  _HouseIconsPainter(this.icons, this.animation) : super(repaint: animation); 
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()..style = PaintingStyle.fill;
-    final double animationValue = animation.value; // Get current animation value (0.0 to 1.0)
+    final double animationValue = animation.value; 
 
     for (var iconData in icons) {
-      canvas.save(); // Save the current canvas state
+      canvas.save(); 
 
-      // Calculate the displacement based on animation value, magnitude, and angle
-      // Using sin/cos for smooth back-and-forth motion,
-      // and adding a unique phase to each icon's animation (animationAngle)
       final double dx = iconData.animationMagnitude * sin(animationValue * 2 * pi + iconData.animationAngle);
       final double dy = iconData.animationMagnitude * cos(animationValue * 2 * pi + iconData.animationAngle);
 
-      // Calculate the current position
       final Offset currentPosition = Offset(
         iconData.initialPosition.dx + dx,
         iconData.initialPosition.dy + dy,
       );
 
-      // Move the canvas origin to the icon's current position
       canvas.translate(currentPosition.dx, currentPosition.dy);
-      // Rotate the canvas around the new origin
       canvas.rotate(iconData.rotationAngle);
 
-      paint.color = iconData.color; // Set icon color and opacity
+      paint.color = iconData.color; 
 
-      // Draw a simple house shape (rectangle for body, triangle for roof)
       final double halfSize = iconData.size / 2;
       final double bodyHeight = iconData.size * 0.6;
       final double roofHeight = iconData.size * 0.4;
 
-      // House body (centered at the new origin)
+      // House body 
       canvas.drawRect(
         Rect.fromLTRB(-halfSize, -bodyHeight / 2, halfSize, bodyHeight / 2),
         paint,
       );
 
-      // House roof (triangle on top of the body)
+      // House roof 
       final Path roofPath = Path();
-      roofPath.moveTo(-halfSize, -bodyHeight / 2); // Top-left corner of body
-      roofPath.lineTo(halfSize, -bodyHeight / 2); // Top-right corner of body
-      roofPath.lineTo(0, -bodyHeight / 2 - roofHeight); // Apex of the roof
-      roofPath.close(); // Close the path to form a triangle
+      roofPath.moveTo(-halfSize, -bodyHeight / 2); 
+      roofPath.lineTo(halfSize, -bodyHeight / 2); 
+      roofPath.lineTo(0, -bodyHeight / 2 - roofHeight); 
+      roofPath.close(); 
       canvas.drawPath(roofPath, paint);
 
-      canvas.restore(); // Restore the canvas to its previous state
+      canvas.restore(); 
     }
   }
 
   @override
   bool shouldRepaint(covariant _HouseIconsPainter oldDelegate) {
-    // Only repaint if the animation object or the list of icons changes.
-    // The `repaint: animation` in the constructor already handles animation value changes.
     return oldDelegate.animation != animation || oldDelegate.icons != icons;
   }
 }
