@@ -1,14 +1,22 @@
 // lib/screens/my_favorites_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/screens/property_detail_screen.dart';
+import 'package:sora_app/services/firestore_service.dart'; 
+import 'package:intl/intl.dart'; 
 
 class MyFavoritesScreen extends StatefulWidget {
   final AuthService authService;
+  final FirestoreService firestoreService;
 
-  const MyFavoritesScreen({Key? key, required this.authService}) : super(key: key);
+  const MyFavoritesScreen({
+    Key? key, 
+    required this.authService,
+    required this.firestoreService, 
+  }) : super(key: key);
 
   @override
   State<MyFavoritesScreen> createState() => _MyFavoritesScreenState();
@@ -16,61 +24,119 @@ class MyFavoritesScreen extends StatefulWidget {
 
 class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
   late CommonWidgets commonWidgets;
-
-  // Sample favorite properties data
-  List<Map<String, dynamic>> _favoriteProperties = [
-    {
-      'title': 'Luxury Villa in Westlands',
-      'location': 'Westlands, Nairobi',
-      'price': 'KSH 45,000,000',
-      'bedrooms': 4,
-      'bathrooms': 3,
-      'area': '3500',
-      'listingType': 'Buy',
-      'type': 'Villa',
-      'description': 'Beautiful luxury villa with modern amenities',
-      'images': ['assets/images/property1.jpg'],
-      'dateAdded': '2024-01-20',
-    },
-    {
-      'title': 'Modern Apartment in Kilimani',
-      'location': 'Kilimani, Nairobi',
-      'price': 'KSH 120,000/month',
-      'bedrooms': 3,
-      'bathrooms': 2,
-      'area': '1800',
-      'listingType': 'Rent',
-      'type': 'Apartment',
-      'description': 'Spacious modern apartment with great amenities',
-      'images': ['assets/images/property2.jpg'],
-      'dateAdded': '2024-01-18',
-    },
-    {
-      'title': 'Commercial Space in CBD',
-      'location': 'CBD, Nairobi',
-      'price': 'KSH 200,000/month',
-      'bedrooms': 0,
-      'bathrooms': 2,
-      'area': '1000',
-      'listingType': 'Lease',
-      'type': 'Commercial',
-      'description': 'Prime commercial space in the heart of the city',
-      'images': ['assets/images/property3.jpg'],
-      'dateAdded': '2024-01-15',
-    },
-  ];
-
+  
   @override
   void initState() {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
   }
 
+  // Helper method for price formatting
+  String _formatPrice(dynamic price) {
+    if (price == null) return 'Price not listed';
+
+    if (price is String) {
+      try {
+        final formatter = NumberFormat('#,###', 'en_US');
+        final doublePrice = double.tryParse(price.replaceAll(RegExp(r'[^\d.]'), ''));
+        if (doublePrice != null) {
+          return 'KSH ${formatter.format(doublePrice)}';
+        }
+      } catch (e) {
+        // Fall through
+      }
+      return 'KSH $price';
+    }
+
+    if (price is num) {
+      final formatter = NumberFormat('#,###', 'en_US');
+      return 'KSH ${formatter.format(price)}';
+    }
+
+    if (price is Map) {
+      final dynamic priceValue = price['amount'] ?? price['value'];
+      if (priceValue is num) {
+        final formatter = NumberFormat('#,###', 'en_US');
+        return 'KSH ${formatter.format(priceValue)}';
+      }
+    }
+
+    return 'KSH ${price.toString()}';
+  }
+
+  // Removes a single favorite property
+  void _removeFromFavorites(String propertyId, String propertyTitle) async {
+    final user = widget.authService.getCurrentUser();
+    if (user == null) return;
+
+    await widget.firestoreService.removeFavorite(user.uid, propertyId);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$propertyTitle removed from favorites'),
+        backgroundColor: Colors.red.shade400,
+      ),
+    );
+  }
+
+  // Confirms and clears ALL favorites
+  void _showClearAllConfirmation(List<Map<String, dynamic>> favoriteProperties) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Clear All Favorites'),
+          content: Text('Are you sure you want to remove all ${favoriteProperties.length} properties from your favorites?'),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Clear All', style: TextStyle(color: Colors.white)),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final user = widget.authService.getCurrentUser();
+                if (user == null) return;
+                
+                int deletedCount = 0;
+                for (var prop in favoriteProperties) {
+                  final String propertyId = prop['id'] as String? ?? '';
+                  if (propertyId.isNotEmpty) {
+                    await widget.firestoreService.removeFavorite(user.uid, propertyId);
+                    deletedCount++;
+                  }
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$deletedCount favorites have been cleared.'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = widget.authService.getCurrentUser();
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth >= 1000;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
+
+    if (user == null) {
+      return Scaffold(
+        appBar: commonWidgets.buildAppBar(),
+        endDrawer: commonWidgets.buildDrawer(),
+        body: commonWidgets.buildSignInPromptScreen('/my_favorites'), 
+      );
+    }
 
     return Scaffold(
       appBar: commonWidgets.buildAppBar(),
@@ -87,7 +153,7 @@ class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
               ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF1E90FF).withOpacity(0.8), Color(0xFF0A66C2).withOpacity(0.8)],
+                  colors: [const Color(0xFF1E90FF).withOpacity(0.8), const Color(0xFF0A66C2).withOpacity(0.8)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -115,99 +181,85 @@ class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
               ),
             ),
 
-            // Favorites Count and Clear All
+            // Favorites Stream Builder (Dynamic Content)
             Padding(
               padding: EdgeInsets.symmetric(
-                vertical: isLargeScreen ? 30 : 20,
                 horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
+                vertical: isLargeScreen ? 30 : 20,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${_favoriteProperties.length} Favorite Properties',
-                    style: TextStyle(
-                      fontSize: isLargeScreen ? 20 : 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  if (_favoriteProperties.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: () {
-                        _showClearAllConfirmation();
-                      },
-                      icon: const Icon(Icons.clear_all, color: Colors.red),
-                      label: const Text('Clear All', style: TextStyle(color: Colors.red)),
-                    ),
-                ],
-              ),
-            ),
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: widget.firestoreService.streamFavoriteProperties(user.uid), 
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: Padding(
+                      padding: EdgeInsets.all(50.0),
+                      child: CircularProgressIndicator(),
+                    ));
+                  }
 
-            // Favorites Grid
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isLargeScreen ? 100 : (isMediumScreen ? 50 : 20),
-                vertical: isLargeScreen ? 30 : 20,
-              ),
-              child: _favoriteProperties.isEmpty
-                  ? Column(
-                      children: [
-                        SizedBox(height: isLargeScreen ? 50 : 30),
-                        Icon(Icons.favorite_border, size: isLargeScreen ? 100 : 70, color: Colors.grey[400]),
-                        SizedBox(height: 20),
-                        Text(
-                          'No favorite properties yet.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: isLargeScreen ? 22 : (isMediumScreen ? 18 : 16),
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        Text(
-                          'Start browsing properties and add them to your favorites.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: isLargeScreen ? 16 : 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/buy');
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0A66C2),
-                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                  if (snapshot.hasError) {
+                    return Center(child: Padding(
+                      padding: const EdgeInsets.all(50.0),
+                      child: Text('Error loading favorites: ${snapshot.error}', style: const TextStyle(color: Colors.red)),
+                    ));
+                  }
+
+                  final favoriteProperties = snapshot.data ?? [];
+                  final propertiesCount = favoriteProperties.length;
+
+                  return Column(
+                    children: [
+                      // Favorites Count and Clear All
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '$propertiesCount Favorite Properties',
+                            style: TextStyle(
+                              fontSize: isLargeScreen ? 20 : 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
                             ),
                           ),
-                          child: const Text(
-                            'Browse Properties',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        SizedBox(height: isLargeScreen ? 50 : 30),
-                      ],
-                    )
-                  : GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
-                        crossAxisSpacing: isLargeScreen ? 30 : 20,
-                        mainAxisSpacing: isLargeScreen ? 30 : 20,
-                        childAspectRatio: isLargeScreen ? 0.8 : (isMediumScreen ? 0.75 : 0.9),
+                          if (propertiesCount > 0)
+                            TextButton.icon(
+                              onPressed: () {
+                                _showClearAllConfirmation(favoriteProperties);
+                              },
+                              icon: const Icon(Icons.clear_all, color: Colors.red),
+                              label: const Text('Clear All', style: TextStyle(color: Colors.red)),
+                            ),
+                        ],
                       ),
-                      itemCount: _favoriteProperties.length,
-                      itemBuilder: (context, index) {
-                        final property = _favoriteProperties[index];
-                        return _buildFavoritePropertyCard(property);
-                      },
-                    ),
+                      const SizedBox(height: 20),
+
+                      // Favorites Grid or Empty State
+                      propertiesCount == 0
+                          ? commonWidgets.buildEmptyState(
+                              'No Favorites Yet',
+                              'Start browsing properties and add them to your favorites.',
+                              () => Navigator.pushNamed(context, '/buy'),
+                              'Browse Properties',
+                            )
+                          : GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: isLargeScreen ? 3 : (isMediumScreen ? 2 : 1),
+                                crossAxisSpacing: isLargeScreen ? 30 : 20,
+                                mainAxisSpacing: isLargeScreen ? 30 : 20,
+                                childAspectRatio: isLargeScreen ? 0.8 : (isMediumScreen ? 0.75 : 0.9),
+                              ),
+                              itemCount: propertiesCount,
+                              itemBuilder: (context, index) {
+                                final property = favoriteProperties[index];
+                                return _buildFavoritePropertyCard(property);
+                              },
+                            ),
+                    ],
+                  );
+                },
+              ),
             ),
 
             // Footer
@@ -218,7 +270,69 @@ class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
     );
   }
 
+  // Card implementation matching my_listings_screen data fields
   Widget _buildFavoritePropertyCard(Map<String, dynamic> property) {
+    // 1. Core Fields (Always safe with .toString())
+    final String propertyId = (property['id'] ?? '0').toString();
+    final String title = (property['title'] ?? 'No Title').toString();
+    final dynamic price = property['price']; 
+    final String listingType = (property['listingType'] ?? 'N/A').toString();
+
+    // 2. Image URL (Use coverImageUrl as primary source)
+    final String imageUrl = (property['coverImageUrl'] as String?) ?? 'assets/images/placeholder.jpg';
+    bool isNetworkImage = imageUrl.startsWith('http');
+
+    // 3. Location (Handle nested Map)
+    String displayLocation = 'Unknown Location';
+    final Map<String, dynamic>? locationMap = property['location'] is Map ? property['location'] as Map<String, dynamic> : null;
+
+    if (locationMap != null) {
+      final String locality = (locationMap['locality'] ?? '').toString();
+      final String town = (locationMap['town'] ?? '').toString();
+      final String county = (locationMap['county'] ?? '').toString();
+      
+      List<String> parts = [locality, town, county].where((p) => p.isNotEmpty).toList();
+      displayLocation = parts.join(', ');
+    }
+    
+    // 4. Bedrooms/Bathrooms/Area (Handle nested maps)
+    int bedrooms = 0;
+    int bathrooms = 0;
+    String areaText = 'N/A';
+    String areaUnit = '';
+
+    // Check for Residential details
+    final Map<String, dynamic>? residentialDetails = property['residentialDetails'] is Map ? property['residentialDetails'] as Map<String, dynamic> : null;
+    if (residentialDetails != null) {
+      // Safely parse from string field in the map
+      bedrooms = int.tryParse(residentialDetails['bedrooms']?.toString() ?? '0') ?? 0;
+      bathrooms = int.tryParse(residentialDetails['bathrooms']?.toString() ?? '0') ?? 0;
+      areaText = (residentialDetails['size'] ?? 'N/A').toString();
+      areaUnit = (residentialDetails['sizeUnit'] ?? '').toString();
+    }
+
+    // Check for Airbnb details (overrides/supplements Residential if present)
+    final Map<String, dynamic>? airbnbDetails = property['airbnbDetails'] is Map ? property['airbnbDetails'] as Map<String, dynamic> : null;
+    if (airbnbDetails != null) {
+      // Safely parse from string field in the map
+      bedrooms = int.tryParse(airbnbDetails['bedrooms']?.toString() ?? '0') ?? bedrooms;
+      bathrooms = int.tryParse(airbnbDetails['bathrooms']?.toString() ?? '0') ?? bathrooms;
+    }
+
+    // Fallback/Top-level check (for simple listings or older data)
+    bedrooms = int.tryParse(property['bedrooms']?.toString() ?? '0') ?? bedrooms;
+    bathrooms = int.tryParse(property['bathrooms']?.toString() ?? '0') ?? bathrooms;
+    if (areaText == 'N/A' && property['size'] != null) {
+        areaText = property['size'].toString();
+        areaUnit = (property['sizeUnit'] ?? 'sqft').toString();
+    }
+
+    // Final area string formatting
+    String finalAreaDisplay = 'N/A';
+    if (areaText != 'N/A') {
+        finalAreaDisplay = areaUnit.isNotEmpty ? '$areaText $areaUnit' : areaText;
+    }
+    
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -239,27 +353,39 @@ class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
               flex: 3,
               child: Stack(
                 children: [
-                  Image.asset(
-                    property['images'][0],
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[300],
-                        child: const Center(
-                          child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-                        ),
-                      );
-                    },
-                  ),
+                  // Image loading logic
+                  isNetworkImage 
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                : null,
+                          ));
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildImagePlaceholder();
+                        },
+                      )
+                    : Image.asset(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildImagePlaceholder();
+                        },
+                      ),
+                  
                   Positioned(
                     top: 10,
                     right: 10,
                     child: IconButton(
                       icon: const Icon(Icons.favorite, color: Colors.red),
-                      onPressed: () {
-                        _removeFromFavorites(property);
-                      },
+                      onPressed: () => _removeFromFavorites(propertyId, title), 
                       tooltip: 'Remove from favorites',
                     ),
                   ),
@@ -273,7 +399,7 @@ class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(
-                        property['listingType'],
+                        listingType,
                         style: const TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     ),
@@ -289,7 +415,7 @@ class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      property['title'],
+                      title,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -305,7 +431,8 @@ class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
                         const SizedBox(width: 5),
                         Expanded(
                           child: Text(
-                            property['location'],
+                            // Use the constructed location string
+                            displayLocation,
                             style: const TextStyle(fontSize: 14, color: Colors.grey),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -314,18 +441,22 @@ class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    if (property['bedrooms'] > 0)
+                    // Show features only if data is available
+                    if (bedrooms > 0 || bathrooms > 0 || finalAreaDisplay != 'N/A')
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildFeatureIcon(Icons.bed, '${property['bedrooms']} Beds'),
-                          _buildFeatureIcon(Icons.bathtub, '${property['bathrooms']} Baths'),
-                          _buildFeatureIcon(Icons.square_foot, '${property['area']} sqft'),
+                          if (bedrooms > 0)
+                            _buildFeatureIcon(Icons.bed, '$bedrooms Beds'),
+                          if (bathrooms > 0)
+                            _buildFeatureIcon(Icons.bathtub, '$bathrooms Baths'),
+                          if (finalAreaDisplay != 'N/A')
+                            _buildFeatureIcon(Icons.square_foot, finalAreaDisplay),
                         ],
                       ),
                     const SizedBox(height: 10),
                     Text(
-                      property['price'],
+                      _formatPrice(price),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -354,56 +485,13 @@ class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
       ],
     );
   }
-
-  void _removeFromFavorites(Map<String, dynamic> property) {
-    setState(() {
-      _favoriteProperties.removeWhere((item) => item['title'] == property['title']);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${property['title']} removed from favorites'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            setState(() {
-              _favoriteProperties.add(property);
-            });
-          },
-        ),
+  
+  Widget _buildImagePlaceholder() {
+    return Container(
+      color: Colors.grey[300],
+      child: const Center(
+        child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
       ),
-    );
-  }
-
-  void _showClearAllConfirmation() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Clear All Favorites'),
-          content: const Text('Are you sure you want to remove all properties from your favorites?'),
-          actions: [
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Clear All', style: TextStyle(color: Colors.white)),
-              onPressed: () {
-                setState(() {
-                  _favoriteProperties.clear();
-                });
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('All favorites have been cleared.')),
-                );
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }

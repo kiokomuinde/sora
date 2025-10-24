@@ -197,7 +197,7 @@ class FirestoreService {
   }
 
   // =========================================================================
-  // 4. FAVORITES MANAGEMENT (Two positional arguments)
+  // 4. FAVORITES MANAGEMENT
   // =========================================================================
 
   /// Checks if a property is in the user's favorites.
@@ -263,8 +263,38 @@ class FirestoreService {
         .collection('users')
         .doc(user.uid)
         .collection('favorites')
+        .orderBy('timestamp', descending: true) // Added orderBy for consistent order
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc.id).toList());
+  }
+
+  /// **IMPLEMENTATION:** Fetches the full property details for all properties in a user's favorites list.
+  Stream<List<Map<String, dynamic>>> streamFavoriteProperties(String userId) {
+    if (userId.isEmpty) {
+      return Stream.value([]);
+    }
+
+    // This stream first fetches the list of favorite IDs and then uses asyncMap
+    // to fetch the full property details for each ID in parallel.
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('favorites')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .asyncMap((snapshot) async {
+      
+      final List<String> favoriteIds = snapshot.docs.map((doc) => doc.id).toList();
+
+      // Fetch full property data for each favorite ID using the existing getPropertyById
+      final List<Future<Map<String, dynamic>?>> propertyFutures = favoriteIds.map((id) => getPropertyById(id)).toList();
+      
+      // Wait for all property fetches to complete
+      final List<Map<String, dynamic>?> results = await Future.wait(propertyFutures);
+
+      // Filter out null results (e.g., deleted properties) and return valid properties
+      return results.whereType<Map<String, dynamic>>().toList();
+    });
   }
 
   // =========================================================================
@@ -430,7 +460,7 @@ class FirestoreService {
   Stream<QuerySnapshot> streamUsers() {
     return _firestore
         .collection('userProfiles') 
-        .orderBy('timestamp', descending: true) 
+        .orderBy('createdAt', descending: true) // Assuming 'createdAt' exists
         .snapshots();
   }
 

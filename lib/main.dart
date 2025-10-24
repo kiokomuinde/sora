@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sora_app/firebase_options.dart';
 import 'package:sora_app/services/auth_service.dart';
+import 'package:sora_app/services/firestore_service.dart'; // <<< ADDED IMPORT
 import 'dart:html' as html;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 // 🎯 CRITICAL: Import for PathUrlStrategy
@@ -34,14 +35,14 @@ import 'screens/events_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'screens/cookie_policy_screen.dart';
 import 'screens/add_property_screen.dart';
-import 'screens/view_property_screen.dart'; // Ensure this is imported
+import 'screens/view_property_screen.dart';
 import 'screens/my_favorites_screen.dart';
 import 'screens/my_listings_screen.dart';
 import 'screens/profile_settings_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/recently_viewed_screen.dart';
 import 'screens/create_blog_screen.dart'; 
-import 'screens/admin_screen.dart'; // <<< ADMIN SCREEN IMPORT
+import 'screens/admin_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,18 +52,28 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // if (kIsWeb) { // <-- REMOVED: Reverting to default Hash URL Strategy
+  // if (kIsWeb) { 
   //   usePathUrlStrategy();
   // }
 
   final AuthService authService = AuthService(firebaseAuth: FirebaseAuth.instance);
-  runApp(MyApp(authService: authService));
+  final FirestoreService firestoreService = FirestoreService(); // <<< INITIALIZED SERVICE
+  
+  runApp(MyApp(
+    authService: authService,
+    firestoreService: firestoreService, // <<< PASSED TO MYAPP
+  ));
 }
 
 class MyApp extends StatelessWidget {
   final AuthService authService;
+  final FirestoreService firestoreService; // <<< RECEIVED SERVICE
 
-  const MyApp({Key? key, required this.authService}) : super(key: key);
+  const MyApp({
+    Key? key, 
+    required this.authService,
+    required this.firestoreService, // <<< REQUIRED IN CONSTRUCTOR
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -214,8 +225,15 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => PrivacyPolicyScreen(authService: authService));
           case '/cookie_policy':
             return MaterialPageRoute(builder: (_) => CookiePolicyScreen(authService: authService));
+            
           case '/my_favorites':
-            return MaterialPageRoute(builder: (_) => MyFavoritesScreen(authService: authService));
+            return MaterialPageRoute(
+              builder: (_) => MyFavoritesScreen(
+                authService: authService,
+                firestoreService: firestoreService, // <<< ADDED firestoreService HERE
+              )
+            );
+            
           case '/my_listings':
             return MaterialPageRoute(builder: (_) => MyListingsScreen(authService: authService));
           case '/profile_settings':
