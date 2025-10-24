@@ -13,6 +13,7 @@ import 'package:firebase_auth/firebase_auth.dart'; // Add this import
 import 'package:intl/intl.dart'; // Import for number formatting
 import 'package:sora_app/screens/blogs_screen.dart'; // Import for blogs_screen.dart
 import 'package:share_plus/share_plus.dart'; // Import for sharing functionality
+import 'dart:math'; // NEW: Import for random number generation
 
 class HomeScreen extends StatefulWidget {
   final AuthService authService;
@@ -447,7 +448,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPropertiesCarousel(
     BuildContext context,
-    String title,
+    String title, // <-- FIX: Use this for the displayed title
     List<Map<String, dynamic>> properties,
     ScrollController scrollController,
     bool isLargeScreen,
@@ -469,24 +470,24 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Popular Properties',
-                style: TextStyle(
-                  fontSize: isLargeScreen ? 36 : (isMediumScreen ? 28 : 22),
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF0A66C2),
-                ),
+              // **FIX: Use the new CelebrationTitle widget for gradient effect**
+              CelebrationTitle(
+                title: title, 
+                isLargeScreen: isLargeScreen, 
+                isMediumScreen: isMediumScreen,
               ),
               TextButton(
                 onPressed: () {
                   String listingType = '';
-                  if (title == 'Popular Properties') {
-                    listingType = 'Rent';
-                  } else if (title == 'Hottest Deals') {
-                    listingType = 'Buy';
-                  } else if (title == 'New in Market') {
-                    listingType = 'Lease';
+                  // Update logic to handle the new titles and determine the listing type
+                  if (title.contains('Staycation')) { 
+                    listingType = 'Staycation';
+                  } else if (title.contains('Deals')) {
+                    listingType = 'Buy'; // Hottest Deals usually implies properties for sale
+                  } else if (title.contains('New Market Arrivals')) {
+                    listingType = 'Rent'; // New in Market often points to fresh rentals
                   }
+                  
                   Navigator.pushNamed(context, '/property_listing', arguments: {'listingType': listingType});
                 },
                 child: const Text(
@@ -752,18 +753,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Re-usable widget from blogs_screen.dart, adapted for local use
-  // **REPLACED with _BlogCard Stateful widget below**
-  /*
-  Widget _buildBlogCard({
-    required Map<String, dynamic> blog,
-    required bool isLargeScreen,
-    required bool isMediumScreen,
-  }) {
-    // ... [Original code removed]
-  }
-  */
-
   Widget _buildTestimonialsSection(bool isLargeScreen, bool isMediumScreen) {
     // Mock testimonials data
     final List<Map<String, String>> testimonials = [
@@ -887,6 +876,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Helper function to get a random subset
+  List<Map<String, dynamic>> getRandomSubset(List<Map<String, dynamic>> source, int count) {
+    if (source.length <= count) return List.from(source);
+
+    // Create a shuffled copy and take the first `count` elements
+    final Random random = Random();
+    final List<Map<String, dynamic>> shuffled = List.from(source)..shuffle(random);
+    return shuffled.take(count).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -932,48 +931,64 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 } else {
                   final properties = snapshot.data!;
-                  // Segregate properties for carousels
-                  final List<Map<String, dynamic>> staycationProperties =
-                      properties.where((p) => p['listingType'] == 'Staycation').toList();
-                  final List<Map<String, dynamic>> otherProperties =
+
+                  // 1. Separate all properties and residential-only properties
+                  final List<Map<String, dynamic>> allProperties = List.from(properties);
+                  // Residential: Filter out Staycation properties as requested for the deals/new carousels
+                  final List<Map<String, dynamic>> residentialProperties =
                       properties.where((p) => p['listingType'] != 'Staycation').toList();
 
-                  // Create the combined list of 10 properties for each carousel
-                  List<Map<String, dynamic>> carouselProperties = [];
-                  final int numStaycations = staycationProperties.length > 3 ? 3 : staycationProperties.length;
-                  final int numOthers = 10 - numStaycations;
-                  carouselProperties.addAll(staycationProperties.take(numStaycations));
-                  carouselProperties.addAll(otherProperties.take(numOthers));
+                  // Determine the number of properties to select (max 18)
+                  const int maxProperties = 18;
+
+                  // 2. Create lists for carousels based on new rules
+
+                  // NEW: Filter for only Staycation (Airbnb) properties
+                  final List<Map<String, dynamic>> airbnbProperties =
+                      properties.where((p) => p['listingType'] == 'Staycation').toList();
+                      
+                  // Popular: Now only Airbnbs (Staycation), max 18. No padding.
+                  final List<Map<String, dynamic>> popularCarouselProperties =
+                      getRandomSubset(airbnbProperties, maxProperties);
+
+                  // Deals and New: Exclude Staycation (up to 18 random)
+                  final List<Map<String, dynamic>> dealsCarouselProperties =
+                      getRandomSubset(residentialProperties, maxProperties);
+                  final List<Map<String, dynamic>> newCarouselProperties =
+                      getRandomSubset(residentialProperties, maxProperties);
 
                   return Column(
                     children: [
-                      // Popular Properties Section
+                      // Popular Properties Section - NOW ONLY AIRBNBS
                       _buildPropertiesCarousel(
                         context,
-                        'Popular Properties',
-                        carouselProperties,
+                        // **UPDATED: Captivating Title 1 (Airbnb)**
+                        '🎉 Staycation Grand Opening! 🥂', 
+                        popularCarouselProperties, // Now only Staycation properties
                         _popularScrollController,
                         isLargeScreen,
                         isMediumScreen,
                         'popularCarousel',
                       ),
 
-                      // Hottest Deals Section
+                      // Hottest Deals Section - Excludes Airbnbs
                       _buildPropertiesCarousel(
                         context,
-                        'Hottest Deals',
-                        carouselProperties,
+                        // **UPDATED: Captivating Title 2 (Deals)**
+                        '💰 Hot Property Deals: You Win! 🏆', 
+                        dealsCarouselProperties, // Residential only
                         _dealsScrollController,
                         isLargeScreen,
                         isMediumScreen,
                         'dealsCarousel',
                       ),
 
-                      // New in Market Section
+                      // New in Market Section - Excludes Airbnbs
                       _buildPropertiesCarousel(
                         context,
-                        'New in Market',
-                        carouselProperties,
+                        // **UPDATED: Captivating Title 3 (New)**
+                        '✨ New Market Arrivals: Be First! 🔑', 
+                        newCarouselProperties, // Residential only
                         _newScrollController,
                         isLargeScreen,
                         isMediumScreen,
@@ -1004,6 +1019,49 @@ class _HomeScreenState extends State<HomeScreen> {
             // Footer
             commonWidgets.buildFooter(),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ====================================================================
+// NEW WIDGET: CelebrationTitle for Gradient Headlines
+// ====================================================================
+
+class CelebrationTitle extends StatelessWidget {
+  final String title;
+  final bool isLargeScreen;
+  final bool isMediumScreen;
+
+  const CelebrationTitle({
+    super.key,
+    required this.title,
+    required this.isLargeScreen,
+    required this.isMediumScreen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      // Apply the blue and purple gradient as the shader
+      shaderCallback: (Rect bounds) {
+        return const LinearGradient(
+          colors: [
+            Color(0xFF4169E1), // Royal Blue
+            Color(0xFF9932CC), // Dark Orchid (Purple)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          tileMode: TileMode.mirror,
+        ).createShader(bounds);
+      },
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: isLargeScreen ? 36 : (isMediumScreen ? 28 : 22),
+          fontWeight: FontWeight.w900, // Extra bold for impact
+          color: Colors.white, // This color is used as a base, masked by the gradient
         ),
       ),
     );
@@ -1105,7 +1163,7 @@ class _BlogCardState extends State<_BlogCard> {
 
   void _shareBlog() {
     final String title = widget.blog['title'] ?? 'Check out this SORA blog post!';
-    
+
     // FIX: Changed from server path routing to Flutter web hash routing
     final String shareText = '$title\n\nRead more here: https://soraproperties.co.ke/#/blog_view/${widget.blog['id']}';
 

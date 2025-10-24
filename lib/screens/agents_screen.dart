@@ -92,7 +92,7 @@ class _AgentsScreenState extends State<AgentsScreen> {
       'image': 'assets/images/riki_pro.webp', // Updated from .png to .webp
       'phone': '+254702778897',
       'email': 'soraproperties001@gmail.com',
-      'bio': 'Erick specializes in luxury residential properties and has over 10 years of experience in the Nairobi market. She is dedicated to providing exceptional service and finding the perfect home for her clients.',
+      'bio': 'Erick specializes in luxury residential properties and has over 10 years of experience in the Nairobi market. He is dedicated to providing exceptional service and finding the perfect home for her clients.',
     },
     {
       'name': 'Kioko Muinde',
