@@ -449,7 +449,8 @@ class FirestoreService {
     if (userId.isEmpty) return false;
     try {
       DocumentSnapshot userDoc = await _firestore.collection('userProfiles').doc(userId).get();
-      return userDoc.exists && userDoc.get('isAdmin') == true;
+      // Safely check for isAdmin: doc.exists and doc.data() is not null and it contains 'isAdmin' and 'isAdmin' is true
+      return userDoc.exists && (userDoc.data() as Map<String, dynamic>?)?['isAdmin'] == true;
     } catch (e) {
       print('Error checking admin status: $e');
       return false;

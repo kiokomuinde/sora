@@ -231,12 +231,15 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
 
     final allProperties = await _firestoreService.getPropertiesByListingType(currentListingType);
     
-    // Filter out the currently viewed property using its ID
+    // Clinical Filter: Exclude the currently viewed property AND explicitly verify the listingType.
     final similarProperties = allProperties.where((property) {
       final fetchedPropertyId = property['id'] as String?;
+      final fetchedListingType = property['listingType'] as String?; // Explicitly check listing type
       
-      // Filter: Exclude the current property (by matching ID) and any property with a missing ID.
-      return fetchedPropertyId != null && fetchedPropertyId != currentPropertyId;
+      // Filter: Exclude the current property (by matching ID) AND ensure listingType is identical
+      return fetchedPropertyId != null 
+             && fetchedPropertyId != currentPropertyId
+             && fetchedListingType == currentListingType;
     }).toList();
     
     return similarProperties;
@@ -596,7 +599,8 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
             elevation: 0, 
           )
         : IconButton.styleFrom(
-            backgroundColor: Colors.white.withOpacity(0.7), 
+            // CORRECTED: Opacity set to 0.4
+            backgroundColor: Colors.white.withOpacity(0.4), 
             shape: const CircleBorder(),
             padding: const EdgeInsets.all(8),
             elevation: 5, 
@@ -636,7 +640,8 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                 icon: const Icon(Icons.arrow_back_ios, size: 30),
                 color: const Color(0xFF0A66C2),
                 style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.7),
+                  // CORRECTED: Opacity set to 0.4
+                  backgroundColor: Colors.white.withOpacity(0.4),
                   shape: const CircleBorder(),
                   padding: const EdgeInsets.all(12),
                 ),
@@ -657,7 +662,8 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                 icon: const Icon(Icons.arrow_forward_ios, size: 30),
                 color: const Color(0xFF0A66C2),
                 style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.7),
+                  // CORRECTED: Opacity set to 0.4
+                  backgroundColor: Colors.white.withOpacity(0.4),
                   shape: const CircleBorder(),
                   padding: const EdgeInsets.all(12),
                 ),
@@ -688,7 +694,8 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                   icon: const Icon(Icons.share, size: 30, color: Color(0xFF0A66C2)),
                   onPressed: _shareProperty,
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.7),
+                    // CORRECTED: Opacity set to 0.4
+                    backgroundColor: Colors.white.withOpacity(0.4),
                     shape: const CircleBorder(),
                     padding: const EdgeInsets.all(8),
                   ),
@@ -1006,7 +1013,8 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                 icon: const Icon(Icons.arrow_back_ios, size: 30),
                 color: const Color(0xFF0A66C2),
                 style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.9),
+                  // CORRECTED: Opacity set to 0.4
+                  backgroundColor: Colors.white.withOpacity(0.4),
                   shape: const CircleBorder(),
                   padding: const EdgeInsets.all(8),
                   elevation: 5,
@@ -1022,7 +1030,8 @@ class _ViewPropertyScreenState extends State<ViewPropertyScreen> {
                 icon: const Icon(Icons.arrow_forward_ios, size: 30),
                 color: const Color(0xFF0A66C2),
                 style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.9),
+                  // CORRECTED: Opacity set to 0.4
+                  backgroundColor: Colors.white.withOpacity(0.4),
                   shape: const CircleBorder(),
                   padding: const EdgeInsets.all(8),
                   elevation: 5,

@@ -31,6 +31,9 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
   
   Map<String, dynamic>? _currentBlogPost;
   late Future<void> _loadBlogFuture;
+  
+  // ADDED: State variable to track admin status
+  bool _isAdmin = false; 
 
   final List<String> _categories = [
     'Market Trends', 'Selling Tips', 'Investment', 'Technology', 
@@ -42,7 +45,31 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService); 
     _loadBlogFuture = _fetchBlogData();
+    // ADDED: Check admin status when the screen initializes
+    _checkAdminStatus(); 
   }
+
+  // ADDED: Method to check and update admin status, hiding the button for normal users
+  Future<void> _checkAdminStatus() async {
+    final user = widget.authService.getCurrentUser();
+    if (user != null) {
+      // Use the checkAdminStatus method from FirestoreService
+      final isAdmin = await _firestoreService.checkAdminStatus(user.uid);
+      if (mounted) {
+        setState(() {
+          _isAdmin = isAdmin;
+        });
+      }
+    } else {
+      // Ensure isAdmin is false if no user is logged in
+      if (mounted) {
+        setState(() {
+          _isAdmin = false;
+        });
+      }
+    }
+  }
+
 
   /// Fetches blog data based on provided blogPost or blogSlug.
   Future<void> _fetchBlogData() async {
@@ -56,6 +83,7 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     }
 
     if (widget.blogSlug != null) {
+      // NOTE: getBlogBySlugOrId is assumed to be implemented in FirestoreService
       final fetchedBlog = await _firestoreService.getBlogBySlugOrId(widget.blogSlug!);
       if (mounted) {
         setState(() {
@@ -314,7 +342,6 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     );
   }
 
-  // --- UPDATED LEFT COLUMN WITH LIGHTER GRADIENT AND BOLDER TEXT ---
   Widget _buildLeftColumn() {
     // Define the colors used in the middle column for consistency
     const Color darkBlueTitle = Color(0xFF0A66C2);
@@ -551,7 +578,8 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
           backgroundColor: Colors.white,
           appBar: commonWidgets.buildAppBar(),
           endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
-          floatingActionButton: isLoggedIn
+          // MODIFIED: Only show the floating action button if the user is logged in AND is an admin (_isAdmin is true)
+          floatingActionButton: isLoggedIn && _isAdmin
               ? Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
@@ -599,7 +627,7 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
                     ),
                   ),
                 )
-              : null,
+              : null, // Return null if not logged in or not admin
           body: Row(
             children: [
               if (isLargeScreen)

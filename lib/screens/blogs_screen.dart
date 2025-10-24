@@ -25,11 +25,29 @@ class _BlogsScreenState extends State<BlogsScreen> {
   String _currentListingTypeFilter = '';
   late CommonWidgets commonWidgets;
   final FirestoreService _firestoreService = FirestoreService(); 
+  
+  // ADDED: State variable to track admin status
+  bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
+    // ADDED: Check admin status when the screen initializes
+    _checkAdminStatus(); 
+  }
+
+  // ADDED: Method to check and update admin status
+  Future<void> _checkAdminStatus() async {
+    final user = widget.authService.getCurrentUser();
+    if (user != null) {
+      final isAdmin = await _firestoreService.checkAdminStatus(user.uid);
+      if (mounted) {
+        setState(() {
+          _isAdmin = isAdmin;
+        });
+      }
+    }
   }
 
   @override
@@ -516,7 +534,8 @@ class _BlogsScreenState extends State<BlogsScreen> {
       backgroundColor: Colors.white,
       appBar: commonWidgets.buildAppBar(),
       endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
-      floatingActionButton: isLoggedIn
+      // MODIFIED: Only show the floating action button if the user is logged in AND is an admin
+      floatingActionButton: isLoggedIn && _isAdmin
           ? Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
@@ -564,7 +583,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
                 ),
               ),
             )
-          : null,
+          : null, // Return null if not logged in or not admin
       body: SingleChildScrollView(
         child: _buildContent(),
       ),

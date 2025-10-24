@@ -962,8 +962,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Popular Properties Section - NOW ONLY AIRBNBS
                       _buildPropertiesCarousel(
                         context,
-                        // **UPDATED: Captivating Title 1 (Airbnb)**
-                        '🎉 Staycation Grand Opening! 🥂', 
+                        // **FIXED: Restored Emojis in Title 1 (Airbnb)**
+                        '✨ Staycation Grand Opening! 🥳', 
                         popularCarouselProperties, // Now only Staycation properties
                         _popularScrollController,
                         isLargeScreen,
@@ -974,8 +974,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Hottest Deals Section - Excludes Airbnbs
                       _buildPropertiesCarousel(
                         context,
-                        // **UPDATED: Captivating Title 2 (Deals)**
-                        '💰 Hot Property Deals: You Win! 🏆', 
+                        // **FIXED: Restored Emojis in Title 2 (Deals)**
+                        '🔥 Hot Property Deals: You Win! 🏆', 
                         dealsCarouselProperties, // Residential only
                         _dealsScrollController,
                         isLargeScreen,
@@ -986,8 +986,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       // New in Market Section - Excludes Airbnbs
                       _buildPropertiesCarousel(
                         context,
-                        // **UPDATED: Captivating Title 3 (New)**
-                        '✨ New Market Arrivals: Be First! 🔑', 
+                        // **FIXED: Restored Emojis in Title 3 (New)**
+                        '🚀 New Market Arrivals: Be First! 🆕', 
                         newCarouselProperties, // Residential only
                         _newScrollController,
                         isLargeScreen,
@@ -1444,15 +1444,14 @@ class _PropertyCardState extends State<_PropertyCard> {
       // Staycation: Get guests from airbnbDetails and baths from residentialDetails
       guestsCapacity = int.tryParse((airbnbDetails['guests'] ?? '0').toString().replaceAll(',', '')) ?? 0;
 
-      // We don't display 'beds' or 'size' for Staycation, only Guests and Baths
+      // We don't display 'beds' or 'size' for Staycation, only Guests and Baths/Amenities
       displayBeds = 0;
       displaySize = 0;
-      // Use residentialDetails for bathrooms, as it is a common field for the physical property
+      // We still calculate baths although it's not displayed now, for completeness
       displayBaths = int.tryParse((residentialDetails['bathrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
 
     } else {
       // Residential (Buy, Rent, Lease): Use residentialDetails for beds and baths
-      // THIS RESTORES THE ORIGINAL FIX for beds/bedrooms
       displayBeds = int.tryParse((residentialDetails['bedrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
       displayBaths = int.tryParse((residentialDetails['bathrooms'] ?? '0').toString().replaceAll(',', '')) ?? 0;
       displaySize = rootSize; // Use the root size field
@@ -1587,9 +1586,10 @@ class _PropertyCardState extends State<_PropertyCard> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         if (listingType == 'Staycation') ...[
-                          // Show Guests and Baths for Staycation
+                          // Show Guests and Amenities (Replaced Baths) for Staycation
                           _buildPropertyFeature(Icons.people_alt_rounded, '$guestsCapacity Guests'),
-                          _buildPropertyFeature(FontAwesomeIcons.toilet, '$displayBaths Baths'),
+                          // **UPDATED: Replaced Baths with Amenities (using Wifi icon)**
+                          _buildPropertyFeature(Icons.wifi, 'Amenities'),
                         ] else ...[
                           // Show Beds, Baths, and Size for Residential
                           _buildPropertyFeature(Icons.bed_rounded, '$displayBeds Beds'),
