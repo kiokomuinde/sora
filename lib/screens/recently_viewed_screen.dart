@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
-import 'package:sora_app/screens/property_detail_screen.dart';
+// Removed property_detail_screen.dart import
 
 class RecentlyViewedScreen extends StatefulWidget {
   final AuthService authService;
@@ -118,7 +118,7 @@ class _RecentlyViewedScreenState extends State<RecentlyViewedScreen> {
               ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF1E90FF).withOpacity(0.8), Color(0xFF0A66C2).withOpacity(0.8)],
+                  colors: [const Color(0xFF1E90FF).withOpacity(0.8), const Color(0xFF0A66C2).withOpacity(0.8)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -186,7 +186,7 @@ class _RecentlyViewedScreenState extends State<RecentlyViewedScreen> {
                       children: [
                         SizedBox(height: isLargeScreen ? 50 : 30),
                         Icon(Icons.history, size: isLargeScreen ? 100 : 70, color: Colors.grey[400]),
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
                         Text(
                           'No recently viewed properties.',
                           textAlign: TextAlign.center,
@@ -195,7 +195,7 @@ class _RecentlyViewedScreenState extends State<RecentlyViewedScreen> {
                             color: Colors.grey[600],
                           ),
                         ),
-                        SizedBox(height: 10),
+                        const SizedBox(height: 10),
                         Text(
                           'Start browsing properties to see your viewing history here.',
                           textAlign: TextAlign.center,
@@ -204,7 +204,7 @@ class _RecentlyViewedScreenState extends State<RecentlyViewedScreen> {
                             color: Colors.grey[500],
                           ),
                         ),
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () {
                             Navigator.pushNamed(context, '/buy');
@@ -248,11 +248,11 @@ class _RecentlyViewedScreenState extends State<RecentlyViewedScreen> {
       margin: const EdgeInsets.only(bottom: 20),
       child: GestureDetector(
         onTap: () {
-          Navigator.push(
+          // === UPDATED: Now uses named routing mapping directly to ViewPropertyScreen ===
+          Navigator.pushNamed(
             context,
-            MaterialPageRoute(
-              builder: (context) => PropertyDetailScreen(property: property),
-            ),
+            '/view_property',
+            arguments: property,
           );
         },
         child: Card(

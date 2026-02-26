@@ -160,12 +160,10 @@ class CommonWidgets {
                 ),
                 const SizedBox(width: 20),
                 _buildAppBarButton(
-                  'Lease',
-                  '/lease',
-                  currentListingTypeFilter == 'Lease',
-                ),
-                const SizedBox(width: 20),
-                _buildAppBarButton('Airbnb', '/airbnb'),
+                  'BNB', // Displayed text remains BNB
+                  '/airbnb', // Restored route logic to airbnb
+                  currentListingTypeFilter == 'Airbnb', // Restored active check logic
+                ), 
                 const SizedBox(width: 20),
                 _buildAppBarButton('About Us', '/about'),
                 const SizedBox(width: 20),
@@ -414,17 +412,10 @@ class CommonWidgets {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.attach_money),
-            title: const Text('Lease'),
+            leading: const Icon(Icons.bed), 
+            title: const Text('BNB'), // Display text remains BNB
             onTap: () {
-              Navigator.pushNamed(context, '/lease');
-            },
-          ),
-          ListTile(
-            leading: const FaIcon(FontAwesomeIcons.airbnb, size: 24),
-            title: const Text('Airbnb'),
-            onTap: () {
-              Navigator.pushNamed(context, '/airbnb');
+              Navigator.pushNamed(context, '/airbnb'); // Route restored to airbnb
             },
           ),
           const Divider(),
@@ -443,6 +434,13 @@ class CommonWidgets {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.article), 
+            title: const Text('Blog'), 
+            onTap: () {
+              Navigator.pushNamed(context, '/blogs');
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.mail),
             title: const Text('Contact Us'),
             onTap: () {
@@ -451,8 +449,6 @@ class CommonWidgets {
           ),
           const Divider(),
           if (isLoggedIn) ...[
-            // This is the mobile drawer version of the button
-            // It should also respect the admin status
             // === MODIFICATION: Check for Admin status for 'Create Blog' button in Drawer ===
             if (authService.getCurrentUser()?.uid != null)
               FutureBuilder<bool>(
@@ -525,7 +521,6 @@ class CommonWidgets {
     return Container(
       color: const Color(0xFF0A66C2),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-      // UPDATED: Wrap the Column in a Stack to position the FloatingActionButton
       child: Stack(
         children: [
           Column(
@@ -542,7 +537,6 @@ class CommonWidgets {
                       children: [
                         Row(
                           children: [
-                            // Corrected image path to fix the asset loading error
                             Image.asset('assets/images/sora_logo.png', height: 40),
                             const SizedBox(width: 8),
                             const Text(
@@ -562,23 +556,18 @@ class CommonWidgets {
                           style: TextStyle(color: Colors.white70),
                         ),
                         const SizedBox(height: 16),
-                        // Replaced Row with Wrap for responsive social media icons
                         Wrap(
                           spacing: 16.0,
                           runSpacing: 8.0,
                           children: [
-                            // UPDATED SOCIAL MEDIA LINKS
                             _buildSocialButton(FontAwesomeIcons.xTwitter, 'https://x.com'),
                             _buildSocialButton(FontAwesomeIcons.facebookF, 'https://www.facebook.com/share/1C3bVnrGCW/'),
                             _buildSocialButton(FontAwesomeIcons.instagram, 'https://www.instagram.com/sora.properties?igsh=MTFzM2dhOXZ5Z3E2eA=='),
                             _buildSocialButton(FontAwesomeIcons.linkedinIn, 'https://linkedin.com'),
                             _buildSocialButton(FontAwesomeIcons.youtube, 'https://youtube.com/@soraproperties?si=F3sQtcRZoBZL8Llv'),
-                            // WhatsApp link updated to use the provided number for 'wa.me'
                             _buildSocialButton(FontAwesomeIcons.whatsapp, 'https://wa.me/+25493999591'),
-                            // TikTok link corrected with 'https://' prefix
                             _buildSocialButton(FontAwesomeIcons.tiktok, 'https://tiktok.com/@sora_properties.l'),
                             _buildSocialButton(FontAwesomeIcons.pinterest, 'https://pinterest.com'),
-                            // Google link corrected with 'https://' prefix
                             _buildSocialButton(FontAwesomeIcons.google, 'https://business.google.com'),
                           ],
                         ),
@@ -591,12 +580,9 @@ class CommonWidgets {
                       flex: 1,
                       child: _buildFooterColumn('Quick Links', [
                         _buildFooterLink('Home', '/home'),
-                        // Add Airbnb after Home
-                        _buildFooterLink('Airbnb', '/airbnb'),
-                        // Add Buy, Rent, and Lease in place of Properties
+                        _buildFooterLink('BNB', '/airbnb'), // Restored route to airbnb
                         _buildFooterLink('Buy', '/buy'),
                         _buildFooterLink('Rent', '/rent'),
-                        _buildFooterLink('Lease', '/lease'),
                         _buildFooterLink('Agents', '/agents'),
                         _buildFooterLink('Blog', '/blogs'),
                         _buildFooterLink('Contact Us', '/contact'),
@@ -646,17 +632,13 @@ class CommonWidgets {
                   ],
                 ],
               ),
-              // Restructured the footer for small screens to use a Column to prevent overflow
               if (isSmallScreen) ...[
                 const SizedBox(height: 20),
                 _buildFooterColumn('Quick Links', [
                   _buildFooterLink('Home', '/home'),
-                  // Add Airbnb after Home
-                  _buildFooterLink('Airbnb', '/airbnb'),
-                  // Add Buy, Rent, and Lease in place of Properties
+                  _buildFooterLink('BNB', '/airbnb'), // Restored route to airbnb
                   _buildFooterLink('Buy', '/buy'),
                   _buildFooterLink('Rent', '/rent'),
-                  _buildFooterLink('Lease', '/lease'),
                   _buildFooterLink('Agents', '/agents'),
                   _buildFooterLink('Blog', '/blogs'),
                   _buildFooterLink('Contact Us', '/contact'),

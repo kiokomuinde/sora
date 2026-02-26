@@ -1,13 +1,14 @@
 // lib/screens/blog_view_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; 
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart'; 
-import 'dart:ui'; // Import for BackdropFilter
+import 'dart:ui'; 
 
 class BlogViewScreen extends StatefulWidget {
   final Map<String, dynamic>? blogPost; 
@@ -32,7 +33,6 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
   Map<String, dynamic>? _currentBlogPost;
   late Future<void> _loadBlogFuture;
   
-  // ADDED: State variable to track admin status
   bool _isAdmin = false; 
 
   final List<String> _categories = [
@@ -45,15 +45,12 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService); 
     _loadBlogFuture = _fetchBlogData();
-    // ADDED: Check admin status when the screen initializes
     _checkAdminStatus(); 
   }
 
-  // ADDED: Method to check and update admin status, hiding the button for normal users
   Future<void> _checkAdminStatus() async {
     final user = widget.authService.getCurrentUser();
     if (user != null) {
-      // Use the checkAdminStatus method from FirestoreService
       final isAdmin = await _firestoreService.checkAdminStatus(user.uid);
       if (mounted) {
         setState(() {
@@ -61,7 +58,6 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
         });
       }
     } else {
-      // Ensure isAdmin is false if no user is logged in
       if (mounted) {
         setState(() {
           _isAdmin = false;
@@ -70,8 +66,6 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     }
   }
 
-
-  /// Fetches blog data based on provided blogPost or blogSlug.
   Future<void> _fetchBlogData() async {
     if (widget.blogPost != null && widget.blogPost!.isNotEmpty) {
       if (mounted) {
@@ -83,7 +77,6 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     }
 
     if (widget.blogSlug != null) {
-      // NOTE: getBlogBySlugOrId is assumed to be implemented in FirestoreService
       final fetchedBlog = await _firestoreService.getBlogBySlugOrId(widget.blogSlug!);
       if (mounted) {
         setState(() {
@@ -107,30 +100,108 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     return 'Date Unavailable';
   }
 
-  // --- SHARING METHOD ---
   void _shareBlog() {
-    // 1. Get the blog ID and Title
     final blogId = widget.blogSlug ?? _currentBlogPost?['blogId'] ?? _currentBlogPost?['id'];
     final blogTitle = _currentBlogPost?['title'] ?? 'A New Blog Post from Sora Properties';
     
-    // 2. Define the base URL using your domain
     const String baseDomain = 'https://soraproperties.co.ke';
 
-    // 3. Construct the full URL for the blog post
     final String shareUrl = blogId != null 
         ? '$baseDomain/#/blog_view/$blogId' 
         : '$baseDomain/#/'; 
 
-    // 4. Create the final share message with line breaks (\n)
+    Clipboard.setData(ClipboardData(text: shareUrl)).then((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Link copied to clipboard!'),
+            backgroundColor: const Color(0xFF1E90FF),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    });
+
     final String shareMessage = '$blogTitle\n\nRead more here: $shareUrl';
 
-    // 5. Execute the share dialog
     Share.share(
       shareMessage, 
       subject: blogTitle,
     ); 
   }
-  // ----------------------
+
+  // --- MOBILE BOTTOM SHEETS ---
+  void _showCategoriesBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.65,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Expanded(child: _buildLeftColumn()),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRelatedTopicsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.65,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+                  child: _buildRightColumn(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  // ----------------------------
 
   Widget _buildSubtopic(Map<String, dynamic> subtopic, {String? imageUrl}) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -203,10 +274,8 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     );
   }
 
-  // Widget to display related topics
   Widget _buildRelatedTopics(String currentBlogId, String currentBlogCategory) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      // Call with correct positional arguments
       future: _firestoreService.getRelatedBlogs(currentBlogCategory, currentBlogId, limit: 3),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -214,7 +283,6 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
         }
 
         if (snapshot.hasError) {
-          // This displays the index error if the index is not yet built
           return Text(
             'Error loading related topics: ${snapshot.error}',
             style: const TextStyle(color: Colors.red),
@@ -236,16 +304,12 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     );
   }
 
-  // Helper for related blog card and navigation
   Widget _buildRelatedBlogCard(BuildContext context, Map<String, dynamic> blog) {
     final String imageUrl = blog['imageUrls']?.isNotEmpty == true ? blog['imageUrls'][0] : 'https://placehold.co/600x400/E0E0E0/white?text=No+Image';
-    
-    // Use 'blogId' key
     final String blogIdForNav = (blog['blogId'] ?? '') as String; 
 
     return GestureDetector(
       onTap: () {
-        // Navigate to the new blog post
         Navigator.pushNamed(
           context,
           '/blog_view/$blogIdForNav', 
@@ -312,7 +376,6 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
   }
 
   Widget _buildRightColumn() {
-    // Robustly find the ID (either 'blogId' from fetch or 'id' from passed argument)
     final rawId = _currentBlogPost?['blogId'] ?? _currentBlogPost?['id'];
     final rawCategory = _currentBlogPost?['category'];
 
@@ -343,11 +406,9 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
   }
 
   Widget _buildLeftColumn() {
-    // Define the colors used in the middle column for consistency
     const Color darkBlueTitle = Color(0xFF0A66C2);
     const Color primaryBlue = Color(0xFF1E90FF);
     
-    // Define new colors for the gradient
     const Color deepPurple = Color(0xFF8A2BE2);
     const Color lightBlue = Color(0xFF87CEEB); 
     const Color lightPurple = Color(0xFFDDA0DD); 
@@ -370,38 +431,34 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
           categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
         }
         
-        // Wrap content in Padding, ClipRRect, and BackdropFilter for the effect
         return Padding( 
           padding: const EdgeInsets.all(16.0),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20), // Rounded corners
+            borderRadius: BorderRadius.circular(20), 
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0), // Blur remains the same
+              filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0), 
               child: Container(
-                // Use a much lighter transparent gradient for the background
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      primaryBlue.withOpacity(0.1),    // Blue - Reduced opacity
-                      deepPurple.withOpacity(0.1),     // Purple - Reduced opacity
-                      lightBlue.withOpacity(0.1),      // Light Blue - Reduced opacity
-                      lightPurple.withOpacity(0.1),    // Light Purple - Reduced opacity
-                      Colors.white.withOpacity(0.05),  // White - Reduced opacity
+                      primaryBlue.withOpacity(0.1),    
+                      deepPurple.withOpacity(0.1),     
+                      lightBlue.withOpacity(0.1),      
+                      lightPurple.withOpacity(0.1),    
+                      Colors.white.withOpacity(0.05),  
                     ],
                     stops: const [0.0, 0.3, 0.6, 0.8, 1.0],
                   ),
                   borderRadius: BorderRadius.circular(20),
-                  // White border for definition
                   border: Border.all(
                     color: Colors.white.withOpacity(0.6), 
                     width: 1.5,
                   ),
-                  // Subtle shadow
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05), // Lighter shadow
+                      color: Colors.black.withOpacity(0.05), 
                       blurRadius: 15,
                       offset: const Offset(0, 8),
                     ),
@@ -415,11 +472,10 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
                       'Blog Categories',
                       style: TextStyle(
                         fontSize: 24,
-                        fontWeight: FontWeight.w900, // <-- VERY BOLD
+                        fontWeight: FontWeight.w900, 
                         color: darkBlueTitle, 
-                        // Text shadow for clarity
                         shadows: [
-                          Shadow(color: Colors.white.withOpacity(0.8), blurRadius: 5, offset: Offset(1, 1)) 
+                          Shadow(color: Colors.white.withOpacity(0.8), blurRadius: 5, offset: const Offset(1, 1)) 
                         ],
                       ),
                     ),
@@ -435,7 +491,7 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
                               style: const TextStyle(
                                 fontSize: 16,
                                 color: primaryBlue, 
-                                fontWeight: FontWeight.w700, // <-- BOLD
+                                fontWeight: FontWeight.w700, 
                               ),
                             ),
                           );
@@ -451,7 +507,6 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
       },
     );
   }
-  // ----------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -492,16 +547,14 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- SHARE ICON PLACEMENT ---
                     Align(
                       alignment: Alignment.centerRight,
                       child: IconButton(
                         icon: const Icon(Icons.share, color: Color(0xFF1E90FF), size: 30),
-                        onPressed: _shareBlog, // Calls the method with the specific format
+                        onPressed: _shareBlog, 
                         tooltip: 'Share this post',
                       ),
                     ),
-                    // ----------------------------
                     Text(
                       currentBlogPost['title'] ?? 'No Title',
                       style: const TextStyle(
@@ -570,6 +623,8 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
                 ),
               ),
               commonWidgets.buildFooter(), 
+              // Added empty space for mobile to prevent the floating menu from covering the footer
+              if (!isLargeScreen) const SizedBox(height: 80),
             ],
           ),
         );
@@ -578,7 +633,6 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
           backgroundColor: Colors.white,
           appBar: commonWidgets.buildAppBar(),
           endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
-          // MODIFIED: Only show the floating action button if the user is logged in AND is an admin (_isAdmin is true)
           floatingActionButton: isLoggedIn && _isAdmin
               ? Container(
                   decoration: BoxDecoration(
@@ -627,22 +681,82 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
                     ),
                   ),
                 )
-              : null, // Return null if not logged in or not admin
-          body: Row(
+              : null, 
+          // Replaced body Row with Stack to overlay the floating pill on mobile
+          body: Stack(
             children: [
-              if (isLargeScreen)
-                Expanded(
-                  flex: 1,
-                  child: _buildLeftColumn(),
-                ),
-              Expanded(
-                flex: 2,
-                child: blogContent,
+              Row(
+                children: [
+                  if (isLargeScreen)
+                    Expanded(
+                      flex: 1,
+                      child: _buildLeftColumn(),
+                    ),
+                  Expanded(
+                    flex: isLargeScreen ? 2 : 1, 
+                    child: blogContent,
+                  ),
+                  if (isLargeScreen)
+                    Expanded(
+                      flex: 1,
+                      child: _buildRightColumn(),
+                    ),
+                ],
               ),
-              if (isLargeScreen)
-                Expanded(
-                  flex: 1,
-                  child: _buildRightColumn(),
+              // Floating Action Menu for Small Screens
+              if (!isLargeScreen)
+                Positioned(
+                  bottom: 30, 
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 15,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton.icon(
+                                onPressed: _showCategoriesBottomSheet,
+                                icon: const Icon(Icons.category_rounded, color: Color(0xFF1E90FF), size: 20),
+                                label: const Text('Categories', style: TextStyle(color: Color(0xFF1E90FF), fontWeight: FontWeight.bold)),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: 24,
+                                color: Colors.grey[300],
+                              ),
+                              TextButton.icon(
+                                onPressed: _showRelatedTopicsBottomSheet,
+                                icon: const Icon(Icons.article_rounded, color: Color(0xFF1E90FF), size: 20),
+                                label: const Text('Related', style: TextStyle(color: Color(0xFF1E90FF), fontWeight: FontWeight.bold)),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
             ],
           ),

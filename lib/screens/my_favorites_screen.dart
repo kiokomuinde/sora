@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
-import 'package:sora_app/screens/property_detail_screen.dart';
 import 'package:sora_app/services/firestore_service.dart'; 
 import 'package:intl/intl.dart'; 
 
@@ -335,11 +334,11 @@ class _MyFavoritesScreenState extends State<MyFavoritesScreen> {
     
     return GestureDetector(
       onTap: () {
-        Navigator.push(
+        // === UPDATED: Now uses named routing to seamlessly map to ViewPropertyScreen ===
+        Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (context) => PropertyDetailScreen(property: property),
-          ),
+          '/view_property',
+          arguments: property,
         );
       },
       child: Card(

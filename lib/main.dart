@@ -6,11 +6,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sora_app/firebase_options.dart';
 import 'package:sora_app/services/auth_service.dart';
-import 'package:sora_app/services/firestore_service.dart'; // <<< ADDED IMPORT
+import 'package:sora_app/services/firestore_service.dart'; 
 import 'dart:html' as html;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-// 🎯 CRITICAL: Import for PathUrlStrategy
-// import 'package:flutter_web_plugins/url_strategy.dart'; // <-- COMMENTED OUT
+
+// CRITICAL: Import for PathUrlStrategy
+import 'package:flutter_web_plugins/url_strategy.dart'; 
 
 // New screens
 import 'screens/splash_screen.dart';
@@ -52,27 +53,26 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // if (kIsWeb) { 
-  //   usePathUrlStrategy();
-  // }
+  // ACTIVE: This entirely removes the '#' from your web URLs.
+  usePathUrlStrategy();
 
   final AuthService authService = AuthService(firebaseAuth: FirebaseAuth.instance);
-  final FirestoreService firestoreService = FirestoreService(); // <<< INITIALIZED SERVICE
+  final FirestoreService firestoreService = FirestoreService(); 
   
   runApp(MyApp(
     authService: authService,
-    firestoreService: firestoreService, // <<< PASSED TO MYAPP
+    firestoreService: firestoreService, 
   ));
 }
 
 class MyApp extends StatelessWidget {
   final AuthService authService;
-  final FirestoreService firestoreService; // <<< RECEIVED SERVICE
+  final FirestoreService firestoreService;
 
   const MyApp({
     Key? key, 
     required this.authService,
-    required this.firestoreService, // <<< REQUIRED IN CONSTRUCTOR
+    required this.firestoreService, 
   }) : super(key: key);
 
   @override
@@ -85,7 +85,7 @@ class MyApp extends StatelessWidget {
     }
 
     return MaterialApp(
-      title: 'SORA',
+      title: 'Sora Properties', // Updated app title for the browser tab
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light().copyWith(
         textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Inter'),
@@ -141,24 +141,20 @@ class MyApp extends StatelessWidget {
             ));
             
           case '/view_property':
-            // 1. Internal Navigation (Full data is passed via arguments)
             if (settings.arguments is Map<String, dynamic>) {
                 final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
                 return MaterialPageRoute(builder: (_) => ViewPropertyScreen(
                   authService: authService, 
                   propertyData: args,
-                  propertyId: args['id'] as String?, // Pass ID if available in data
+                  propertyId: args['id'] as String?, 
                 ));
             } 
-            // 2. Deep Link Navigation (Only ID is available in the URL path parameter)
             else if (parameter != null && parameter.isNotEmpty) {
-                // FIX: Pass the ID from the URL path, the screen will fetch the data
                 return MaterialPageRoute(builder: (_) => ViewPropertyScreen(
                   authService: authService,
                   propertyId: parameter, 
                 ));
             }
-            // 3. Fallback: If no args or ID, go to the generic listing screen
             else {
                 return MaterialPageRoute(builder: (_) => PropertyListingScreen(authService: authService));
             }
@@ -181,7 +177,6 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
             
           case '/blog_view':
-            // 1. Internal Navigation
             if (settings.arguments is Map<String, dynamic>) {
                 final args = settings.arguments as Map<String, dynamic>;
                 return MaterialPageRoute(
@@ -192,7 +187,6 @@ class MyApp extends StatelessWidget {
                   )
                 );
             } 
-            // 2. Deep Link - This now correctly handles the path received after the hash
             else if (parameter != null) {
                 return MaterialPageRoute(
                   builder: (_) => BlogViewScreen(
@@ -213,7 +207,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => FAQsScreen(authService: authService));
           case '/local_guides':
             return MaterialPageRoute(builder: (_) => LocalGuidesScreen(authService: authService));
-          case '/terms_of_service':
+            
+          case '/terms': 
             return MaterialPageRoute(builder: (_) => TermsOfServiceScreen(authService: authService));
           case '/sitemap':
             return MaterialPageRoute(builder: (_) => SitemapScreen(authService: authService));
@@ -221,16 +216,16 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => SupportScreen(authService: authService));
           case '/events':
             return MaterialPageRoute(builder: (_) => EventsScreen(authService: authService));
-          case '/privacy_policy':
+          case '/privacy': 
             return MaterialPageRoute(builder: (_) => PrivacyPolicyScreen(authService: authService));
-          case '/cookie_policy':
+          case '/cookies': 
             return MaterialPageRoute(builder: (_) => CookiePolicyScreen(authService: authService));
             
           case '/my_favorites':
             return MaterialPageRoute(
               builder: (_) => MyFavoritesScreen(
                 authService: authService,
-                firestoreService: firestoreService, // <<< ADDED firestoreService HERE
+                firestoreService: firestoreService, 
               )
             );
             
@@ -240,7 +235,7 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => ProfileSettingsScreen(authService: authService));
           case '/dashboard':
             return MaterialPageRoute(builder: (_) => DashboardScreen(authService: authService));
-          case '/admin': // <<< ADMIN SCREEN ROUTE ADDED
+          case '/admin': 
             return MaterialPageRoute(builder: (_) => AdminScreen(authService: authService));
           case '/recently_viewed':
             return MaterialPageRoute(builder: (_) => RecentlyViewedScreen(authService: authService));

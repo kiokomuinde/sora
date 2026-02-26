@@ -1,4 +1,4 @@
-// /lib/screens/blogs_screen.dart
+// lib/screens/blogs_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -8,12 +8,11 @@ import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:sora_app/services/firestore_service.dart'; 
-import 'package:share_plus/share_plus.dart'; // Import for sharing functionality
+import 'package:share_plus/share_plus.dart'; 
 
 class BlogsScreen extends StatefulWidget {
   final AuthService authService;
 
-  // FIX: Removed duplicate 'required' keyword
   const BlogsScreen({super.key, required this.authService});
 
   @override
@@ -26,18 +25,15 @@ class _BlogsScreenState extends State<BlogsScreen> {
   late CommonWidgets commonWidgets;
   final FirestoreService _firestoreService = FirestoreService(); 
   
-  // ADDED: State variable to track admin status
   bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
     commonWidgets = CommonWidgets(context: context, authService: widget.authService);
-    // ADDED: Check admin status when the screen initializes
     _checkAdminStatus(); 
   }
 
-  // ADDED: Method to check and update admin status
   Future<void> _checkAdminStatus() async {
     final user = widget.authService.getCurrentUser();
     if (user != null) {
@@ -52,29 +48,21 @@ class _BlogsScreenState extends State<BlogsScreen> {
 
   @override
   void dispose() {
-    // FIX: Corrected typo from _newsletterEmailEmailController to _newsletterEmailController
     _newsletterEmailController.dispose();
     super.dispose();
   }
 
-  // Function to handle sharing a blog post
   void _shareBlog(Map<String, dynamic> blog) {
-    // Determine the unique identifier for the URL
     final blogId = blog['blogId'] ?? blog['id'];
     final blogTitle = blog['title'] ?? 'A Blog Post from Sora Properties';
-    
-    // Define the base domain (ensure this matches your application's domain)
     const String baseDomain = 'https://soraproperties.co.ke';
 
-    // Construct the full URL for the blog post view
     final String shareUrl = blogId != null 
         ? '$baseDomain/#/blog_view/$blogId' 
-        : '$baseDomain/#/blogs'; // Fallback URL
+        : '$baseDomain/#/blogs'; 
 
-    // Create the final share message
     final String shareMessage = 'Check out this post: $blogTitle\n\n$shareUrl';
 
-    // Execute the share dialog
     Share.share(
       shareMessage, 
       subject: blogTitle,
@@ -84,7 +72,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
   Widget _buildFilterChip(String label, String value) {
     final bool isSelected = _currentListingTypeFilter == value;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
       child: FilterChip(
         label: Text(label),
         selected: isSelected,
@@ -115,17 +103,12 @@ class _BlogsScreenState extends State<BlogsScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
-    // --- SAFETY CHECK: Robustly extract image URL from potentially dynamic list ---
     final List<dynamic>? imageUrlsDynamic = blog['imageUrls'] as List<dynamic>?;
-    // Map list to string safely, assuming Firestore arrays are lists of strings
     final List<String> imageUrls = imageUrlsDynamic?.map((e) => e.toString()).toList() ?? [];
     final String imageUrl = imageUrls.isNotEmpty ? imageUrls[0] : 'https://placehold.co/600x400/E0E0E0/white?text=No+Image';
-    // -------------------------------------------------------------------------------
     
     return GestureDetector(
       onTap: () {
-        // Navigate to the blog view screen
-        // IMPORTANT: Use the blog ID/Slug for navigation in the URL path
         final blogIdForNav = blog['blogId'] ?? blog['id']; 
         Navigator.pushNamed(
           context,
@@ -134,24 +117,21 @@ class _BlogsScreenState extends State<BlogsScreen> {
         );
       },
       child: Container(
-        // CRITICAL FIX: Increased horizontal margin to reduce visible card width and increase horizontal gap
-        margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0), 
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
+              color: Colors.grey.withOpacity(0.2),
               spreadRadius: 2,
-              blurRadius: 7,
-              offset: const Offset(0, 3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image section wrapped in Stack to include the share icon
             Stack( 
               children: [
                 ClipRRect(
@@ -161,155 +141,135 @@ class _BlogsScreenState extends State<BlogsScreen> {
                   ),
                   child: Image.network(
                     imageUrl,
-                    // CRITICAL FIX: Increased image height to ensure it occupies the upper half of the compact card.
-                    height: isMobile ? 200 : 280, 
+                    height: 200, // Fixed height for the image
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
-                      height: isMobile ? 200 : 280,
+                      height: 200,
                       color: Colors.grey[200],
-                      child: const Center(child: Icon(Icons.image_not_supported, size: 50)),
+                      child: const Center(child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey)),
                     ),
                   ),
                 ),
-                // Share Icon positioned at the top right
                 Positioned( 
-                  top: 8,
-                  right: 8,
+                  top: 10,
+                  right: 10,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5), // Semi-transparent black background
-                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.black.withOpacity(0.6), 
+                      shape: BoxShape.circle,
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.share, color: Colors.white, size: 20),
                       onPressed: () {
-                        // Stop the gesture detector from navigating when the share button is pressed
                         _shareBlog(blog);
                       },
                       tooltip: 'Share this post',
                     ),
                   ),
                 ),
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A66C2).withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      blog['category'] ?? 'Uncategorized',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
-            // Blog details section
-            // CRITICAL FIX: Wrap Padding with Expanded to allow the inner Column to use Spacer
-            Expanded(
+            Expanded( // Using Expanded ensures the text container utilizes exactly the remaining vertical space
               child: Padding(
-                padding: const EdgeInsets.all(8.0), // Reduced padding
+                padding: const EdgeInsets.all(16.0), 
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      blog['category'] ?? 'Uncategorized',
-                      style: TextStyle(
-                        fontSize: 15, 
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 5), // Reduced spacing
-                    Text(
                       blog['title'] ?? 'Untitled Blog Post',
-                      style: const TextStyle(
-                        fontSize: 22, 
+                      style: TextStyle(
+                        fontSize: isMobile ? 18 : 20, 
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0A66C2),
+                        color: const Color(0xFF0A66C2),
+                        height: 1.2,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 5), // Reduced spacing
-                    Text(
-                      blog['snippet'] ?? 'A brief snippet about the blog post content.',
-                      style: TextStyle(
-                        fontSize: 15, 
-                        color: Colors.grey[700],
+                    const SizedBox(height: 8), 
+                    Expanded( // Pushes the bottom row down and safely contains the snippet
+                      child: Text(
+                        blog['snippet'] ?? 'A brief snippet about the blog post content.',
+                        style: TextStyle(
+                          fontSize: isMobile ? 14 : 15, 
+                          color: Colors.grey[700],
+                          height: 1.4,
+                        ),
+                        maxLines: 3, 
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2, // CRITICAL: Reduced max lines from 3 to 2 for smaller card height
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    
-                    // CRITICAL FIX: Use Spacer to push the metadata and button to the bottom
-                    const Spacer(), 
-
+                    const SizedBox(height: 10), 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // Author/User ID (Simplified)
-                        Text(
-                          'By ${blog['userId'] ?? 'Sora Team'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'By ${blog['userId'] ?? 'Sora Team'}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                blog['timestamp'] != null
+                                    ? (blog['timestamp'] as Timestamp).toDate().toString().split(' ')[0]
+                                    : 'Date Unavailable',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        // Date
-                        Text(
-                          // Format the timestamp if it exists, otherwise use a placeholder
-                          blog['timestamp'] != null
-                              ? (blog['timestamp'] as Timestamp).toDate().toString().split(' ')[0]
-                              : 'Date Unavailable',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E90FF).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              final blogIdForNav = blog['blogId'] ?? blog['id']; 
+                              Navigator.pushNamed(
+                                context,
+                                '/blog_view/$blogIdForNav',
+                                arguments: blog,
+                              );
+                            },
+                            icon: const Icon(Icons.arrow_forward, color: Color(0xFF1E90FF)),
+                            padding: const EdgeInsets.all(8),
+                            constraints: const BoxConstraints(), 
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 8), // Spacing between metadata and button
-                    
-                    // This Align widget ensures the button is correctly positioned at the bottom right.
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      // Redesigned "Read More" button
-                      child: Container(
-                        decoration: BoxDecoration(
-                          // Added a subtle gradient background
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF1E90FF), Color(0xFF0A66C2)],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF1E90FF).withOpacity(0.4),
-                              blurRadius: 5,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            final blogIdForNav = blog['blogId'] ?? blog['id']; 
-                            Navigator.pushNamed(
-                              context,
-                              '/blog_view/$blogIdForNav',
-                              arguments: blog,
-                            );
-                          },
-                          // Removed default button styling background/shadow
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent, // Make button background transparent
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          label: const Text(
-                            'Read More',
-                            style: TextStyle(
-                              color: Colors.white, // White text for contrast on gradient
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -321,36 +281,43 @@ class _BlogsScreenState extends State<BlogsScreen> {
     );
   }
 
+  Widget _buildContent(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
 
-  Widget _buildContent() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch, // Ensures children take full width
+      crossAxisAlignment: CrossAxisAlignment.stretch, 
       children: [
         // Title and Subtitle
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+          padding: EdgeInsets.symmetric(
+            vertical: isMobile ? 30 : 50, 
+            horizontal: 20
+          ),
           decoration: const BoxDecoration(
-            color: Color(0xFFF3F4F6),
+            color: Color(0xFFF8F9FA),
+            border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0), width: 1)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: const [
+            children: [
               Text(
                 'Sora Blog: Insights & Trends',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0A66C2),
+                  fontSize: isMobile ? 28 : 36,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF0A66C2),
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 'Your source for the latest real estate market analysis, investment tips, and homeowner guides.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey,
+                  fontSize: isMobile ? 15 : 18,
+                  color: Colors.grey[700],
                 ),
               ),
             ],
@@ -359,57 +326,62 @@ class _BlogsScreenState extends State<BlogsScreen> {
 
         // Categories/Filters
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildFilterChip('All', ''),
-                _buildFilterChip('Market Trends', 'Market Trends'),
-                _buildFilterChip('Selling Tips', 'Selling Tips'),
-                _buildFilterChip('Investment', 'Investment'),
-                _buildFilterChip('Technology', 'Technology'),
-                _buildFilterChip('Financing', 'Financing'),
-                _buildFilterChip('Real Estate', 'Real Estate'),
-                _buildFilterChip('Airbnb', 'Airbnb'),
-              ],
-            ),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+          alignment: Alignment.center,
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8.0,
+            runSpacing: 8.0,
+            children: [
+              _buildFilterChip('All', ''),
+              _buildFilterChip('Market Trends', 'Market Trends'),
+              _buildFilterChip('Selling Tips', 'Selling Tips'),
+              _buildFilterChip('Investment', 'Investment'),
+              _buildFilterChip('Technology', 'Technology'),
+              _buildFilterChip('Financing', 'Financing'),
+              _buildFilterChip('Real Estate', 'Real Estate'),
+              // CHANGED BACK: Display 'BNB' on UI, but filter using 'Airbnb' for the backend
+              _buildFilterChip('BNB', 'Airbnb'), 
+            ],
           ),
         ),
 
         // Blog Posts Grid/List
         Padding( 
-          padding: const EdgeInsets.all(20.0),
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 15.0 : 30.0, vertical: 10.0),
           child: StreamBuilder<QuerySnapshot>(
             stream: _firestoreService.getBlogs(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                print('DEBUG: Blogs Stream is waiting...');
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(40.0),
+                    child: CircularProgressIndicator(),
+                  )
+                );
               }
 
               if (snapshot.hasError) {
-                print('DEBUG: Error loading blogs: ${snapshot.error}');
-                return Center(child: Text('Error loading blogs: ${snapshot.error}'));
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Text('Error loading blogs: ${snapshot.error}'),
+                  )
+                );
               }
 
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                print('DEBUG: No blog posts found in snapshot.');
-                // Use a sized box to give space to the "No blogs found" message
                 return const Center(child: Padding(
                   padding: EdgeInsets.all(40.0),
-                  child: Text('No blog posts found.'),
+                  child: Text('No blog posts found.', style: TextStyle(fontSize: 16)),
                 ));
               }
 
               final allBlogs = snapshot.data!.docs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
-                data['blogId'] = doc.id; // Ensure the ID is present in the map
+                data['blogId'] = doc.id; 
                 return data;
               }).toList();
-              
-              print('DEBUG: Successfully loaded ${allBlogs.length} blogs.'); // Print the count
               
               final filteredBlogs = allBlogs.where((blog) {
                 final category = blog['category'] ?? '';
@@ -420,18 +392,36 @@ class _BlogsScreenState extends State<BlogsScreen> {
               }).toList();
 
               if (filteredBlogs.isEmpty) {
-                 return Center(child: Text('No blogs found in the category: $_currentListingTypeFilter'));
+                 return Center(
+                   child: Padding(
+                     padding: const EdgeInsets.all(40.0),
+                     child: Text('No blogs found in the category: $_currentListingTypeFilter', style: const TextStyle(fontSize: 16)),
+                   )
+                 );
+              }
+
+              // Responsive logic for the grid
+              int crossAxisCount;
+              if (screenWidth > 1200) {
+                crossAxisCount = 4;
+              } else if (screenWidth > 900) {
+                crossAxisCount = 3;
+              } else if (screenWidth > 600) {
+                crossAxisCount = 2;
+              } else {
+                crossAxisCount = 1;
               }
 
               return GridView.builder(
-                shrinkWrap: true, // IMPORTANT: Allows GridView to size based on its children
-                physics: const NeverScrollableScrollPhysics(), // IMPORTANT: Disables GridView's own scrolling
+                shrinkWrap: true, 
+                physics: const NeverScrollableScrollPhysics(), 
+                // Using mainAxisExtent fixes the height explicitly instead of using childAspectRatio.
+                // This completely solves the text-overflow issue on mobile devices.
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: MediaQuery.of(context).size.width > 900 ? 3 : MediaQuery.of(context).size.width > 600 ? 2 : 1,
-                  crossAxisSpacing: 20,
-                  mainAxisSpacing: 20,
-                  // CRITICAL FIX: Increased aspect ratio to aggressively shorten the card height
-                  childAspectRatio: MediaQuery.of(context).size.width > 900 ? 0.9 : 1.0, 
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: isMobile ? 15 : 25,
+                  mainAxisSpacing: isMobile ? 15 : 25,
+                  mainAxisExtent: 420, // Strict, beautiful absolute height for all cards!
                 ),
                 itemCount: filteredBlogs.length,
                 itemBuilder: (context, index) {
@@ -442,8 +432,10 @@ class _BlogsScreenState extends State<BlogsScreen> {
           ),
         ),
         
+        const SizedBox(height: 30),
+        
         // Newsletter Signup
-        _buildNewsletterSignup(),
+        _buildNewsletterSignup(context),
         
         // Footer
         commonWidgets.buildFooter(),
@@ -451,73 +443,121 @@ class _BlogsScreenState extends State<BlogsScreen> {
     );
   }
 
-  Widget _buildNewsletterSignup() {
+  Widget _buildNewsletterSignup(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-      color: const Color(0xFFF0F8FF), // Light background for contrast
+      padding: EdgeInsets.symmetric(
+        vertical: isMobile ? 40 : 50, 
+        horizontal: 20
+      ),
+      color: const Color(0xFFF0F8FF), 
       child: Column(
         children: [
-          const Text(
+          Text(
             'Stay Updated',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: isMobile ? 24 : 30,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF0A66C2),
+              color: const Color(0xFF0A66C2),
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Subscribe to our newsletter for exclusive real estate insights.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
+              fontSize: isMobile ? 14 : 16,
+              color: Colors.grey[700],
             ),
           ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: 400,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _newsletterEmailController,
-                    decoration: InputDecoration(
-                      hintText: 'Enter your email',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
+          const SizedBox(height: 25),
+          
+          Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: isMobile 
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: _newsletterEmailController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter your email',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
                     ),
-                  ),
+                    const SizedBox(height: 15),
+                    ElevatedButton(
+                      onPressed: () {
+                        print('Subscribing: ${_newsletterEmailController.text}');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E90FF),
+                        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Subscribe',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _newsletterEmailController,
+                        decoration: InputDecoration(
+                          hintText: 'Enter your email',
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        print('Subscribing: ${_newsletterEmailController.text}');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E90FF),
+                        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Subscribe',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    // TODO: Implement newsletter signup logic (e.g., save to Firestore/CMS)
-                    print('Subscribing: ${_newsletterEmailController.text}');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E90FF),
-                    padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    'Subscribe',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -534,11 +574,10 @@ class _BlogsScreenState extends State<BlogsScreen> {
       backgroundColor: Colors.white,
       appBar: commonWidgets.buildAppBar(),
       endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
-      // MODIFIED: Only show the floating action button if the user is logged in AND is an admin
       floatingActionButton: isLoggedIn && _isAdmin
           ? Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(25),
                 gradient: const LinearGradient(
                   colors: [
                     Color(0xFF1E90FF),
@@ -549,9 +588,9 @@ class _BlogsScreenState extends State<BlogsScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    spreadRadius: 2,
-                    blurRadius: 5,
+                    color: Colors.black.withOpacity(0.3),
+                    spreadRadius: 1,
+                    blurRadius: 6,
                     offset: const Offset(0, 3),
                   ),
                 ],
@@ -559,22 +598,23 @@ class _BlogsScreenState extends State<BlogsScreen> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(25),
                   onTap: () {
                     Navigator.pushNamed(context, '/create_blog');
                   },
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: const [
-                        Icon(Icons.add, color: Colors.white),
+                        Icon(Icons.edit, color: Colors.white),
                         SizedBox(width: 8),
                         Text(
-                          'Create Blog',
+                          'Write Post',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
                       ],
@@ -583,9 +623,9 @@ class _BlogsScreenState extends State<BlogsScreen> {
                 ),
               ),
             )
-          : null, // Return null if not logged in or not admin
+          : null, 
       body: SingleChildScrollView(
-        child: _buildContent(),
+        child: _buildContent(context),
       ),
     );
   }

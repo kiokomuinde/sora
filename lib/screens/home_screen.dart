@@ -963,7 +963,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildPropertiesCarousel(
                         context,
                         // **FIXED: Restored Emojis in Title 1 (Airbnb)**
-                        '✨ Staycation Grand Opening! 🥳', 
+                        'Staycation Grand Opening!', 
                         popularCarouselProperties, // Now only Staycation properties
                         _popularScrollController,
                         isLargeScreen,
@@ -975,7 +975,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildPropertiesCarousel(
                         context,
                         // **FIXED: Restored Emojis in Title 2 (Deals)**
-                        '🔥 Hot Property Deals: You Win! 🏆', 
+                        'Hot Property Deals: You Win! ', 
                         dealsCarouselProperties, // Residential only
                         _dealsScrollController,
                         isLargeScreen,
@@ -987,7 +987,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildPropertiesCarousel(
                         context,
                         // **FIXED: Restored Emojis in Title 3 (New)**
-                        '🚀 New Market Arrivals: Be First! 🆕', 
+                        'New Market Arrivals: Be First!', 
                         newCarouselProperties, // Residential only
                         _newScrollController,
                         isLargeScreen,
@@ -1864,7 +1864,7 @@ class _RollingButtonState extends State<RollingButton> with SingleTickerProvider
               ).createShader(bounds);
             },
             child: Text(
-              'Airbnb',
+              'BNB',
               style: TextStyle(
                 fontSize: 50,
                 fontWeight: animatedFontWeight,

@@ -7,8 +7,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sora_app/widgets/property_card.dart';
 import 'package:sora_app/services/firestore_service.dart';
 
-// Assuming StringCasingExtension is defined in common_widgets.dart or another imported file.
-
 class PropertyListingScreen extends StatefulWidget {
   final AuthService authService;
   final String listingType;
@@ -25,6 +23,100 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
   String _searchQuery = '';
   String _currentSortOption = 'price_low_to_high';
   String _currentListingTypeFilter = '';
+
+  bool _isMobileSearchExpanded = false;
+  bool _isMobileSortExpanded = false;
+
+  final List<Map<String, dynamic>> _managedProperties = const [
+    {
+      'id': 'static_01',
+      'title': 'Executive 2-Bedroom Apartment',
+      'location': {'locality': 'Kilimani, Nairobi'},
+      'price': '120000',
+      'coverImageUrl': 'assets/images/rental1.webp',
+      'listingType': 'For Rent', 
+      'residentialDetails': {'bedrooms': '2', 'bathrooms': '2'},
+      'size': '1400',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_02',
+      'title': 'Spacious 3-Bedroom Flat',
+      'location': {'locality': 'Mirema, Nairobi'},
+      'price': '65000',
+      'coverImageUrl': 'assets/images/rental2.webp',
+      'listingType': 'For Rent',
+      'residentialDetails': {'bedrooms': '3', 'bathrooms': '2'},
+      'size': '1600',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_03',
+      'title': 'Modern Studio Apartment',
+      'location': {'locality': 'Ongata Rongai, Kajiado'},
+      'price': '25000',
+      'coverImageUrl': 'assets/images/rental3.webp',
+      'listingType': 'For Rent',
+      'residentialDetails': {'bedrooms': '1', 'bathrooms': '1'},
+      'size': '550',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_04',
+      'title': 'Brand New 4-Bedroom Duplex',
+      'location': {'locality': 'Membley, Kiambu'},
+      'price': '80000',
+      'coverImageUrl': 'assets/images/rental4.webp',
+      'listingType': 'For Rent',
+      'residentialDetails': {'bedrooms': '4', 'bathrooms': '3'},
+      'size': '2100',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_05',
+      'title': 'Compact 1-Bedroom Flat',
+      'location': {'locality': 'Thika, Kiambu'},
+      'price': '30000',
+      'coverImageUrl': 'assets/images/rental5.webp',
+      'listingType': 'For Rent',
+      'residentialDetails': {'bedrooms': '1', 'bathrooms': '1'},
+      'size': '700',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_06',
+      'title': 'Prime 2-Bedroom Apartment',
+      'location': {'locality': 'Kitengela, Kajiado'},
+      'price': '45000',
+      'coverImageUrl': 'assets/images/rental6.webp',
+      'listingType': 'For Rent',
+      'residentialDetails': {'bedrooms': '2', 'bathrooms': '2'},
+      'size': '1100',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_07',
+      'title': 'Luxury 3-Bedroom Penthouse',
+      'location': {'locality': 'Kileleshwa, Nairobi'},
+      'price': '180000',
+      'coverImageUrl': 'assets/images/rental7.webp',
+      'listingType': 'For Rent',
+      'residentialDetails': {'bedrooms': '3', 'bathrooms': '4'},
+      'size': '2500',
+      'isFavorite': false,
+    },
+    {
+      'id': 'static_08',
+      'title': 'Affordable 2-Bedroom Flat',
+      'location': {'locality': 'Syokimau, Machakos'},
+      'price': '38000',
+      'coverImageUrl': 'assets/images/rental8.webp',
+      'listingType': 'For Rent',
+      'residentialDetails': {'bedrooms': '2', 'bathrooms': '1'},
+      'size': '950',
+      'isFavorite': false,
+    },
+  ];
 
   @override
   void initState() {
@@ -73,6 +165,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
           queryValue = 'For Lease';
           break;
         case 'airbnb':
+        case 'bnb':
           queryValue = 'Staycation';
           break;
       }
@@ -82,49 +175,94 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       }
 
       final querySnapshot = await query.get();
-      return querySnapshot.docs.map((doc) => {
+      List<Map<String, dynamic>> results = querySnapshot.docs.map((doc) => {
             ...doc.data() as Map<String, dynamic>,
             'id': doc.id,
           }).toList();
+
+      if (_currentListingTypeFilter.toLowerCase() == 'rent' && results.isEmpty) {
+        return List<Map<String, dynamic>>.from(_managedProperties);
+      }
+
+      return results;
     } catch (e) {
-      print('Error fetching properties: $e');
+      debugPrint('Error fetching properties: $e');
+      if (_currentListingTypeFilter.toLowerCase() == 'rent') {
+        return List<Map<String, dynamic>>.from(_managedProperties);
+      }
       return [];
     }
   }
 
   List<Map<String, dynamic>> _applyFiltersAndSort(List<Map<String, dynamic>> properties) {
-    List<Map<String, dynamic>> filteredList = properties;
+    List<Map<String, dynamic>> filteredList = List<Map<String, dynamic>>.from(properties);
 
     if (_searchQuery.isNotEmpty) {
       final queryLower = _searchQuery.toLowerCase();
       filteredList = filteredList.where((p) {
-        final title = p['title'] as String? ?? '';
-        final town = (p['location'] as Map<String, dynamic>?)?['town'] as String? ?? '';
-        return title.toLowerCase().contains(queryLower) ||
-            town.toLowerCase().contains(queryLower);
+        final title = (p['title'] ?? '').toString().toLowerCase();
+        final locationMap = p['location'] as Map<String, dynamic>?;
+        final town = (locationMap?['town'] ?? '').toString().toLowerCase();
+        final locality = (locationMap?['locality'] ?? '').toString().toLowerCase();
+        
+        return title.contains(queryLower) ||
+            town.contains(queryLower) ||
+            locality.contains(queryLower);
       }).toList();
     }
 
     filteredList.sort((a, b) {
-      final double? priceA = double.tryParse(a['price']?.toString() ?? '0') ?? 0;
-      final double? priceB = double.tryParse(b['price']?.toString() ?? '0') ?? 0;
+      final double priceA = double.tryParse(a['price']?.toString() ?? '0') ?? 0;
+      final double priceB = double.tryParse(b['price']?.toString() ?? '0') ?? 0;
       
-      final bedroomsA = int.tryParse((a['residentialDetails'] as Map<String, dynamic>?)?['bedrooms']?.toString() ?? '0') ?? 0;
-      final bedroomsB = int.tryParse((b['residentialDetails'] as Map<String, dynamic>?)?['bedrooms']?.toString() ?? '0') ?? 0;
+      final resA = a['residentialDetails'] as Map<String, dynamic>?;
+      final resB = b['residentialDetails'] as Map<String, dynamic>?;
+
+      final bedsA = int.tryParse(resA?['bedrooms']?.toString() ?? '0') ?? 0;
+      final bedsB = int.tryParse(resB?['bedrooms']?.toString() ?? '0') ?? 0;
       
       if (_currentSortOption == 'price_low_to_high') {
-        return priceA!.compareTo(priceB!);
+        return priceA.compareTo(priceB);
       } else if (_currentSortOption == 'price_high_to_low') {
-        return priceB!.compareTo(priceA!);
+        return priceB.compareTo(priceA);
       } else if (_currentSortOption == 'bedrooms_asc') {
-        return bedroomsA.compareTo(bedroomsB);
+        return bedsA.compareTo(bedsB);
       } else if (_currentSortOption == 'bedrooms_desc') {
-        return bedroomsB.compareTo(bedroomsA);
+        return bedsB.compareTo(bedsA);
       }
       return 0;
     });
 
     return filteredList;
+  }
+
+  // --- NEW DIALOG FOR OCCUPIED RENTALS ---
+  void _showOccupiedDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Row(
+            children: [
+              Icon(Icons.sentiment_dissatisfied, color: Colors.orange[700]),
+              const SizedBox(width: 10),
+              const Text('Currently Fully Occupied', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Text(
+            'We are sorry, this property from our managed portfolio is currently **fully occupied** and unavailable for viewing or rent. Please explore our other available listings, or contact us for similar properties!',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0A66C2))),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showAuthDialog() {
@@ -164,80 +302,97 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth >= 1000;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
+    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: commonWidgets.buildAppBar(
         currentListingTypeFilter: _currentListingTypeFilter,
       ),
       endDrawer: commonWidgets.buildDrawer(),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(), 
-            _buildFilterAndSortSection(isLargeScreen),
-            FutureBuilder<List<Map<String, dynamic>>>(
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _buildHeader(isLargeScreen),
+          ),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _StickyFilterDelegate(
+              minHeight: isLargeScreen ? 76.0 : 60.0,
+              maxHeight: isLargeScreen ? 76.0 : 60.0,
+              child: _buildFilterAndSortSection(isLargeScreen),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _fetchProperties(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: Padding(
+                    padding: EdgeInsets.all(40.0),
+                    child: CircularProgressIndicator(),
+                  ));
                 } else if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No properties found.'));
+                  return const Center(child: Padding(
+                    padding: EdgeInsets.all(40.0),
+                    child: Text('No properties found.'),
+                  ));
                 }
-                final filteredAndSortedProperties = _applyFiltersAndSort(snapshot.data!);
-                if (filteredAndSortedProperties.isEmpty) {
-                  return const Center(child: Text('No properties match your search.'));
+                final filtered = _applyFiltersAndSort(snapshot.data!);
+                if (filtered.isEmpty) {
+                  return const Center(child: Padding(
+                    padding: EdgeInsets.all(40.0),
+                    child: Text('No properties match your search.'),
+                  ));
                 }
-                return _buildPropertiesGrid(filteredAndSortedProperties, isLargeScreen, isMediumScreen, screenWidth);
+                return _buildPropertiesGrid(filtered, isLargeScreen, isMediumScreen, screenWidth);
               },
             ),
-            commonWidgets.buildFooter(),
-          ],
-        ),
+          ),
+          SliverToBoxAdapter(
+            child: commonWidgets.buildFooter(),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isLargeScreen) {
+    final String titleText = _currentListingTypeFilter.isNotEmpty
+        ? '${_currentListingTypeFilter.toCapitalized()} Properties'
+        : 'Discover Your Dream Property';
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0A66C2).withOpacity(0.8), 
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF0A66C2).withOpacity(0.8), 
-            const Color(0xFF5B21B6).withOpacity(0.8), 
-          ],
-          stops: const [0.8, 1.0], 
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
+      padding: EdgeInsets.symmetric(
+        horizontal: isLargeScreen ? 40 : 20,
+        vertical: isLargeScreen ? 30 : 15, 
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            widget.listingType.isNotEmpty
-                ? '${widget.listingType.toCapitalized()} Properties'
-                : 'All Properties',
-            style: const TextStyle(
-              fontSize: 48, 
-              fontWeight: FontWeight.w800, 
-              color: Colors.white, 
-              letterSpacing: 1.5,
+          ShaderMask(
+            shaderCallback: (bounds) => const LinearGradient(
+              colors: [Color(0xFF0A66C2), Color(0xFF5B21B6)], 
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ).createShader(bounds),
+            child: Text(
+              titleText,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isLargeScreen ? 42 : 32, 
+                fontWeight: FontWeight.w900, 
+                color: Colors.white, 
+                letterSpacing: 1.2,
+                height: 1.2,
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Explore our exclusive collection of properties tailored to your needs. Your dream home awaits.',
-            style: TextStyle(
-              fontSize: 20,
-              color: Colors.white.withOpacity(0.95), 
-              fontWeight: FontWeight.w400,
-            ),
+          const SizedBox(height: 8),
+          const _PassingCloudText(
+            text: 'Explore our exclusive collection of properties tailored to your needs.',
           ),
         ],
       ),
@@ -245,43 +400,140 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
   }
 
   Widget _buildFilterAndSortSection(bool isLargeScreen) {
-    Widget content = isLargeScreen
-        ? Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // INCREASED WIDTH FOR LARGE SCREEN (from 350 to 450)
-              SizedBox(
-                width: 450, 
-                child: _buildSearchField(),
-              ),
-              _buildSortDropdown(),
-            ],
-          )
-        : Wrap(
-            spacing: 15,
-            runSpacing: 15,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            alignment: WrapAlignment.center,
-            children: [
-              // INCREASED WIDTH FOR SMALL/MEDIUM SCREEN (from 280 to 320)
-              SizedBox(
-                width: 320, 
-                child: _buildSearchField(),
-              ),
-              _buildSortDropdown(),
-            ],
-          );
+    if (isLargeScreen) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(width: 450, child: _buildSearchField(isLargeScreen)),
+            const SizedBox(width: 20),
+            SizedBox(width: 250, child: _buildSortDropdown(isLargeScreen)),
+          ],
+        ),
+      );
+    } else {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: _buildMobileActionArea(),
+        ),
+      );
+    }
+  }
 
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isLargeScreen ? 40 : 20,
-        vertical: 25,
-      ),
-      child: content,
+  Widget _buildMobileActionArea() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (_isMobileSearchExpanded)
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: _buildSearchField(false)),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isMobileSearchExpanded = false;
+                      _searchController.clear(); 
+                    });
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(4.0),
+                    child: Icon(Icons.close, color: Color(0xFF0A66C2)),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          _buildSmallActionButton(
+            icon: Icons.search,
+            label: 'Search',
+            onTap: () {
+              setState(() {
+                _isMobileSearchExpanded = true;
+                _isMobileSortExpanded = false; 
+              });
+            },
+          ),
+        if (_isMobileSearchExpanded || _isMobileSortExpanded) const SizedBox(width: 15),
+        if (_isMobileSortExpanded)
+          Expanded(
+            child: Row(
+              children: [
+                const SizedBox(width: 8), 
+                Expanded(child: _buildSortDropdown(false)),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isMobileSortExpanded = false;
+                    });
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(4.0),
+                    child: Icon(Icons.close, color: Color(0xFF0A66C2)),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          _buildSmallActionButton(
+            icon: Icons.sort,
+            label: 'Sort',
+            onTap: () {
+              setState(() {
+                _isMobileSortExpanded = true;
+                _isMobileSearchExpanded = false; 
+              });
+            },
+          ),
+      ],
     );
   }
 
-  Widget _buildSearchField() {
+  Widget _buildSmallActionButton({required IconData icon, required String label, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(30),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0A66C2), Color(0xFF5B21B6)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0A66C2).withOpacity(0.3),
+              blurRadius: 8.0,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchField(bool isLargeScreen) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
@@ -292,7 +544,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0A66C2).withOpacity(0.3),
+            color: const Color(0xFF0A66C2).withOpacity(0.2),
             blurRadius: 10.0,
             offset: const Offset(0, 4),
           ),
@@ -301,23 +553,15 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       padding: const EdgeInsets.all(2),
       child: TextField(
         controller: _searchController,
+        style: TextStyle(fontSize: isLargeScreen ? 16 : 14),
         decoration: InputDecoration(
-          hintText: 'Search by title or town...',
-          hintStyle: const TextStyle(color: Colors.black45, fontSize: 16),
-          prefixIcon: const Icon(Icons.search, color: Color(0xFF0A66C2), size: 24),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide.none, 
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+          hintText: 'Search location...',
+          hintStyle: TextStyle(color: Colors.black45, fontSize: isLargeScreen ? 16 : 13),
+          prefixIcon: Icon(Icons.search, color: const Color(0xFF0A66C2), size: isLargeScreen ? 24 : 20),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+          contentPadding: EdgeInsets.symmetric(vertical: isLargeScreen ? 18 : 12, horizontal: isLargeScreen ? 20 : 10),
           fillColor: Colors.white,
           filled: true,
         ),
@@ -325,7 +569,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     );
   }
 
-  Widget _buildSortDropdown() {
+  Widget _buildSortDropdown(bool isLargeScreen) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
@@ -336,7 +580,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0A66C2).withOpacity(0.3),
+            color: const Color(0xFF0A66C2).withOpacity(0.2),
             blurRadius: 10.0,
             offset: const Offset(0, 4),
           ),
@@ -344,19 +588,17 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       ),
       padding: const EdgeInsets.all(2), 
       child: Container(
-        height: 56, 
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-        ),
+        height: isLargeScreen ? 56 : 42, 
+        padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 20 : 10),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
         child: Center(
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
+              isExpanded: true, 
               value: _currentSortOption,
-              icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF0A66C2)),
+              icon: Icon(Icons.keyboard_arrow_down, color: const Color(0xFF0A66C2), size: isLargeScreen ? 24 : 20),
               elevation: 0, 
-              style: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w500),
+              style: TextStyle(color: Colors.black87, fontSize: isLargeScreen ? 16 : 13, fontWeight: FontWeight.w500),
               dropdownColor: Colors.white,
               onChanged: (String? newValue) {
                 setState(() {
@@ -371,24 +613,15 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
               ].map<DropdownMenuItem<String>>((String value) {
                 String displayText;
                 switch (value) {
-                  case 'price_low_to_high':
-                    displayText = 'Price: Low to High';
-                    break;
-                  case 'price_high_to_low':
-                    displayText = 'Price: High to Low';
-                    break;
-                  case 'bedrooms_asc':
-                    displayText = 'Bedrooms: Ascending';
-                    break;
-                  case 'bedrooms_desc':
-                    displayText = 'Bedrooms: Descending';
-                    break;
-                  default:
-                    displayText = '';
+                  case 'price_low_to_high': displayText = 'Price: Low to High'; break;
+                  case 'price_high_to_low': displayText = 'Price: High to Low'; break;
+                  case 'bedrooms_asc': displayText = 'Beds: Asc'; break;
+                  case 'bedrooms_desc': displayText = 'Beds: Desc'; break;
+                  default: displayText = '';
                 }
                 return DropdownMenuItem<String>(
                   value: value,
-                  child: Text(displayText),
+                  child: Text(displayText, overflow: TextOverflow.ellipsis),
                 );
               }).toList(),
             ),
@@ -400,18 +633,21 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
 
   Widget _buildPropertiesGrid(List<Map<String, dynamic>> properties, bool isLargeScreen, bool isMediumScreen, double screenWidth) {
     int crossAxisCount;
+    double childAspectRatio;
+
     if (isLargeScreen) {
       crossAxisCount = 5;
+      childAspectRatio = 0.85;
     } else if (isMediumScreen) {
       crossAxisCount = 3;
-    } else if (screenWidth > 400) {
-      crossAxisCount = 2;
+      childAspectRatio = 0.85;
     } else {
       crossAxisCount = 1;
+      childAspectRatio = 0.95;
     }
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 40 : 20, vertical: 20),
+      padding: EdgeInsets.only(left: isLargeScreen ? 40 : 20, right: isLargeScreen ? 40 : 20, top: 10, bottom: 20),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -419,21 +655,98 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
           crossAxisCount: crossAxisCount,
           crossAxisSpacing: 15,
           mainAxisSpacing: 15,
-          childAspectRatio: 0.75,
+          childAspectRatio: childAspectRatio,
         ),
         itemCount: properties.length,
         itemBuilder: (context, index) {
           final property = properties[index];
-          // Use the new PropertyCard widget
-          return PropertyCard(
-            property: property,
-            isLargeScreen: isLargeScreen,
-            isMediumScreen: isMediumScreen,
-            authService: widget.authService,
-            onAuthRequired: _showAuthDialog,
+          
+          // --- LOGIC TO INTERCEPT "FOR RENT" CLICKS ---
+          final bool isForRent = (property['listingType'] ?? '').toString().toLowerCase() == 'for rent';
+
+          return GestureDetector(
+            onTap: isForRent ? _showOccupiedDialog : null, // If it's for rent, show the popup. Otherwise, handle normally inside PropertyCard or navigation.
+            child: AbsorbPointer(
+              absorbing: isForRent, // Blocks internal clicks on the card if it's for rent so our GestureDetector takes over
+              child: PropertyCard(
+                property: property,
+                isLargeScreen: isLargeScreen,
+                isMediumScreen: isMediumScreen,
+                authService: widget.authService,
+                onAuthRequired: _showAuthDialog,
+              ),
+            ),
           );
         },
       ),
+    );
+  }
+}
+
+class _StickyFilterDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double minHeight;
+  final double maxHeight;
+
+  _StickyFilterDelegate({required this.child, required this.minHeight, required this.maxHeight});
+
+  @override double get minExtent => minHeight;
+  @override double get maxExtent => maxHeight;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        boxShadow: shrinkOffset > 0 || overlapsContent
+            ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+            : [],
+      ),
+      alignment: Alignment.center,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyFilterDelegate oldDelegate) {
+    return maxHeight != oldDelegate.maxExtent || minHeight != oldDelegate.minExtent || child != oldDelegate.child;
+  }
+}
+
+class _PassingCloudText extends StatefulWidget {
+  final String text;
+  const _PassingCloudText({Key? key, required this.text}) : super(key: key);
+  @override
+  __PassingCloudTextState createState() => __PassingCloudTextState();
+}
+
+class __PassingCloudTextState extends State<_PassingCloudText> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(duration: const Duration(milliseconds: 2500), vsync: this)..repeat(); 
+  }
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return ShaderMask(
+          blendMode: BlendMode.srcIn, 
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              colors: [Colors.grey[600]!, Colors.blue[400]!, Colors.grey[600]!],
+              stops: const [0.0, 0.5, 1.0],
+              begin: Alignment(-3.0 + (_controller.value * 6.0), 0.0),
+              end: Alignment(-1.0 + (_controller.value * 6.0), 0.0),
+            ).createShader(bounds);
+          },
+          child: Text(widget.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+        );
+      },
     );
   }
 }
