@@ -1,6 +1,6 @@
 {
-    "name": "sora_app",
-    "short_name": "sora_app",
+    "name": "Sora Properties",
+    "short_name": "Sora Properties",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
