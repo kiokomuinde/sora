@@ -27,13 +27,14 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
   bool _isMobileSearchExpanded = false;
   bool _isMobileSortExpanded = false;
 
+  // UPDATED: Standardized asset paths for GitHub Pages compatibility
   final List<Map<String, dynamic>> _managedProperties = const [
     {
       'id': 'static_01',
       'title': 'Executive 2-Bedroom Apartment',
       'location': {'locality': 'Kilimani, Nairobi'},
       'price': '120000',
-      'coverImageUrl': 'assets/images/rental1.webp',
+      'coverImageUrl': 'assets/assets/images/rental1.webp', // Flutter Web sometimes expects assets/assets
       'listingType': 'For Rent', 
       'residentialDetails': {'bedrooms': '2', 'bathrooms': '2'},
       'size': '1400',
@@ -44,7 +45,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       'title': 'Spacious 3-Bedroom Flat',
       'location': {'locality': 'Mirema, Nairobi'},
       'price': '65000',
-      'coverImageUrl': 'assets/images/rental2.webp',
+      'coverImageUrl': 'assets/assets/images/rental2.webp',
       'listingType': 'For Rent',
       'residentialDetails': {'bedrooms': '3', 'bathrooms': '2'},
       'size': '1600',
@@ -55,7 +56,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       'title': 'Modern Studio Apartment',
       'location': {'locality': 'Ongata Rongai, Kajiado'},
       'price': '25000',
-      'coverImageUrl': 'assets/images/rental3.webp',
+      'coverImageUrl': 'assets/assets/images/rental3.webp',
       'listingType': 'For Rent',
       'residentialDetails': {'bedrooms': '1', 'bathrooms': '1'},
       'size': '550',
@@ -66,7 +67,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       'title': 'Brand New 4-Bedroom Duplex',
       'location': {'locality': 'Membley, Kiambu'},
       'price': '80000',
-      'coverImageUrl': 'assets/images/rental4.webp',
+      'coverImageUrl': 'assets/assets/images/rental4.webp',
       'listingType': 'For Rent',
       'residentialDetails': {'bedrooms': '4', 'bathrooms': '3'},
       'size': '2100',
@@ -77,7 +78,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       'title': 'Compact 1-Bedroom Flat',
       'location': {'locality': 'Thika, Kiambu'},
       'price': '30000',
-      'coverImageUrl': 'assets/images/rental5.webp',
+      'coverImageUrl': 'assets/assets/images/rental5.webp',
       'listingType': 'For Rent',
       'residentialDetails': {'bedrooms': '1', 'bathrooms': '1'},
       'size': '700',
@@ -88,7 +89,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       'title': 'Prime 2-Bedroom Apartment',
       'location': {'locality': 'Kitengela, Kajiado'},
       'price': '45000',
-      'coverImageUrl': 'assets/images/rental6.webp',
+      'coverImageUrl': 'assets/assets/images/rental6.webp',
       'listingType': 'For Rent',
       'residentialDetails': {'bedrooms': '2', 'bathrooms': '2'},
       'size': '1100',
@@ -99,7 +100,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       'title': 'Luxury 3-Bedroom Penthouse',
       'location': {'locality': 'Kileleshwa, Nairobi'},
       'price': '180000',
-      'coverImageUrl': 'assets/images/rental7.webp',
+      'coverImageUrl': 'assets/assets/images/rental7.webp',
       'listingType': 'For Rent',
       'residentialDetails': {'bedrooms': '3', 'bathrooms': '4'},
       'size': '2500',
@@ -110,7 +111,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       'title': 'Affordable 2-Bedroom Flat',
       'location': {'locality': 'Syokimau, Machakos'},
       'price': '38000',
-      'coverImageUrl': 'assets/images/rental8.webp',
+      'coverImageUrl': 'assets/assets/images/rental8.webp',
       'listingType': 'For Rent',
       'residentialDetails': {'bedrooms': '2', 'bathrooms': '1'},
       'size': '950',
@@ -236,7 +237,6 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     return filteredList;
   }
 
-  // --- NEW DIALOG FOR OCCUPIED RENTALS ---
   void _showOccupiedDialog() {
     showDialog(
       context: context,
@@ -661,13 +661,12 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
         itemBuilder: (context, index) {
           final property = properties[index];
           
-          // --- LOGIC TO INTERCEPT "FOR RENT" CLICKS ---
           final bool isForRent = (property['listingType'] ?? '').toString().toLowerCase() == 'for rent';
 
           return GestureDetector(
-            onTap: isForRent ? _showOccupiedDialog : null, // If it's for rent, show the popup. Otherwise, handle normally inside PropertyCard or navigation.
+            onTap: isForRent ? _showOccupiedDialog : null, 
             child: AbsorbPointer(
-              absorbing: isForRent, // Blocks internal clicks on the card if it's for rent so our GestureDetector takes over
+              absorbing: isForRent, 
               child: PropertyCard(
                 property: property,
                 isLargeScreen: isLargeScreen,
