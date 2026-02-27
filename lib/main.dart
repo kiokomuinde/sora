@@ -46,15 +46,20 @@ import 'screens/create_blog_screen.dart';
 import 'screens/admin_screen.dart';
 
 void main() async {
+  // 1. THIS MUST BE FIRST for Web SEO/Clean URLs
+  usePathUrlStrategy();
+
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "env.txt");
+  
+  try {
+    await dotenv.load(fileName: "env.txt");
+  } catch (e) {
+    debugPrint("Error loading env file: $e");
+  }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
-  // ACTIVE: This entirely removes the '#' from your web URLs.
-  usePathUrlStrategy();
 
   final AuthService authService = AuthService(firebaseAuth: FirebaseAuth.instance);
   final FirestoreService firestoreService = FirestoreService(); 
@@ -77,35 +82,31 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String chosenInitialRoute;
+    // Improved initial route logic for Web
+    String chosenInitialRoute = '/home';
     if (kIsWeb) {
-      chosenInitialRoute = html.window.location.pathname ?? '/home';
+      final path = html.window.location.pathname;
+      if (path != null && path != '/' && path.isNotEmpty) {
+        chosenInitialRoute = path;
+      }
     } else {
       chosenInitialRoute = '/splash';
     }
 
     return MaterialApp(
-      title: 'Sora Properties', // Updated app title for the browser tab
+      title: 'Sora Properties',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light().copyWith(
         textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Inter'),
       ),
       initialRoute: chosenInitialRoute,
       onGenerateRoute: (settings) {
-        final uri = Uri.parse(settings.name!);
+        // This handles deep links like /view_property/some-id-123
+        final uri = Uri.parse(settings.name ?? '/home');
         final pathSegments = uri.pathSegments;
 
-        String routeName;
-        if (pathSegments.isEmpty) {
-          routeName = '/home';
-        } else {
-          routeName = '/${pathSegments.first}';
-        }
-
-        String? parameter;
-        if (pathSegments.length > 1) {
-          parameter = pathSegments[1];
-        }
+        String routeName = pathSegments.isEmpty ? '/home' : '/${pathSegments.first}';
+        String? parameter = pathSegments.length > 1 ? pathSegments[1] : null;
 
         switch (routeName) {
           case '/splash':
@@ -116,48 +117,27 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => HomeScreen(authService: authService));
             
           case '/property_listing':
-            String listingType = parameter ?? '';
-            if (settings.arguments is Map<String, dynamic>) {
-                final args = settings.arguments as Map<String, dynamic>;
-                listingType = args['listingType'] ?? listingType;
-            }
-            return MaterialPageRoute(builder: (_) => PropertyListingScreen(
-              authService: authService,
-              listingType: listingType,
-            ));
-            
           case '/buy':
           case '/rent':
           case '/lease':
           case '/airbnb':
-            String listingType = routeName.substring(1); 
-            if (settings.arguments is Map<String, dynamic>) {
-                final args = settings.arguments as Map<String, dynamic>;
-                listingType = args['listingType'] ?? listingType;
-            }
+            String type = routeName == '/property_listing' ? (parameter ?? '') : routeName.substring(1);
             return MaterialPageRoute(builder: (_) => PropertyListingScreen(
               authService: authService,
-              listingType: listingType,
+              listingType: type,
             ));
             
           case '/view_property':
+            // Logic for sharing valid links: /view_property/PROPERTY_ID
+            String? id = parameter;
             if (settings.arguments is Map<String, dynamic>) {
-                final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
-                return MaterialPageRoute(builder: (_) => ViewPropertyScreen(
-                  authService: authService, 
-                  propertyData: args,
-                  propertyId: args['id'] as String?, 
-                ));
-            } 
-            else if (parameter != null && parameter.isNotEmpty) {
-                return MaterialPageRoute(builder: (_) => ViewPropertyScreen(
-                  authService: authService,
-                  propertyId: parameter, 
-                ));
+              final args = settings.arguments as Map<String, dynamic>;
+              id = args['id'];
             }
-            else {
-                return MaterialPageRoute(builder: (_) => PropertyListingScreen(authService: authService));
-            }
+            return MaterialPageRoute(builder: (_) => ViewPropertyScreen(
+              authService: authService,
+              propertyId: id,
+            ));
             
           case '/add_property':
             return MaterialPageRoute(builder: (_) => AddPropertyScreen(authService: authService));
@@ -177,27 +157,17 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
             
           case '/blog_view':
+            String? slug = parameter;
             if (settings.arguments is Map<String, dynamic>) {
-                final args = settings.arguments as Map<String, dynamic>;
-                return MaterialPageRoute(
-                  builder: (_) => BlogViewScreen(
-                    blogPost: args, 
-                    authService: authService,
-                    blogSlug: args['blogId'] as String?, 
-                  )
-                );
-            } 
-            else if (parameter != null) {
-                return MaterialPageRoute(
-                  builder: (_) => BlogViewScreen(
-                    authService: authService,
-                    blogSlug: parameter, 
-                    blogPost: null, 
-                  )
-                );
-            } else {
-                return MaterialPageRoute(builder: (_) => BlogsScreen(authService: authService));
+              final args = settings.arguments as Map<String, dynamic>;
+              slug = args['blogId'];
             }
+            return MaterialPageRoute(
+              builder: (_) => BlogViewScreen(
+                authService: authService,
+                blogSlug: slug,
+              )
+            );
             
           case '/create_blog':
             return MaterialPageRoute(builder: (_) => CreateBlogScreen(authService: authService));
@@ -207,7 +177,6 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => FAQsScreen(authService: authService));
           case '/local_guides':
             return MaterialPageRoute(builder: (_) => LocalGuidesScreen(authService: authService));
-            
           case '/terms': 
             return MaterialPageRoute(builder: (_) => TermsOfServiceScreen(authService: authService));
           case '/sitemap':
@@ -220,15 +189,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => PrivacyPolicyScreen(authService: authService));
           case '/cookies': 
             return MaterialPageRoute(builder: (_) => CookiePolicyScreen(authService: authService));
-            
           case '/my_favorites':
-            return MaterialPageRoute(
-              builder: (_) => MyFavoritesScreen(
-                authService: authService,
-                firestoreService: firestoreService, 
-              )
-            );
-            
+            return MaterialPageRoute(builder: (_) => MyFavoritesScreen(authService: authService, firestoreService: firestoreService));
           case '/my_listings':
             return MaterialPageRoute(builder: (_) => MyListingsScreen(authService: authService));
           case '/profile_settings':
@@ -240,9 +202,7 @@ class MyApp extends StatelessWidget {
           case '/recently_viewed':
             return MaterialPageRoute(builder: (_) => RecentlyViewedScreen(authService: authService));
           default:
-            return MaterialPageRoute(builder: (context) {
-              return HomeScreen(authService: authService);
-            });
+            return MaterialPageRoute(builder: (_) => HomeScreen(authService: authService));
         }
       },
     );
