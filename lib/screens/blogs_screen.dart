@@ -10,6 +10,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sora_app/services/firestore_service.dart'; 
 import 'package:share_plus/share_plus.dart'; 
 
+// 🎯 CRITICAL: SEO Package Import
+import 'package:seo/seo.dart';
+
 class BlogsScreen extends StatefulWidget {
   final AuthService authService;
 
@@ -107,175 +110,197 @@ class _BlogsScreenState extends State<BlogsScreen> {
     final List<String> imageUrls = imageUrlsDynamic?.map((e) => e.toString()).toList() ?? [];
     final String imageUrl = imageUrls.isNotEmpty ? imageUrls[0] : 'https://placehold.co/600x400/E0E0E0/white?text=No+Image';
     
-    return GestureDetector(
-      onTap: () {
-        final blogIdForNav = blog['blogId'] ?? blog['id']; 
-        Navigator.pushNamed(
-          context,
-          '/blog_view/$blogIdForNav',
-          arguments: blog,
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 2,
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack( 
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(15),
-                    topRight: Radius.circular(15),
-                  ),
-                  child: Image.network(
-                    imageUrl,
-                    height: 200, // Fixed height for the image
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 200,
-                      color: Colors.grey[200],
-                      child: const Center(child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey)),
+    final blogTitle = blog['title'] ?? 'Untitled Blog Post';
+    final blogIdForNav = blog['blogId'] ?? blog['id']; 
+    final blogSnippet = blog['snippet'] ?? 'A brief snippet about the blog post content.';
+    
+    // 🎯 SEO: Crawlable Link Wrapping the entire card
+    return Seo.link(
+      href: 'https://soraproperties.co.ke/#/blog_view/$blogIdForNav',
+      anchor: blogTitle,
+      child: GestureDetector(
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            '/blog_view/$blogIdForNav',
+            arguments: blog,
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.2),
+                spreadRadius: 2,
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack( 
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(15),
+                      topRight: Radius.circular(15),
                     ),
-                  ),
-                ),
-                Positioned( 
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6), 
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.share, color: Colors.white, size: 20),
-                      onPressed: () {
-                        _shareBlog(blog);
-                      },
-                      tooltip: 'Share this post',
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0A66C2).withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      blog['category'] ?? 'Uncategorized',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    // 🎯 SEO: Image Tag with Alt Text
+                    child: Seo.image(
+                      src: imageUrl,
+                      alt: blogTitle,
+                      child: Image.network(
+                        imageUrl,
+                        height: 200, 
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 200,
+                          color: Colors.grey[200],
+                          child: const Center(child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey)),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            Expanded( // Using Expanded ensures the text container utilizes exactly the remaining vertical space
-              child: Padding(
-                padding: const EdgeInsets.all(16.0), 
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      blog['title'] ?? 'Untitled Blog Post',
-                      style: TextStyle(
-                        fontSize: isMobile ? 18 : 20, 
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0A66C2),
-                        height: 1.2,
+                  Positioned( 
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6), 
+                        shape: BoxShape.circle,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      child: IconButton(
+                        icon: const Icon(Icons.share, color: Colors.white, size: 20),
+                        onPressed: () {
+                          _shareBlog(blog);
+                        },
+                        tooltip: 'Share this post',
+                      ),
                     ),
-                    const SizedBox(height: 8), 
-                    Expanded( // Pushes the bottom row down and safely contains the snippet
+                  ),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A66C2).withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Text(
-                        blog['snippet'] ?? 'A brief snippet about the blog post content.',
-                        style: TextStyle(
-                          fontSize: isMobile ? 14 : 15, 
-                          color: Colors.grey[700],
-                          height: 1.4,
+                        blog['category'] ?? 'Uncategorized',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
                         ),
-                        maxLines: 3, 
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(height: 10), 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'By ${blog['userId'] ?? 'Sora Team'}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey[600],
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                blog['timestamp'] != null
-                                    ? (blog['timestamp'] as Timestamp).toDate().toString().split(' ')[0]
-                                    : 'Date Unavailable',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                            ],
+                  ),
+                ],
+              ),
+              Expanded( 
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0), 
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 🎯 SEO: H2 Semantic Header for Blog Titles
+                      Seo.text(
+                        text: blogTitle,
+                        style: TextTagStyle.h2,
+                        child: Text(
+                          blogTitle,
+                          style: TextStyle(
+                            fontSize: isMobile ? 18 : 20, 
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0A66C2),
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(height: 8), 
+                      Expanded( 
+                        // 🎯 SEO: Paragraph Semantic Tag for Snippets
+                        child: Seo.text(
+                          text: blogSnippet,
+                          style: TextTagStyle.p,
+                          child: Text(
+                            blogSnippet,
+                            style: TextStyle(
+                              fontSize: isMobile ? 14 : 15, 
+                              color: Colors.grey[700],
+                              height: 1.4,
+                            ),
+                            maxLines: 3, 
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1E90FF).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                      ),
+                      const SizedBox(height: 10), 
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'By ${blog['userId'] ?? 'Sora Team'}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[600],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  blog['timestamp'] != null
+                                      ? (blog['timestamp'] as Timestamp).toDate().toString().split(' ')[0]
+                                      : 'Date Unavailable',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: IconButton(
-                            onPressed: () {
-                              final blogIdForNav = blog['blogId'] ?? blog['id']; 
-                              Navigator.pushNamed(
-                                context,
-                                '/blog_view/$blogIdForNav',
-                                arguments: blog,
-                              );
-                            },
-                            icon: const Icon(Icons.arrow_forward, color: Color(0xFF1E90FF)),
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(), 
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E90FF).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/blog_view/$blogIdForNav',
+                                  arguments: blog,
+                                );
+                              },
+                              icon: const Icon(Icons.arrow_forward, color: Color(0xFF1E90FF)),
+                              padding: const EdgeInsets.all(8),
+                              constraints: const BoxConstraints(), 
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -302,22 +327,32 @@ class _BlogsScreenState extends State<BlogsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                'Sora Blog: Insights & Trends',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: isMobile ? 28 : 36,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF0A66C2),
+              // 🎯 SEO: Main H1 Page Header
+              Seo.text(
+                text: 'Sora Blog: Insights & Trends',
+                style: TextTagStyle.h1,
+                child: Text(
+                  'Sora Blog: Insights & Trends',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: isMobile ? 28 : 36,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF0A66C2),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                'Your source for the latest real estate market analysis, investment tips, and homeowner guides.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: isMobile ? 15 : 18,
-                  color: Colors.grey[700],
+              // 🎯 SEO: Paragraph Descriptor
+              Seo.text(
+                text: 'Your source for the latest real estate market analysis, investment tips, and homeowner guides.',
+                style: TextTagStyle.p,
+                child: Text(
+                  'Your source for the latest real estate market analysis, investment tips, and homeowner guides.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: isMobile ? 15 : 18,
+                    color: Colors.grey[700],
+                  ),
                 ),
               ),
             ],
@@ -340,7 +375,6 @@ class _BlogsScreenState extends State<BlogsScreen> {
               _buildFilterChip('Technology', 'Technology'),
               _buildFilterChip('Financing', 'Financing'),
               _buildFilterChip('Real Estate', 'Real Estate'),
-              // CHANGED BACK: Display 'BNB' on UI, but filter using 'Airbnb' for the backend
               _buildFilterChip('BNB', 'Airbnb'), 
             ],
           ),
@@ -356,7 +390,7 @@ class _BlogsScreenState extends State<BlogsScreen> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(40.0),
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator(color: Color(0xFF0A66C2)),
                   )
                 );
               }
@@ -415,13 +449,11 @@ class _BlogsScreenState extends State<BlogsScreen> {
               return GridView.builder(
                 shrinkWrap: true, 
                 physics: const NeverScrollableScrollPhysics(), 
-                // Using mainAxisExtent fixes the height explicitly instead of using childAspectRatio.
-                // This completely solves the text-overflow issue on mobile devices.
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: crossAxisCount,
                   crossAxisSpacing: isMobile ? 15 : 25,
                   mainAxisSpacing: isMobile ? 15 : 25,
-                  mainAxisExtent: 420, // Strict, beautiful absolute height for all cards!
+                  mainAxisExtent: 420, 
                 ),
                 itemCount: filteredBlogs.length,
                 itemBuilder: (context, index) {
@@ -456,21 +488,30 @@ class _BlogsScreenState extends State<BlogsScreen> {
       color: const Color(0xFFF0F8FF), 
       child: Column(
         children: [
-          Text(
-            'Stay Updated',
-            style: TextStyle(
-              fontSize: isMobile ? 24 : 30,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF0A66C2),
+          // 🎯 SEO: H2 Semantic Header for Newsletter
+          Seo.text(
+            text: 'Stay Updated',
+            style: TextTagStyle.h2,
+            child: Text(
+              'Stay Updated',
+              style: TextStyle(
+                fontSize: isMobile ? 24 : 30,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF0A66C2),
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          Text(
-            'Subscribe to our newsletter for exclusive real estate insights.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: isMobile ? 14 : 16,
-              color: Colors.grey[700],
+          Seo.text(
+            text: 'Subscribe to our newsletter for exclusive real estate insights.',
+            style: TextTagStyle.p,
+            child: Text(
+              'Subscribe to our newsletter for exclusive real estate insights.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isMobile ? 14 : 16,
+                color: Colors.grey[700],
+              ),
             ),
           ),
           const SizedBox(height: 25),
@@ -497,7 +538,9 @@ class _BlogsScreenState extends State<BlogsScreen> {
                     const SizedBox(height: 15),
                     ElevatedButton(
                       onPressed: () {
-                        print('Subscribing: ${_newsletterEmailController.text}');
+                        // Implement Newsletter Logic
+                        _newsletterEmailController.clear();
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Subscribed successfully!')));
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1E90FF),
@@ -538,7 +581,9 @@ class _BlogsScreenState extends State<BlogsScreen> {
                     const SizedBox(width: 10),
                     ElevatedButton(
                       onPressed: () {
-                        print('Subscribing: ${_newsletterEmailController.text}');
+                        // Implement Newsletter Logic
+                        _newsletterEmailController.clear();
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Subscribed successfully!')));
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1E90FF),
@@ -570,62 +615,82 @@ class _BlogsScreenState extends State<BlogsScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth > 900;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: commonWidgets.buildAppBar(),
-      endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
-      floatingActionButton: isLoggedIn && _isAdmin
-          ? Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF1E90FF),
-                    Color(0xFF8A2BE2),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    spreadRadius: 1,
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
+    // 🎯 SEO: Dynamic Page Titles based on Filter
+    final String categoryTitle = _currentListingTypeFilter.isNotEmpty 
+        ? '$_currentListingTypeFilter - ' 
+        : '';
+    final String pageTitle = '${categoryTitle}Real Estate Blog & Insights | Sora Properties';
+    final String pageDesc = 'Stay updated with the latest real estate news, investment tips, and market trends in Kenya with the Sora Properties blog.';
+
+    // 🎯 SEO: Core Head Wrapper
+    return Seo.head(
+      tags: [
+        MetaTag(name: 'title', content: pageTitle),
+        MetaTag(name: 'description', content: pageDesc),
+        MetaTag(name: 'keywords', content: 'Real Estate Blog, Kenya Real Estate, Investment Tips, Property Market Trends, Sora Properties'),
+        MetaTag(name: 'og:title', content: pageTitle),
+        MetaTag(name: 'og:description', content: pageDesc),
+        MetaTag(name: 'og:type', content: 'blog'),
+        MetaTag(name: 'og:url', content: 'https://soraproperties.co.ke/#/blogs'),
+        MetaTag(name: 'twitter:card', content: 'summary_large_image'),
+      ],
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: commonWidgets.buildAppBar(),
+        endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
+        floatingActionButton: isLoggedIn && _isAdmin
+            ? Container(
+                decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(25),
-                  onTap: () {
-                    Navigator.pushNamed(context, '/create_blog');
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.edit, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text(
-                          'Write Post',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF1E90FF),
+                      Color(0xFF8A2BE2),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      spreadRadius: 1,
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(25),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/create_blog');
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.edit, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text(
+                            'Write Post',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            )
-          : null, 
-      body: SingleChildScrollView(
-        child: _buildContent(context),
+              )
+            : null, 
+        body: SingleChildScrollView(
+          child: _buildContent(context),
+        ),
       ),
     );
   }

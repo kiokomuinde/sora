@@ -10,6 +10,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart'; 
 import 'dart:ui'; 
 
+// 🎯 CRITICAL: SEO Package Import
+import 'package:seo/seo.dart';
+
 class BlogViewScreen extends StatefulWidget {
   final Map<String, dynamic>? blogPost; 
   final AuthService authService;
@@ -208,17 +211,21 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
     final isMobile = screenWidth < 600;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0),
+      padding: const EdgeInsets.only(bottom: 30.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
-          Text(
-            subtopic['title'] ?? '',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E90FF),
+          // 🎯 SEO: H2 Semantic Header for Subtopics
+          Seo.text(
+            text: subtopic['title'] ?? '',
+            style: TextTagStyle.h2,
+            child: Text(
+              subtopic['title'] ?? '',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E90FF),
+              ),
             ),
           ),
           if (imageUrl != null) ...[
@@ -227,46 +234,46 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(15),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 7,
-                    offset: const Offset(0, 3),
-                  ),
+                  BoxShadow(color: Colors.grey.withOpacity(0.3), spreadRadius: 2, blurRadius: 7, offset: const Offset(0, 3)),
                 ],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15),
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: isMobile ? 180 : 250,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
+                // 🎯 SEO: Image tagging for Contextual Media
+                child: Seo.image(
+                  src: imageUrl,
+                  alt: subtopic['title'] ?? 'Article Image',
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: isMobile ? 180 : 250,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        height: isMobile ? 180 : 250,
+                        color: Colors.grey[200],
+                        child: const Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) => Container(
                       height: isMobile ? 180 : 250,
                       color: Colors.grey[200],
-                      child: const Center(child: CircularProgressIndicator()),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: isMobile ? 180 : 250,
-                      color: Colors.grey[200],
-                      child: const Center(child: Icon(Icons.error, color: Colors.red)),
-                    );
-                  },
+                      child: const Center(child: Icon(Icons.broken_image, color: Colors.grey, size: 50)),
+                    ),
+                  ),
                 ),
               ),
             ),
           ],
-          const SizedBox(height: 10),
-          Text(
-            subtopic['body'] ?? '',
-            style: const TextStyle(
-              fontSize: 16,
-              height: 1.5,
+          const SizedBox(height: 15),
+          // 🎯 SEO: Paragraph tag for the main body
+          Seo.text(
+            text: subtopic['body'] ?? '',
+            style: TextTagStyle.p,
+            child: Text(
+              subtopic['body'] ?? '',
+              style: const TextStyle(fontSize: 16, height: 1.6, color: Color(0xFF333333)),
             ),
           ),
         ],
@@ -282,23 +289,12 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (snapshot.hasError) {
-          return Text(
-            'Error loading related topics: ${snapshot.error}',
-            style: const TextStyle(color: Colors.red),
-          );
-        }
-
-        final relatedBlogs = snapshot.data;
-
-        if (relatedBlogs == null || relatedBlogs.isEmpty) {
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text('No other related blog topics found.'));
         }
         
         return Column(
-          children: relatedBlogs.map((blog) {
-            return _buildRelatedBlogCard(context, blog);
-          }).toList(),
+          children: snapshot.data!.map((blog) => _buildRelatedBlogCard(context, blog)).toList(),
         );
       },
     );
@@ -306,70 +302,70 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
 
   Widget _buildRelatedBlogCard(BuildContext context, Map<String, dynamic> blog) {
     final String imageUrl = blog['imageUrls']?.isNotEmpty == true ? blog['imageUrls'][0] : 'https://placehold.co/600x400/E0E0E0/white?text=No+Image';
-    final String blogIdForNav = (blog['blogId'] ?? '') as String; 
+    final String blogIdForNav = (blog['blogId'] ?? blog['id'] ?? '') as String; 
+    final String blogTitle = blog['title'] ?? 'No Title';
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          '/blog_view/$blogIdForNav', 
-          arguments: blog, 
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 15),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              spreadRadius: 2,
-              blurRadius: 5,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                imageUrl,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, size: 80),
-              ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    blog['title'] ?? 'No Title',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+    // 🎯 SEO: Internal Crawlable link creation
+    return Seo.link(
+      href: 'https://soraproperties.co.ke/#/blog_view/$blogIdForNav',
+      anchor: blogTitle,
+      child: GestureDetector(
+        onTap: () {
+          Navigator.pushNamed(context, '/blog_view/$blogIdForNav', arguments: blog);
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 15),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            boxShadow: [
+              BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 4, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Seo.image(
+                  src: imageUrl,
+                  alt: blogTitle,
+                  child: Image.network(
+                    imageUrl,
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(width: 80, height: 80, color: Colors.grey[200], child: const Icon(Icons.broken_image)),
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    _formatDate(blog['timestamp']),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Seo.text(
+                      text: blogTitle,
+                      style: TextTagStyle.h3,
+                      child: Text(
+                        blogTitle,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      _formatDate(blog['timestamp']),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -378,28 +374,25 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
   Widget _buildRightColumn() {
     final rawId = _currentBlogPost?['blogId'] ?? _currentBlogPost?['id'];
     final rawCategory = _currentBlogPost?['category'];
-
-    final currentBlogId = (rawId is String && rawId.isNotEmpty) ? rawId : null; 
+    final currentBlogId = (rawId is String && rawId.isNotEmpty) ? rawId : null;
     final currentBlogCategory = (rawCategory is String && rawCategory.isNotEmpty) ? rawCategory : null;
 
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.all(20),
-      child: ListView( 
+      child: ListView(
+        shrinkWrap: true,
+        physics: const ClampingScrollPhysics(),
         children: [
           const Text(
             'Related Topics',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E90FF),
-            ),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1E90FF)),
           ),
           const SizedBox(height: 20),
-          if (currentBlogId != null && currentBlogCategory != null)
-            _buildRelatedTopics(currentBlogId, currentBlogCategory)
-          else
-            const Text('Related topics unavailable until blog data is loaded or if blog is missing ID/category.', style: TextStyle(color: Colors.grey)),
+          if (currentBlogId != null && currentBlogCategory != null) 
+            _buildRelatedTopics(currentBlogId, currentBlogCategory) 
+          else 
+            const Text('Related topics unavailable.', style: TextStyle(color: Colors.grey)),
         ],
       ),
     );
@@ -408,100 +401,67 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
   Widget _buildLeftColumn() {
     const Color darkBlueTitle = Color(0xFF0A66C2);
     const Color primaryBlue = Color(0xFF1E90FF);
-    
-    const Color deepPurple = Color(0xFF8A2BE2);
-    const Color lightBlue = Color(0xFF87CEEB); 
-    const Color lightPurple = Color(0xFFDDA0DD); 
 
     return StreamBuilder<QuerySnapshot>(
       stream: _firestoreService.getBlogs(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No blogs available.'));
+        Map<String, int> categoryCounts = {};
+        if (snapshot.hasData) {
+          for (var doc in snapshot.data!.docs) {
+            final cat = (doc.data() as Map<String, dynamic>)['category'] as String?;
+            if (cat != null) {
+              categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
+            }
+          }
         }
 
-        final blogs = snapshot.data!.docs;
-        final Map<String, int> categoryCounts = {};
-        for (var blog in blogs) {
-          final data = blog.data() as Map<String, dynamic>;
-          final category = data['category'] ?? 'Uncategorized';
-          categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
-        }
-        
-        return Padding( 
-          padding: const EdgeInsets.all(16.0),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20), 
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0), 
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      primaryBlue.withOpacity(0.1),    
-                      deepPurple.withOpacity(0.1),     
-                      lightBlue.withOpacity(0.1),      
-                      lightPurple.withOpacity(0.1),    
-                      Colors.white.withOpacity(0.05),  
-                    ],
-                    stops: const [0.0, 0.3, 0.6, 0.8, 1.0],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.6), 
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05), 
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Blog Categories',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900, 
-                        color: darkBlueTitle, 
-                        shadows: [
-                          Shadow(color: Colors.white.withOpacity(0.8), blurRadius: 5, offset: const Offset(1, 1)) 
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: ListView(
-                        children: _categories.map((category) {
-                          final count = categoryCounts[category] ?? 0;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(
-                              '$category ($count)',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: primaryBlue, 
-                                fontWeight: FontWeight.w700, 
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 8)),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Blog Categories',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: darkBlueTitle,
+                  shadows: [Shadow(color: Colors.white.withOpacity(0.8), blurRadius: 5, offset: const Offset(1, 1))],
                 ),
               ),
-            ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const ClampingScrollPhysics(),
+                  children: _categories.map((category) {
+                    final count = categoryCounts[category] ?? 0;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(category, style: const TextStyle(fontSize: 16, color: primaryBlue, fontWeight: FontWeight.w700)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
+                            child: Text('$count', style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                          )
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -514,13 +474,11 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
       future: _loadBlogFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
         if (_currentBlogPost == null || _currentBlogPost!.isEmpty) {
-            return Scaffold( 
+          return Scaffold(
             appBar: commonWidgets.buildAppBar(),
             body: const Center(
               child: Padding(
@@ -535,221 +493,223 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
         final screenWidth = MediaQuery.of(context).size.width;
         final bool isLargeScreen = screenWidth >= 1000;
         final bool isLoggedIn = widget.authService.getCurrentUser() != null;
+        
         final List<String> imageUrls = currentBlogPost['imageUrls']?.cast<String>() ?? [];
         final List<Map<String, dynamic>> subtopics = currentBlogPost['subtopics']?.cast<Map<String, dynamic>>() ?? [];
+        
+        final String blogTitle = currentBlogPost['title'] ?? 'Untitled Post';
+        final String blogSummary = currentBlogPost['summary'] ?? '';
+        final String coverImage = imageUrls.isNotEmpty ? imageUrls[0] : 'https://placehold.co/600x400/E0E0E0/white?text=No+Image';
+
+        // 🎯 SEO: Dynamic Page Metadata Setup
+        final String pageTitle = '$blogTitle | Sora Properties Blog';
+        final String pageDesc = blogSummary.isNotEmpty ? blogSummary : 'Read the latest real estate insights and tips from Sora Properties.';
+        final String pageUrl = 'https://soraproperties.co.ke/#/blog_view/${widget.blogSlug ?? currentBlogPost['blogId'] ?? currentBlogPost['id']}';
+
+        final Widget mainArticleContent = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                icon: const Icon(Icons.share, color: Color(0xFF1E90FF)),
+                onPressed: _shareBlog,
+                tooltip: 'Share Article',
+              ),
+            ),
+            // 🎯 SEO: Primary H1 Header for the Blog Entry
+            Seo.text(
+              text: blogTitle,
+              style: TextTagStyle.h1,
+              child: Text(
+                blogTitle,
+                style: TextStyle(
+                  fontSize: isLargeScreen ? 40 : 28,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0A66C2),
+                  height: 1.2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Text(
+                  'Published: ${_formatDate(currentBlogPost['timestamp'])}',
+                  style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            if (imageUrls.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                // 🎯 SEO: Main article image tagging
+                child: Seo.image(
+                  src: coverImage,
+                  alt: blogTitle,
+                  child: Image.network(
+                    coverImage,
+                    width: double.infinity,
+                    height: isLargeScreen ? 500 : 250,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: isLargeScreen ? 500 : 250,
+                      color: Colors.grey[200],
+                      child: const Center(child: Icon(Icons.broken_image, size: 80, color: Colors.grey)),
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 40),
+            const Text(
+              'Summary',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1E90FF)),
+            ),
+            const SizedBox(height: 10),
+            // 🎯 SEO: Paragraph tag
+            Seo.text(
+              text: blogSummary,
+              style: TextTagStyle.p,
+              child: Text(
+                blogSummary,
+                style: const TextStyle(fontSize: 16, height: 1.6, color: Color(0xFF4B5563)),
+              ),
+            ),
+            const SizedBox(height: 40),
+            const Divider(),
+            ...subtopics.asMap().entries.map((entry) {
+              int index = entry.key;
+              Map<String, dynamic> subtopic = entry.value;
+              String? imageUrl = (index + 1 < imageUrls.length) ? imageUrls[index + 1] : null;
+              return _buildSubtopic(subtopic, imageUrl: imageUrl);
+            }).toList(),
+            
+            if (isLargeScreen) ...[
+              const SizedBox(height: 60),
+              const Divider(),
+              const SizedBox(height: 40),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: SizedBox(height: 500, child: _buildLeftColumn())),
+                  const SizedBox(width: 40),
+                  Expanded(child: SizedBox(height: 500, child: _buildRightColumn())),
+                ],
+              ),
+            ]
+          ],
+        );
 
         final blogContent = SingleChildScrollView(
           child: Column(
             children: [
               Container(
                 width: double.infinity,
+                constraints: const BoxConstraints(maxWidth: 1400),
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        icon: const Icon(Icons.share, color: Color(0xFF1E90FF), size: 30),
-                        onPressed: _shareBlog, 
-                        tooltip: 'Share this post',
-                      ),
-                    ),
-                    Text(
-                      currentBlogPost['title'] ?? 'No Title',
-                      style: const TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0A66C2),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'By ${currentBlogPost['userId'] ?? 'Sora Team'} on ${_formatDate(currentBlogPost['timestamp'])}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      currentBlogPost['snippet'] ?? '',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
+                child: isLargeScreen 
+                    ? Row( // Desktop wide layout mapping
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 7, child: mainArticleContent),
+                          const SizedBox(width: 60),
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              children: [
+                                SizedBox(height: 450, child: _buildLeftColumn()), // Categories
+                                const SizedBox(height: 40),
+                                _buildRightColumn(), // Related
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : mainArticleContent, // Mobile layout mapping
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      currentBlogPost['introduction'] ?? '',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    ...subtopics.asMap().entries.map((entry) {
-                      final int index = entry.key;
-                      final Map<String, dynamic> subtopic = entry.value;
-                      final String? imageUrl = index < imageUrls.length ? imageUrls[index] : null;
-                      return _buildSubtopic(subtopic, imageUrl: imageUrl);
-                    }).toList(),
-                    const SizedBox(height: 30),
-                    const Text(
-                      'Summary',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E90FF),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      currentBlogPost['summary'] ?? '',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              commonWidgets.buildFooter(), 
-              // Added empty space for mobile to prevent the floating menu from covering the footer
+              commonWidgets.buildFooter(),
               if (!isLargeScreen) const SizedBox(height: 80),
             ],
           ),
         );
 
-        return Scaffold(
-          backgroundColor: Colors.white,
-          appBar: commonWidgets.buildAppBar(),
-          endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
-          floatingActionButton: isLoggedIn && _isAdmin
-              ? Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF1E90FF),
-                        Color(0xFF8A2BE2),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+        // 🎯 SEO: Wrapping the Page Scaffold in Seo.head for Dynamic Search Metadata
+        return Seo.head(
+          tags: [
+            MetaTag(name: 'title', content: pageTitle),
+            MetaTag(name: 'description', content: pageDesc),
+            MetaTag(name: 'og:title', content: pageTitle),
+            MetaTag(name: 'og:description', content: pageDesc),
+            MetaTag(name: 'og:image', content: coverImage),
+            MetaTag(name: 'og:url', content: pageUrl),
+            MetaTag(name: 'og:type', content: 'article'),
+            MetaTag(name: 'twitter:card', content: 'summary_large_image'),
+          ],
+          child: Scaffold(
+            backgroundColor: Colors.white,
+            appBar: commonWidgets.buildAppBar(),
+            endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
+            floatingActionButton: isLoggedIn && _isAdmin
+                ? Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(25),
+                      gradient: const LinearGradient(colors: [Color(0xFF1E90FF), Color(0xFF8A2BE2)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), spreadRadius: 1, blurRadius: 6, offset: const Offset(0, 3))],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        spreadRadius: 2,
-                        blurRadius: 5,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: () {
-                        Navigator.pushNamed(context, '/create_blog');
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.add, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text(
-                              'Create Blog',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(25),
+                        onTap: () => Navigator.pushNamed(context, '/create_blog'),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.edit, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text('Write Post', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                )
-              : null, 
-          // Replaced body Row with Stack to overlay the floating pill on mobile
-          body: Stack(
-            children: [
-              Row(
-                children: [
-                  if (isLargeScreen)
-                    Expanded(
-                      flex: 1,
-                      child: _buildLeftColumn(),
-                    ),
-                  Expanded(
-                    flex: isLargeScreen ? 2 : 1, 
-                    child: blogContent,
-                  ),
-                  if (isLargeScreen)
-                    Expanded(
-                      flex: 1,
-                      child: _buildRightColumn(),
-                    ),
-                ],
-              ),
-              // Floating Action Menu for Small Screens
-              if (!isLargeScreen)
-                Positioned(
-                  bottom: 30, 
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 15,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 5),
+                  )
+                : null, 
+            body: Stack(
+              children: [
+                blogContent,
+                if (!isLargeScreen)
+                  Positioned(
+                    bottom: 0, left: 0, right: 0,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.95),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -2))],
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
                           child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               TextButton.icon(
                                 onPressed: _showCategoriesBottomSheet,
                                 icon: const Icon(Icons.category_rounded, color: Color(0xFF1E90FF), size: 20),
                                 label: const Text('Categories', style: TextStyle(color: Color(0xFF1E90FF), fontWeight: FontWeight.bold)),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                ),
+                                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
                               ),
-                              Container(
-                                width: 1,
-                                height: 24,
-                                color: Colors.grey[300],
-                              ),
+                              Container(width: 1, height: 24, color: Colors.grey[300]),
                               TextButton.icon(
                                 onPressed: _showRelatedTopicsBottomSheet,
                                 icon: const Icon(Icons.article_rounded, color: Color(0xFF1E90FF), size: 20),
                                 label: const Text('Related', style: TextStyle(color: Color(0xFF1E90FF), fontWeight: FontWeight.bold)),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                ),
+                                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
                               ),
                             ],
                           ),
@@ -757,8 +717,8 @@ class _BlogViewScreenState extends State<BlogViewScreen> {
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         );
       },

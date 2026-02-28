@@ -1,6 +1,7 @@
 // /lib/screens/property_listing_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:seo/seo.dart'; // <-- Added SEO package
 import 'package:sora_app/widgets/common_widgets.dart';
 import 'package:sora_app/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -34,7 +35,7 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       'title': 'Executive 2-Bedroom Apartment',
       'location': {'locality': 'Kilimani, Nairobi'},
       'price': '120000',
-      'coverImageUrl': 'assets/assets/images/rental1.webp', // Flutter Web sometimes expects assets/assets
+      'coverImageUrl': 'assets/assets/images/rental1.webp',
       'listingType': 'For Rent', 
       'residentialDetails': {'bedrooms': '2', 'bathrooms': '2'},
       'size': '1400',
@@ -302,65 +303,83 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isLargeScreen = screenWidth >= 1000;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 1000;
+
+    // SEO Dynamic Meta Tags Generation
+    final String baseTitle = _currentListingTypeFilter.isNotEmpty 
+        ? _currentListingTypeFilter 
+        : 'Discover';
+    final String pageTitle = '$baseTitle Properties | Sora Properties';
+    final String pageDesc = 'Explore our exclusive collection of $baseTitle properties tailored to your needs. Find premium listings managed by Sora Properties.';
     
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: commonWidgets.buildAppBar(
-        currentListingTypeFilter: _currentListingTypeFilter,
-      ),
-      endDrawer: commonWidgets.buildDrawer(),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: _buildHeader(isLargeScreen),
-          ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _StickyFilterDelegate(
-              minHeight: isLargeScreen ? 76.0 : 60.0,
-              maxHeight: isLargeScreen ? 76.0 : 60.0,
-              child: _buildFilterAndSortSection(isLargeScreen),
+    // Wrapped entire Scaffold in Seo.head
+    return Seo.head(
+      tags: [
+        MetaTag(name: 'title', content: pageTitle),
+        MetaTag(name: 'description', content: pageDesc),
+        MetaTag(name: 'og:title', content: pageTitle),
+        MetaTag(name: 'og:description', content: pageDesc),
+      ],
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        appBar: commonWidgets.buildAppBar(
+          currentListingTypeFilter: _currentListingTypeFilter,
+        ),
+        endDrawer: commonWidgets.buildDrawer(),
+        body: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: _buildHeader(isLargeScreen),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _fetchProperties(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: Padding(
-                    padding: EdgeInsets.all(40.0),
-                    child: CircularProgressIndicator(),
-                  ));
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Padding(
-                    padding: EdgeInsets.all(40.0),
-                    child: Text('No properties found.'),
-                  ));
-                }
-                final filtered = _applyFiltersAndSort(snapshot.data!);
-                if (filtered.isEmpty) {
-                  return const Center(child: Padding(
-                    padding: EdgeInsets.all(40.0),
-                    child: Text('No properties match your search.'),
-                  ));
-                }
-                return _buildPropertiesGrid(filtered, isLargeScreen, isMediumScreen, screenWidth);
-              },
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickyFilterDelegate(
+                minHeight: isLargeScreen ? 76.0 : 60.0,
+                maxHeight: isLargeScreen ? 76.0 : 60.0,
+                child: _buildFilterAndSortSection(isLargeScreen),
+              ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: commonWidgets.buildFooter(),
-          ),
-        ],
+            SliverToBoxAdapter(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _fetchProperties(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: Padding(
+                      padding: EdgeInsets.all(40.0),
+                      child: CircularProgressIndicator(),
+                    ));
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Padding(
+                      padding: EdgeInsets.all(40.0),
+                      child: Text('No properties found.'),
+                    ));
+                  }
+                  final filtered = _applyFiltersAndSort(snapshot.data!);
+                  if (filtered.isEmpty) {
+                    return const Center(child: Padding(
+                      padding: EdgeInsets.all(40.0),
+                      child: Text('No properties match your search.'),
+                    ));
+                  }
+                  return _buildPropertiesGrid(filtered, isLargeScreen, isMediumScreen, screenWidth);
+                },
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: commonWidgets.buildFooter(),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader(bool isLargeScreen) {
+    // Note: Assuming toCapitalized() is a string extension you have elsewhere in your code
+    // If not, it might throw an error. You can replace with a basic String if needed.
     final String titleText = _currentListingTypeFilter.isNotEmpty
-        ? '${_currentListingTypeFilter.toCapitalized()} Properties'
+        ? '${_currentListingTypeFilter} Properties' 
         : 'Discover Your Dream Property';
 
     return Container(
@@ -372,21 +391,26 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [Color(0xFF0A66C2), Color(0xFF5B21B6)], 
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ).createShader(bounds),
-            child: Text(
-              titleText,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: isLargeScreen ? 42 : 32, 
-                fontWeight: FontWeight.w900, 
-                color: Colors.white, 
-                letterSpacing: 1.2,
-                height: 1.2,
+          // Wrapped the main Header in an H1 tag for SEO
+          Seo.text(
+            text: titleText,
+            style: TextTagStyle.h1,
+            child: ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFF0A66C2), Color(0xFF5B21B6)], 
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ).createShader(bounds),
+              child: Text(
+                titleText,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: isLargeScreen ? 42 : 32, 
+                  fontWeight: FontWeight.w900, 
+                  color: Colors.white, 
+                  letterSpacing: 1.2,
+                  height: 1.2,
+                ),
               ),
             ),
           ),
@@ -662,17 +686,24 @@ class _PropertyListingScreenState extends State<PropertyListingScreen> {
           final property = properties[index];
           
           final bool isForRent = (property['listingType'] ?? '').toString().toLowerCase() == 'for rent';
+          final String propertyTitle = property['title']?.toString() ?? 'View Property Details';
 
-          return GestureDetector(
-            onTap: isForRent ? _showOccupiedDialog : null, 
-            child: AbsorbPointer(
-              absorbing: isForRent, 
-              child: PropertyCard(
-                property: property,
-                isLargeScreen: isLargeScreen,
-                isMediumScreen: isMediumScreen,
-                authService: widget.authService,
-                onAuthRequired: _showAuthDialog,
+          // SEO Critical: Wrapped the interactive property card in an Seo.link 
+          // This allows Google to discover and crawl individual property URLs
+          return Seo.link(
+            href: 'https://soraproperties.co.ke/view_property/${property['id']}',
+            anchor: propertyTitle,
+            child: GestureDetector(
+              onTap: isForRent ? _showOccupiedDialog : null, 
+              child: AbsorbPointer(
+                absorbing: isForRent, 
+                child: PropertyCard(
+                  property: property,
+                  isLargeScreen: isLargeScreen,
+                  isMediumScreen: isMediumScreen,
+                  authService: widget.authService,
+                  onAuthRequired: _showAuthDialog,
+                ),
               ),
             ),
           );
@@ -733,17 +764,22 @@ class __PassingCloudTextState extends State<_PassingCloudText> with SingleTicker
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return ShaderMask(
-          blendMode: BlendMode.srcIn, 
-          shaderCallback: (bounds) {
-            return LinearGradient(
-              colors: [Colors.grey[600]!, Colors.blue[400]!, Colors.grey[600]!],
-              stops: const [0.0, 0.5, 1.0],
-              begin: Alignment(-3.0 + (_controller.value * 6.0), 0.0),
-              end: Alignment(-1.0 + (_controller.value * 6.0), 0.0),
-            ).createShader(bounds);
-          },
-          child: Text(widget.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+        // Wrapped the description text in an SEO paragraph tag
+        return Seo.text(
+          text: widget.text,
+          style: TextTagStyle.p,
+          child: ShaderMask(
+            blendMode: BlendMode.srcIn, 
+            shaderCallback: (bounds) {
+              return LinearGradient(
+                colors: [Colors.grey[600]!, Colors.blue[400]!, Colors.grey[600]!],
+                stops: const [0.0, 0.5, 1.0],
+                begin: Alignment(-3.0 + (_controller.value * 6.0), 0.0),
+                end: Alignment(-1.0 + (_controller.value * 6.0), 0.0),
+              ).createShader(bounds);
+            },
+            child: Text(widget.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+          ),
         );
       },
     );
