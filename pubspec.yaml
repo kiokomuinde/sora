@@ -21,7 +21,7 @@ dependencies:
   intl: ^0.17.0
   font_awesome_flutter: ^10.8.0
   meta_seo: ^3.0.9
-  seo: ^0.0.10 # <-- Added the new SEO package here
+  seo: ^0.0.10 
 
 dev_dependencies:
   flutter_test:
