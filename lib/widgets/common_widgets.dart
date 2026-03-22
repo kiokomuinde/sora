@@ -565,7 +565,7 @@ class CommonWidgets {
                             _buildSocialButton(FontAwesomeIcons.instagram, 'https://www.instagram.com/sora.properties?igsh=MTFzM2dhOXZ5Z3E2eA=='),
                             _buildSocialButton(FontAwesomeIcons.linkedinIn, 'https://linkedin.com'),
                             _buildSocialButton(FontAwesomeIcons.youtube, 'https://youtube.com/@soraproperties?si=F3sQtcRZoBZL8Llv'),
-                            _buildSocialButton(FontAwesomeIcons.whatsapp, 'https://wa.me/+25493999591'),
+                            _buildSocialButton(FontAwesomeIcons.whatsapp, 'https://wa.me/+254702778897'), // Updated WhatsApp Number
                             _buildSocialButton(FontAwesomeIcons.tiktok, 'https://tiktok.com/@sora_properties.l'),
                             _buildSocialButton(FontAwesomeIcons.pinterest, 'https://pinterest.com'),
                             _buildSocialButton(FontAwesomeIcons.google, 'https://business.google.com'),
@@ -959,7 +959,147 @@ class CommonWidgets {
       ),
     );
   }
-}
+
+  // =========================================================
+  // NEW INQUIRY BUTTON LOGIC
+  // =========================================================
+
+  // 1. The Popup Modal (Call vs WhatsApp)
+  void showInquiryPopup() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: const Text(
+            'How would you like to reach us?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.bold, 
+              color: Color(0xFF0A66C2),
+              fontSize: 20,
+            ),
+          ),
+          content: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Call Option
+                InkWell(
+                  onTap: () async {
+                    Navigator.pop(dialogContext);
+                    final Uri launchUri = Uri(scheme: 'tel', path: '+254702778897'); // Updated Call Number
+                    if (await canLaunchUrl(launchUri)) {
+                      await launchUrl(launchUri);
+                    }
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E90FF),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)
+                          ]
+                        ),
+                        child: const Icon(Icons.phone, color: Colors.white, size: 35),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text('Call Us', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                ),
+                // WhatsApp Option
+                InkWell(
+                  onTap: () async {
+                    Navigator.pop(dialogContext);
+                    
+                    // ==========================================
+                    // UPDATED WITH PRE-FILLED PROFESSIONAL MESSAGE
+                    // ==========================================
+                    final Uri whatsappUrl = Uri.parse("https://wa.me/254702778897?text=Hello%20Sora%20Properties!%20I%20am%20reaching%20out%20from%20your%20website%20and%20would%20love%20to%20connect%20with%20your%20team."); 
+                    
+                    if (await canLaunchUrl(whatsappUrl)) {
+                      await launchUrl(whatsappUrl);
+                    }
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF25D366), // WhatsApp Green
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: Colors.green.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)
+                          ]
+                        ),
+                        child: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white, size: 35),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text('WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 2. Responsive AppBar Button
+  Widget buildAppBarInquiryButton() {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: _isSmallScreen() ? 10.0 : 20.0,
+        vertical: kIsWeb ? 15.0 : 8.0, 
+      ),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFF8C00), // High-contrast orange
+          elevation: 5,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: _isSmallScreen()
+              ? const EdgeInsets.symmetric(horizontal: 12)
+              : const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+        ),
+        onPressed: showInquiryPopup,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.headset_mic, color: Colors.white, size: 22),
+            if (!_isSmallScreen()) ...[
+              const SizedBox(width: 8),
+              const Text(
+                'Inquire Now',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 3. Floating Action Button (FAB) for individual property pages
+  Widget buildInquiryFAB() {
+    return FloatingActionButton.extended(
+      onPressed: showInquiryPopup,
+      backgroundColor: const Color(0xFFFF8C00), 
+      elevation: 6,
+      icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+      label: const Text('Inquire', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+    );
+  }
+
+} // End of CommonWidgets class
 
 // A custom reusable header widget.
 class CustomHeader extends StatelessWidget {

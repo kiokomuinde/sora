@@ -895,6 +895,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: commonWidgets.buildAppBar(),
       endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
+      floatingActionButton: commonWidgets.buildInquiryFAB(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SingleChildScrollView(
         child: Column(
           children: [
