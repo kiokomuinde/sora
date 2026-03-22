@@ -116278,7 +116278,7 @@ if(J.c0(d)===0){s=1
 break}m.L(new A.aS1(m,d))
 m.a_3()
 p=4
-i=A.eq("https://sora-properties-1w4x.vercel.app/api/chat",0,null)
+i=A.eq("https://sora-ai-backend-44q8k1nwj-henrychoxx-7703s-projects.vercel.app/api/chat",0,null)
 h=t.N
 g=A.R(["Content-Type","application/json"],h,h)
 f=m.f
