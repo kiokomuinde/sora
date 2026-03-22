@@ -8,8 +8,9 @@ import 'package:sora_app/services/auth_service.dart';
 import 'package:sora_app/screens/home_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// === NEW IMPORT ===
+// === NEW IMPORTS ===
 import 'package:sora_app/services/firestore_service.dart'; 
+import 'package:sora_app/widgets/sora_ai_chat.dart'; // Import the new AI Chat widget!
 
 // Extension for capitalizing first letter of a string
 extension StringExtension on String {
@@ -22,7 +23,7 @@ class CommonWidgets {
   final BuildContext context;
   final AuthService authService;
   
-  // === NEW FIELD: Instantiate FirestoreService ===
+  // Instantiate FirestoreService
   final FirestoreService _firestoreService = FirestoreService(); 
 
   CommonWidgets({required this.context, required this.authService});
@@ -31,7 +32,7 @@ class CommonWidgets {
   void showLoginSignupDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
+      builder: (BuildContext ctx) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           title: const Text(
@@ -52,7 +53,7 @@ class CommonWidgets {
                 style: TextStyle(color: Colors.grey),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop();
+                Navigator.of(ctx).pop();
               },
             ),
             ElevatedButton(
@@ -67,7 +68,7 @@ class CommonWidgets {
                 ),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop();
+                Navigator.of(ctx).pop();
                 Navigator.pushNamed(context, '/signin');
               },
             ),
@@ -83,7 +84,7 @@ class CommonWidgets {
                 ),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop();
+                Navigator.of(ctx).pop();
                 Navigator.pushNamed(context, '/signup');
               },
             ),
@@ -102,7 +103,7 @@ class CommonWidgets {
   AppBar buildAppBar({String? currentListingTypeFilter}) {
     final bool isLoggedIn = authService.getCurrentUser() != null;
     final User? user = authService.getCurrentUser();
-    final String? userId = user?.uid; // Get UID for admin check
+    final String? userId = user?.uid; 
     final String userEmail = user?.email ?? 'Guest';
     final String displayName = user?.displayName ?? userEmail.split('@')[0];
 
@@ -160,9 +161,9 @@ class CommonWidgets {
                 ),
                 const SizedBox(width: 20),
                 _buildAppBarButton(
-                  'BNB', // Displayed text remains BNB
-                  '/airbnb', // Restored route logic to airbnb
-                  currentListingTypeFilter == 'Airbnb', // Restored active check logic
+                  'BNB', 
+                  '/airbnb', 
+                  currentListingTypeFilter == 'Airbnb', 
                 ), 
                 const SizedBox(width: 20),
                 _buildAppBarButton('About Us', '/about'),
@@ -172,7 +173,7 @@ class CommonWidgets {
                 _buildAppBarButton('Contact Us', '/contact'),
                 const SizedBox(width: 20),
                 _buildAppBarButton('Blog', '/blogs'),
-                // === MODIFICATION: Check for Admin status for 'Create Blog' button ===
+                
                 if (isLoggedIn && userId != null)
                   FutureBuilder<bool>(
                     future: _firestoreService.checkAdminStatus(userId),
@@ -188,11 +189,17 @@ class CommonWidgets {
                       return const SizedBox.shrink();
                     },
                   ),
-                // === END MODIFICATION ===
               ],
             )
           : null,
       actions: [
+        // ==========================================
+        // AI CHAT BUTTON & INQUIRY BUTTON INJECTED
+        // ==========================================
+        buildAppBarAiButton(),
+        buildAppBarInquiryButton(),
+        // ==========================================
+
         if (kIsWeb && !_isSmallScreen()) // Only show on web and large screens
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -413,9 +420,9 @@ class CommonWidgets {
           ),
           ListTile(
             leading: const Icon(Icons.bed), 
-            title: const Text('BNB'), // Display text remains BNB
+            title: const Text('BNB'), 
             onTap: () {
-              Navigator.pushNamed(context, '/airbnb'); // Route restored to airbnb
+              Navigator.pushNamed(context, '/airbnb'); 
             },
           ),
           const Divider(),
@@ -449,7 +456,6 @@ class CommonWidgets {
           ),
           const Divider(),
           if (isLoggedIn) ...[
-            // === MODIFICATION: Check for Admin status for 'Create Blog' button in Drawer ===
             if (authService.getCurrentUser()?.uid != null)
               FutureBuilder<bool>(
                 future: _firestoreService.checkAdminStatus(authService.getCurrentUser()!.uid),
@@ -466,8 +472,6 @@ class CommonWidgets {
                   return const SizedBox.shrink();
                 },
               ),
-            // === END MODIFICATION ===
-
             const Divider(),
             ListTile(
               leading: const Icon(Icons.add_home_work),
@@ -515,7 +519,6 @@ class CommonWidgets {
   // Common Footer for consistent UI
   Widget buildFooter() {
     final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
-    // Get the user ID here to check if they are logged in
     final String? userId = authService.getCurrentUser()?.uid;
 
     return Container(
@@ -565,7 +568,7 @@ class CommonWidgets {
                             _buildSocialButton(FontAwesomeIcons.instagram, 'https://www.instagram.com/sora.properties?igsh=MTFzM2dhOXZ5Z3E2eA=='),
                             _buildSocialButton(FontAwesomeIcons.linkedinIn, 'https://linkedin.com'),
                             _buildSocialButton(FontAwesomeIcons.youtube, 'https://youtube.com/@soraproperties?si=F3sQtcRZoBZL8Llv'),
-                            _buildSocialButton(FontAwesomeIcons.whatsapp, 'https://wa.me/+254702778897'), // Updated WhatsApp Number
+                            _buildSocialButton(FontAwesomeIcons.whatsapp, 'https://wa.me/+254702778897'), 
                             _buildSocialButton(FontAwesomeIcons.tiktok, 'https://tiktok.com/@sora_properties.l'),
                             _buildSocialButton(FontAwesomeIcons.pinterest, 'https://pinterest.com'),
                             _buildSocialButton(FontAwesomeIcons.google, 'https://business.google.com'),
@@ -580,7 +583,7 @@ class CommonWidgets {
                       flex: 1,
                       child: _buildFooterColumn('Quick Links', [
                         _buildFooterLink('Home', '/home'),
-                        _buildFooterLink('BNB', '/airbnb'), // Restored route to airbnb
+                        _buildFooterLink('BNB', '/airbnb'),
                         _buildFooterLink('Buy', '/buy'),
                         _buildFooterLink('Rent', '/rent'),
                         _buildFooterLink('Agents', '/agents'),
@@ -623,7 +626,7 @@ class CommonWidgets {
                               ? Uri.parse('https://mail.google.com/mail/?view=cm&fs=1&to=$email')
                               : Uri(scheme: 'mailto', path: email);
                             if (!await launchUrl(url)) {
-                              // Handle error, e.g., show a snackbar
+                              // Handle error
                             }
                           },
                         ),
@@ -636,7 +639,7 @@ class CommonWidgets {
                 const SizedBox(height: 20),
                 _buildFooterColumn('Quick Links', [
                   _buildFooterLink('Home', '/home'),
-                  _buildFooterLink('BNB', '/airbnb'), // Restored route to airbnb
+                  _buildFooterLink('BNB', '/airbnb'),
                   _buildFooterLink('Buy', '/buy'),
                   _buildFooterLink('Rent', '/rent'),
                   _buildFooterLink('Agents', '/agents'),
@@ -675,7 +678,7 @@ class CommonWidgets {
                           ? Uri.parse('https://mail.google.com/mail/?view=cm&fs=1&to=$email')
                           : Uri(scheme: 'mailto', path: email);
                       if (!await launchUrl(url)) {
-                        // Handle error, e.g., show a snackbar
+                        // Handle error
                       }
                     },
                   ),
@@ -690,29 +693,23 @@ class CommonWidgets {
               ),
             ],
           ),
-          // NEW: Floating Action Button for Admin Screen (visible only on Web)
-          // === Logic: Only visible if user is logged in AND is admin ===
           if (kIsWeb && userId != null)
             Positioned(
               left: 20,
               bottom: 20,
-              // Wrap the button container in a FutureBuilder to check the admin status
               child: FutureBuilder<bool>(
-                // Fetch the admin status from Firestore
                 future: _firestoreService.checkAdminStatus(userId),
                 builder: (context, snapshot) {
-                  // Only render the button if the data is loaded and is true
                   if (snapshot.connectionState == ConnectionState.done && snapshot.data == true) {
                     return Container(
-                      // Added Container and Decoration to apply gradient
-                      width: 56.0, // Default FAB size
-                      height: 56.0, // Default FAB size
+                      width: 56.0, 
+                      height: 56.0, 
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28.0), // Half of size for circle
+                        borderRadius: BorderRadius.circular(28.0),
                         gradient: const LinearGradient(
                           colors: [
-                            Color(0xFF1E90FF), // Blue
-                            Color(0xFF8A2BE2), // Blue Violet (Purple)
+                            Color(0xFF1E90FF), 
+                            Color(0xFF8A2BE2), 
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -722,23 +719,18 @@ class CommonWidgets {
                         onPressed: () {
                           Navigator.pushNamed(context, '/admin');
                         },
-                        // Set background color to transparent to show the gradient Container
                         backgroundColor: Colors.transparent,
-                        // Remove shadow/elevation
                         elevation: 0,
-                        // Ensure the splash effect is contained within the gradient
                         highlightElevation: 0,
                         tooltip: 'Admin Screen',
                         child: const Icon(Icons.shield, color: Colors.white),
                       ),
                     );
                   }
-                  // If not logged in, not admin, or still loading, show nothing.
                   return const SizedBox.shrink();
                 },
               ),
             ),
-          // === END MODIFICATION ===
         ],
       ),
     );
@@ -753,8 +745,6 @@ class CommonWidgets {
           final uri = Uri.parse(url);
           if (await canLaunchUrl(uri)) {
             await launchUrl(uri, mode: LaunchMode.externalApplication);
-          } else {
-            // Log error or show a snackbar to the user
           }
         },
       ),
@@ -849,7 +839,9 @@ class CommonWidgets {
     );
   }
 
-  // Moved this method inside the class definition to fix the compilation error
+  // =========================================================
+  // ORIGINAL CALL TO ACTION BUTTON (Preserved)
+  // =========================================================
   Widget buildCallToActionButton({
     required String text,
     required VoidCallback onPressed,
@@ -961,14 +953,104 @@ class CommonWidgets {
   }
 
   // =========================================================
-  // NEW INQUIRY BUTTON LOGIC
+  // SORA AI CHAT LOGIC & BUTTONS
   // =========================================================
 
-  // 1. The Popup Modal (Call vs WhatsApp)
+  // 1. Logic to pop open the AI Chat window
+  void openAiChat() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Allows it to be tall
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        // Ensures the keyboard doesn't cover the input field
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: const SoraAiChat(),
+      ),
+    );
+  }
+
+  // 2. AI Chat Button for the AppBar (Next to Inquire Now)
+  Widget buildAppBarAiButton() {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: _isSmallScreen() ? 5.0 : 10.0,
+        vertical: kIsWeb ? 15.0 : 8.0, 
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E90FF), Color(0xFF8A2BE2)], // Blue to Purple
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(color: Colors.purple.withOpacity(0.3), blurRadius: 5, spreadRadius: 1)
+          ]
+        ),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent, // Let gradient show
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: _isSmallScreen()
+                ? const EdgeInsets.symmetric(horizontal: 12)
+                : const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+          ),
+          onPressed: openAiChat,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.auto_awesome, color: Colors.white, size: 22),
+              if (!_isSmallScreen()) ...[
+                const SizedBox(width: 8),
+                const Text(
+                  'Ask Sora AI',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 3. AI Chat FAB (Floating Action Button)
+  Widget buildAiChatFAB() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E90FF), Color(0xFF8A2BE2)], // Blue to Purple
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(color: Colors.purple.withOpacity(0.4), blurRadius: 8, spreadRadius: 2)
+        ]
+      ),
+      child: FloatingActionButton.extended(
+        heroTag: 'sora_ai_fab', 
+        onPressed: openAiChat,
+        backgroundColor: Colors.transparent, 
+        elevation: 0,
+        highlightElevation: 0,
+        icon: const Icon(Icons.auto_awesome, color: Colors.white),
+        label: const Text('Ask Sora AI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+      ),
+    );
+  }
+
+  // =========================================================
+  // HUMAN INQUIRY BUTTON LOGIC (Call/WhatsApp/Messenger)
+  // =========================================================
+
   void showInquiryPopup() {
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
+      builder: (BuildContext ctx) { 
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           title: const Text(
@@ -988,10 +1070,10 @@ class CommonWidgets {
                 // Call Option
                 InkWell(
                   onTap: () async {
-                    Navigator.pop(dialogContext);
-                    final Uri launchUri = Uri(scheme: 'tel', path: '+254702778897'); // Updated Call Number
+                    Navigator.of(ctx).pop(); 
+                    final Uri launchUri = Uri(scheme: 'tel', path: '+254702778897'); 
                     if (await canLaunchUrl(launchUri)) {
-                      await launchUrl(launchUri);
+                      await launchUrl(launchUri, mode: LaunchMode.externalApplication); 
                     }
                   },
                   child: Column(
@@ -1006,25 +1088,20 @@ class CommonWidgets {
                             BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)
                           ]
                         ),
-                        child: const Icon(Icons.phone, color: Colors.white, size: 35),
+                        child: const Icon(Icons.phone, color: Colors.white, size: 30),
                       ),
                       const SizedBox(height: 10),
-                      const Text('Call Us', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const Text('Call', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     ],
                   ),
                 ),
                 // WhatsApp Option
                 InkWell(
                   onTap: () async {
-                    Navigator.pop(dialogContext);
-                    
-                    // ==========================================
-                    // UPDATED WITH PRE-FILLED PROFESSIONAL MESSAGE
-                    // ==========================================
+                    Navigator.of(ctx).pop(); 
                     final Uri whatsappUrl = Uri.parse("https://wa.me/254702778897?text=Hello%20Sora%20Properties!%20I%20am%20reaching%20out%20from%20your%20website%20and%20would%20love%20to%20connect%20with%20your%20team."); 
-                    
                     if (await canLaunchUrl(whatsappUrl)) {
-                      await launchUrl(whatsappUrl);
+                      await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication); 
                     }
                   },
                   child: Column(
@@ -1033,16 +1110,44 @@ class CommonWidgets {
                       Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF25D366), // WhatsApp Green
+                          color: const Color(0xFF25D366), 
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(color: Colors.green.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)
                           ]
                         ),
-                        child: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white, size: 35),
+                        child: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white, size: 30),
                       ),
                       const SizedBox(height: 10),
-                      const Text('WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const Text('WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    ],
+                  ),
+                ),
+                // Messenger Option
+                InkWell(
+                  onTap: () async {
+                    Navigator.of(ctx).pop(); 
+                    final Uri messengerUrl = Uri.parse("https://m.me/soraproperties002"); 
+                    if (await canLaunchUrl(messengerUrl)) {
+                      await launchUrl(messengerUrl, mode: LaunchMode.externalApplication); 
+                    }
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0084FF), 
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)
+                          ]
+                        ),
+                        child: const FaIcon(FontAwesomeIcons.facebookMessenger, color: Colors.white, size: 30),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text('Messenger', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -1054,16 +1159,15 @@ class CommonWidgets {
     );
   }
 
-  // 2. Responsive AppBar Button
   Widget buildAppBarInquiryButton() {
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: _isSmallScreen() ? 10.0 : 20.0,
+        horizontal: _isSmallScreen() ? 5.0 : 10.0,
         vertical: kIsWeb ? 15.0 : 8.0, 
       ),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFF8C00), // High-contrast orange
+          backgroundColor: const Color(0xFFFF8C00), 
           elevation: 5,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: _isSmallScreen()
@@ -1088,9 +1192,9 @@ class CommonWidgets {
     );
   }
 
-  // 3. Floating Action Button (FAB) for individual property pages
   Widget buildInquiryFAB() {
     return FloatingActionButton.extended(
+      heroTag: 'inquiry_fab',
       onPressed: showInquiryPopup,
       backgroundColor: const Color(0xFFFF8C00), 
       elevation: 6,
