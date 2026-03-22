@@ -21,7 +21,7 @@ class _SoraAiChatState extends State<SoraAiChat> {
   // ==========================================
   // FIXED: Now using your clean Production URL
   // ==========================================
-  final String _vercelApiUrl = 'https://sora-properties-1w4x.vercel.app/api/chat';
+  final String _vercelApiUrl = 'https://sora-ai-backend-44q8k1nwj-henrychoxx-7703s-projects.vercel.app/api/chat';
 
   @override
   void initState() {
