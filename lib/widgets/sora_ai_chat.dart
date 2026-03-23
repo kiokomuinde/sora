@@ -18,10 +18,8 @@ class _SoraAiChatState extends State<SoraAiChat> {
   List<Map<String, dynamic>> _chatHistory = [];
   bool _isLoading = false;
 
-  // ==========================================
-  // FIXED: Now using your clean Production URL
-  // ==========================================
-  final String _vercelApiUrl = 'https://sora-ai-backend-44q8k1nwj-henrychoxx-7703s-projects.vercel.app/api/chat';
+  // IMPORTANT: The exact Vercel URL you confirmed
+  final String _vercelApiUrl = 'https://sora-ai-backend.vercel.app/api/chat';
 
   @override
   void initState() {
@@ -50,16 +48,34 @@ class _SoraAiChatState extends State<SoraAiChat> {
     _scrollToBottom();
 
     try {
+      print("--- STEP 1: SENDING REQUEST TO VERCEL ---");
+      print("Target URL: $_vercelApiUrl");
+      print("Message sending: $userText");
+
+      // ==========================================
+      // THE FIX: Clean the history for Gemini
+      // ==========================================
+      List<Map<String, dynamic>> historyToSend = List.from(_chatHistory);
+      historyToSend.removeLast(); // Don't send the current message in history
+      
+      // If the first message is our fake greeting, remove it so Gemini doesn't crash!
+      if (historyToSend.isNotEmpty && historyToSend.first['role'] == 'model') {
+        historyToSend.removeAt(0);
+      }
+
       // Send the request to Vercel
       final response = await http.post(
         Uri.parse(_vercelApiUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'message': userText,
-          // We send everything EXCEPT the brand new message as history
-          'history': _chatHistory.sublist(0, _chatHistory.length - 1) 
+          'history': historyToSend // Send the cleaned history
         }),
       );
+
+      print("--- STEP 2: VERCEL REPLIED ---");
+      print("Status Code: ${response.statusCode}");
+      print("Raw Body: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -70,14 +86,15 @@ class _SoraAiChatState extends State<SoraAiChat> {
           });
         });
       } else {
-        _showError("Connection error. Please try again.");
+        // If Vercel throws an error (like 500), we show the exact reason in the chat UI!
+        final data = jsonDecode(response.body);
+        final errorMessage = data['details'] ?? data['error'] ?? 'Unknown Server Error';
+        _showError("Server Error ${response.statusCode}: $errorMessage");
       }
     } catch (e) {
-      // ==========================================
-      // FIXED: Added print statement to track exact crashes
-      // ==========================================
-      print("🚨 SORA AI CRASH REPORT: $e"); 
-      _showError("Network error. Check your connection.");
+      print("--- STEP 3: FLUTTER NETWORK CRASH ---");
+      print("Exact Error: $e");
+      _showError("App failed to reach the internet. Check your debug console.");
     } finally {
       setState(() { _isLoading = false; });
       _scrollToBottom();
