@@ -18,16 +18,21 @@ class _SoraAiChatState extends State<SoraAiChat> {
   List<Map<String, dynamic>> _chatHistory = [];
   bool _isLoading = false;
 
-  // IMPORTANT: The exact Vercel URL you confirmed
-  final String _vercelApiUrl = 'https://sora-ai-backend.vercel.app/api/chat';
+  // IMPORTANT: Your Vercel URL
+  final String _vercelApiUrl = 'https://sora-ai-backend-amber.vercel.app/api/chat';
 
   @override
   void initState() {
     super.initState();
-    // The bot sends the first welcoming message!
+    // The bot sends the first welcoming message
     _chatHistory.add({
       "role": "model",
-      "parts": [{"text": "Hello! I am Sora, your personal real estate assistant. Are you looking to buy, rent, or find a BNB today?"}]
+      "parts": [{
+        "text": "Hello! I am Sora, your personal real estate assistant. Are you looking to buy, rent, or find a BNB today?",
+        "imageUrl": null,
+        "email": null,
+        "phone": null // Added phone initialization
+      }]
     });
   }
 
@@ -36,78 +41,60 @@ class _SoraAiChatState extends State<SoraAiChat> {
     if (userText.isEmpty) return;
 
     setState(() {
-      // Add user message to UI
       _chatHistory.add({
         "role": "user",
         "parts": [{"text": userText}]
       });
       _isLoading = true;
-      _controller.clear();
     });
-    
+
+    _controller.clear();
     _scrollToBottom();
 
     try {
-      print("--- STEP 1: SENDING REQUEST TO VERCEL ---");
-      print("Target URL: $_vercelApiUrl");
-      print("Message sending: $userText");
-
-      // ==========================================
-      // THE FIX: Clean the history for Gemini
-      // ==========================================
-      List<Map<String, dynamic>> historyToSend = List.from(_chatHistory);
-      historyToSend.removeLast(); // Don't send the current message in history
-      
-      // If the first message is our fake greeting, remove it so Gemini doesn't crash!
-      if (historyToSend.isNotEmpty && historyToSend.first['role'] == 'model') {
-        historyToSend.removeAt(0);
-      }
-
-      // Send the request to Vercel
       final response = await http.post(
         Uri.parse(_vercelApiUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'message': userText,
-          'history': historyToSend // Send the cleaned history
         }),
       );
-
-      print("--- STEP 2: VERCEL REPLIED ---");
-      print("Status Code: ${response.statusCode}");
-      print("Raw Body: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
           _chatHistory.add({
             "role": "model",
-            "parts": [{"text": data['reply']}]
+            "parts": [{
+              "text": data['replyText'] ?? "I found some information for you.",
+              "imageUrl": data['imageUrl'],
+              "email": data['email'],
+              "phone": data['phone'] // Capturing the phone number from Vercel!
+            }]
           });
+          _isLoading = false;
         });
+        _scrollToBottom();
       } else {
-        // If Vercel throws an error (like 500), we show the exact reason in the chat UI!
-        final data = jsonDecode(response.body);
-        final errorMessage = data['details'] ?? data['error'] ?? 'Unknown Server Error';
-        _showError("Server Error ${response.statusCode}: $errorMessage");
+        setState(() {
+          _chatHistory.add({
+            "role": "model",
+            "parts": [{"text": "Sorry, I'm having trouble connecting to the database right now. (Error ${response.statusCode})"}]
+          });
+          _isLoading = false;
+        });
+        _scrollToBottom();
       }
     } catch (e) {
-      print("--- STEP 3: FLUTTER NETWORK CRASH ---");
-      print("Exact Error: $e");
-      _showError("App failed to reach the internet. Check your debug console.");
-    } finally {
-      setState(() { _isLoading = false; });
+      setState(() {
+        _chatHistory.add({
+          "role": "model",
+          "parts": [{"text": "Network error. Please check your connection."}]
+        });
+        _isLoading = false;
+      });
       _scrollToBottom();
     }
-  }
-
-  void _showError(String error) {
-    setState(() {
-      _chatHistory.add({
-        "role": "model",
-        "parts": [{"text": "Oops! $error"}]
-      });
-    });
   }
 
   void _scrollToBottom() {
@@ -122,61 +109,204 @@ class _SoraAiChatState extends State<SoraAiChat> {
     });
   }
 
+  // Feature: Full Screen Image Viewer
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(imageUrl, fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7, // Takes up 70% of screen
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA), // Light, premium web background
+      appBar: AppBar(
+        title: const Row(
+          children: [
+            Icon(Icons.real_estate_agent, color: Colors.white),
+            SizedBox(width: 10),
+            Text('Sora AI Assistant', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          ],
+        ),
+        backgroundColor: const Color(0xFF0A66C2), // Sora Blue
+        elevation: 2,
       ),
-      child: Column(
+      body: Column(
         children: [
-          // Chat Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF0A66C2),
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Chat with Sora AI', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                )
-              ],
-            ),
-          ),
-          
-          // Chat Messages Area
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               itemCount: _chatHistory.length,
               itemBuilder: (context, index) {
                 final message = _chatHistory[index];
                 final isUser = message['role'] == 'user';
-                final text = message['parts'][0]['text'];
+                final parts = message['parts'][0];
+                final text = parts['text'];
+                final imageUrl = parts['imageUrl'];
+                final email = parts['email'];
+                final phone = parts['phone']; // Extract the new phone variable
 
                 return Align(
                   alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * (isUser ? 0.65 : 0.85),
+                    ),
                     decoration: BoxDecoration(
-                      color: isUser ? const Color(0xFF1E90FF) : Colors.grey[200],
+                      color: isUser ? const Color(0xFF0A66C2) : Colors.white,
+                      boxShadow: isUser ? [] : [
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                      ],
                       borderRadius: BorderRadius.circular(20).copyWith(
                         bottomRight: isUser ? const Radius.circular(0) : const Radius.circular(20),
                         bottomLeft: isUser ? const Radius.circular(20) : const Radius.circular(0),
                       ),
                     ),
-                    child: Text(
-                      text,
-                      style: TextStyle(color: isUser ? Colors.white : Colors.black87, fontSize: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 1. The Text (Includes pricing info from AI)
+                          Text(
+                            text,
+                            style: TextStyle(
+                              color: isUser ? Colors.white : const Color(0xFF2D3748), 
+                              fontSize: 16,
+                              height: 1.4,
+                            ),
+                          ),
+                          
+                          // 2. Premium Image Card
+                          if (!isUser && imageUrl != null) ...[
+                            const SizedBox(height: 16),
+                            GestureDetector(
+                              onTap: () => _showFullScreenImage(context, imageUrl),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Stack(
+                                  children: [
+                                    Image.network(
+                                      imageUrl,
+                                      width: double.infinity,
+                                      height: 220,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return Container(
+                                          height: 220,
+                                          width: double.infinity,
+                                          color: Colors.grey[200],
+                                          child: const Center(
+                                            child: CircularProgressIndicator(color: Color(0xFFFF8C00)),
+                                          ),
+                                        );
+                                      },
+                                      errorBuilder: (context, error, stackTrace) => 
+                                          Container(
+                                            height: 150, 
+                                            color: Colors.grey[200], 
+                                            child: const Center(child: Icon(Icons.broken_image, color: Colors.grey))
+                                          ),
+                                    ),
+                                    Positioned(
+                                      bottom: 0, left: 0, right: 0,
+                                      child: Container(
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.bottomCenter,
+                                            end: Alignment.topCenter,
+                                            colors: [Colors.black.withOpacity(0.4), Colors.transparent],
+                                          )
+                                        ),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                          
+                          // 3. Dynamic Action / Contact Buttons
+                          if (!isUser && (email != null || phone != null)) ...[
+                            const SizedBox(height: 16),
+                            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                            const SizedBox(height: 12),
+                            const Text("Contact Agent:", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                if (phone != null)
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF25D366), // WhatsApp Green
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    icon: const Icon(Icons.phone, size: 18),
+                                    label: Text(phone, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    onPressed: () {
+                                      // Using SnackBar for testing. You can add url_launcher here later to actually dial!
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Calling $phone...')),
+                                      );
+                                    },
+                                  ),
+                                if (email != null)
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFF8C00), // Sora Orange
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    icon: const Icon(Icons.email_outlined, size: 18),
+                                    label: const Text("Email", style: TextStyle(fontWeight: FontWeight.bold)),
+                                    onPressed: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Emailing $email...')),
+                                      );
+                                    },
+                                  ),
+                              ],
+                            )
+                          ]
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -184,30 +314,66 @@ class _SoraAiChatState extends State<SoraAiChat> {
             ),
           ),
 
+          // Sleek Typing Indicator
           if (_isLoading)
-            const Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator()),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                margin: const EdgeInsets.only(left: 16, bottom: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 15, width: 15, 
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0A66C2))
+                    ),
+                    SizedBox(width: 10),
+                    Text("Sora is searching properties...", style: TextStyle(color: Colors.grey, fontSize: 13, fontStyle: FontStyle.italic)),
+                  ],
+                ),
+              ),
+            ),
 
-          // Typing Input Area
-          Padding(
-            padding: const EdgeInsets.all(12.0),
+          // Modern Typing Input Area
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(0, -4), blurRadius: 10)],
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
                     decoration: InputDecoration(
-                      hintText: 'Ask about properties...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      hintText: 'e.g., Show me 2-bedroom BNBs...',
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      filled: true,
+                      fillColor: const Color(0xFFF5F7FA),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                const SizedBox(width: 8),
-                CircleAvatar(
-                  backgroundColor: const Color(0xFFFF8C00),
+                const SizedBox(width: 12),
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0A66C2),
+                    shape: BoxShape.circle,
+                  ),
                   child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white),
+                    icon: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
                     onPressed: _sendMessage,
                   ),
                 )
