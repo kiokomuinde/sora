@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async'; // Added for the loading text timer
 import 'package:url_launcher/url_launcher.dart'; 
 
 class SoraAiChat extends StatefulWidget {
@@ -18,6 +19,17 @@ class _SoraAiChatState extends State<SoraAiChat> {
   
   List<Map<String, dynamic>> _chatHistory = [];
   bool _isLoading = false;
+
+  // Loading animation variables
+  Timer? _loadingTimer;
+  int _loadingTextIndex = 0;
+  final List<String> _loadingPhrases = [
+    "Scanning the market...",
+    "Analyzing best locations...",
+    "Reviewing property details...",
+    "Negotiating with algorithms...",
+    "Almost there..."
+  ];
 
   final String _vercelApiUrl = 'https://sora-ai-backend-amber.vercel.app/api/chat';
 
@@ -35,6 +47,23 @@ class _SoraAiChatState extends State<SoraAiChat> {
     });
   }
 
+  @override
+  void dispose() {
+    _loadingTimer?.cancel();
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _startLoadingTimer() {
+    _loadingTextIndex = 0;
+    _loadingTimer = Timer.periodic(const Duration(milliseconds: 1800), (timer) {
+      setState(() {
+        _loadingTextIndex = (_loadingTextIndex + 1) % _loadingPhrases.length;
+      });
+    });
+  }
+
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
@@ -45,6 +74,7 @@ class _SoraAiChatState extends State<SoraAiChat> {
         "parts": [{"text": text, "imageGallery": null, "email": null, "phone": null}]
       });
       _isLoading = true;
+      _startLoadingTimer();
     });
 
     _controller.clear();
@@ -84,6 +114,7 @@ class _SoraAiChatState extends State<SoraAiChat> {
     } finally {
       setState(() {
         _isLoading = false;
+        _loadingTimer?.cancel();
       });
       _scrollToBottom();
     }
@@ -271,11 +302,25 @@ class _SoraAiChatState extends State<SoraAiChat> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F9FC), // Slightly cooler off-white background
       appBar: AppBar(
-        title: const Text('Sora AI Assistant', style: TextStyle(color: Colors.black87)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A66C2).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.real_estate_agent, color: Color(0xFF0A66C2), size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text('Sora AI Assistant', style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w600)),
+          ],
+        ),
         backgroundColor: Colors.white,
-        elevation: 1,
+        elevation: 0, // Removed hard shadow for a modern look
+        scrolledUnderElevation: 2,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: Column(
@@ -283,7 +328,7 @@ class _SoraAiChatState extends State<SoraAiChat> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 8),
               itemCount: _chatHistory.length,
               itemBuilder: (context, index) {
                 final message = _chatHistory[index];
@@ -300,10 +345,65 @@ class _SoraAiChatState extends State<SoraAiChat> {
               },
             ),
           ),
-          if (_isLoading)
-            const Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator()),
+          if (_isLoading) _buildLoadingBubble(),
           _buildInputArea(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingBubble() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16, top: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(20),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Color(0xFF0A66C2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              child: Text(
+                _loadingPhrases[_loadingTextIndex],
+                key: ValueKey<int>(_loadingTextIndex),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -315,21 +415,27 @@ class _SoraAiChatState extends State<SoraAiChat> {
     String? email,
     String? phone,
   }) {
-    // Corrected to seamlessly identify both company phone numbers
     bool isCompanyContact = (email == 'sales@soraproperties.co.ke' || phone == '0702778897' || phone == '0712529637');
 
     return Align(
       alignment: isModel ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85), // Made slightly wider for better images
+        margin: const EdgeInsets.only(bottom: 16),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
         decoration: BoxDecoration(
-          color: isModel ? Colors.grey[100] : const Color(0xFF0A66C2),
+          color: isModel ? Colors.white : const Color(0xFF0A66C2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: isModel ? const Radius.circular(0) : const Radius.circular(16),
-            bottomRight: isModel ? const Radius.circular(16) : const Radius.circular(0),
+            topLeft: const Radius.circular(20),
+            topRight: const Radius.circular(20),
+            bottomLeft: isModel ? const Radius.circular(4) : const Radius.circular(20),
+            bottomRight: isModel ? const Radius.circular(20) : const Radius.circular(4),
           ),
         ),
         padding: const EdgeInsets.all(16),
@@ -345,7 +451,6 @@ class _SoraAiChatState extends State<SoraAiChat> {
               ),
             ),
             
-            // RENDERING THE PREMIUM LISTING CAROUSEL
             if (imageGallery != null && imageGallery.isNotEmpty) ...[
               const SizedBox(height: 16),
               _ListingImageCarousel(images: imageGallery), 
@@ -361,23 +466,25 @@ class _SoraAiChatState extends State<SoraAiChat> {
                     ElevatedButton.icon(
                       onPressed: () => _showContactOptions(context, phone, isCompanyContact),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xFF0A66C2).withOpacity(0.1),
+                        foregroundColor: const Color(0xFF0A66C2),
+                        elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
                       icon: const Icon(Icons.phone, size: 18),
-                      label: Text(isCompanyContact ? "Contact Sora" : "Contact Agent"),
+                      label: Text(isCompanyContact ? "Contact Sora" : "Contact Agent", style: const TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   if (email != null)
                     ElevatedButton.icon(
                       onPressed: () => _showEmailOptions(context, email, isCompanyContact),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.orange.withOpacity(0.1),
+                        foregroundColor: Colors.orange[800],
+                        elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
                       icon: const Icon(Icons.email, size: 18),
-                      label: const Text("Email"),
+                      label: const Text("Email", style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
                 ],
               ),
@@ -390,31 +497,49 @@ class _SoraAiChatState extends State<SoraAiChat> {
 
   Widget _buildInputArea() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(0, -4), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04), 
+            offset: const Offset(0, -4), 
+            blurRadius: 15
+          )
+        ],
       ),
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                hintText: 'e.g., Show me 2-bedroom BNBs...',
-                hintStyle: TextStyle(color: Colors.grey[400]),
-                filled: true,
-                fillColor: const Color(0xFFF5F7FA),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F2F5),
+                borderRadius: BorderRadius.circular(30),
               ),
-              onSubmitted: (_) => _sendMessage(),
+              child: TextField(
+                controller: _controller,
+                textInputAction: TextInputAction.send,
+                decoration: InputDecoration(
+                  hintText: 'e.g., Show me 2-bedroom BNBs...',
+                  hintStyle: TextStyle(color: Colors.grey[500], fontSize: 15),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                ),
+                onSubmitted: (_) => _sendMessage(),
+              ),
             ),
           ),
           const SizedBox(width: 12),
-          Container(
-            decoration: const BoxDecoration(color: Color(0xFF0A66C2), shape: BoxShape.circle),
-            child: IconButton(icon: const Icon(Icons.send_rounded, color: Colors.white, size: 24), onPressed: _sendMessage),
+          GestureDetector(
+            onTap: _sendMessage,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0A66C2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
+            ),
           )
         ],
       ),
@@ -448,12 +573,11 @@ class __ListingImageCarouselState extends State<_ListingImageCarousel> {
     if (widget.images.isEmpty) return const SizedBox.shrink();
 
     return AspectRatio(
-      aspectRatio: 16 / 10, // Creates that perfect real estate wide-angle look
+      aspectRatio: 16 / 10,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Stack(
           children: [
-            // 1. The Image Pager
             PageView.builder(
               controller: _pageController,
               onPageChanged: (index) {
@@ -467,7 +591,6 @@ class __ListingImageCarouselState extends State<_ListingImageCarousel> {
                   widget.images[index],
                   fit: BoxFit.cover,
                   width: double.infinity,
-                  // Adds a subtle loading spinner for each image
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
                     return Container(
@@ -490,7 +613,6 @@ class __ListingImageCarouselState extends State<_ListingImageCarousel> {
               },
             ),
             
-            // 2. The Premium Image Counter Chip (Top Right)
             if (widget.images.length > 1)
               Positioned(
                 top: 8,
@@ -508,7 +630,6 @@ class __ListingImageCarouselState extends State<_ListingImageCarousel> {
                 ),
               ),
 
-            // 3. Left Arrow Overlay
             if (_currentIndex > 0)
               Positioned(
                 left: 8,
@@ -529,7 +650,6 @@ class __ListingImageCarouselState extends State<_ListingImageCarousel> {
                 ),
               ),
               
-            // 4. Right Arrow Overlay
             if (_currentIndex < widget.images.length - 1)
               Positioned(
                 right: 8,
@@ -550,7 +670,6 @@ class __ListingImageCarouselState extends State<_ListingImageCarousel> {
                 ),
               ),
               
-            // 5. The Animated Dot Overlay (Bottom)
             if (widget.images.length > 1)
               Positioned(
                 bottom: 12,
@@ -562,7 +681,6 @@ class __ListingImageCarouselState extends State<_ListingImageCarousel> {
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       margin: const EdgeInsets.symmetric(horizontal: 3),
-                      // Makes the active dot slightly wider for a modern feel
                       width: _currentIndex == index ? 16 : 6,
                       height: 6,
                       decoration: BoxDecoration(

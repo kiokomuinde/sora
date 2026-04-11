@@ -96,7 +96,7 @@ class CommonWidgets {
 
   // Helper method to check if screen is small (for responsive design)
   bool _isSmallScreen() {
-    return MediaQuery.of(context).size.width < 1024;
+    return MediaQuery.of(context).size.width < 1200;
   }
 
   // Common AppBar for consistent navigation
@@ -143,61 +143,63 @@ class CommonWidgets {
         ),
       ),
       title: kIsWeb && !_isSmallScreen()
-          ? Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildAppBarButton('Home', '/home'),
-                const SizedBox(width: 20),
-                _buildAppBarButton(
-                  'Buy',
-                  '/buy',
-                  currentListingTypeFilter == 'Buy',
-                ),
-                const SizedBox(width: 20),
-                _buildAppBarButton(
-                  'Rent',
-                  '/rent',
-                  currentListingTypeFilter == 'Rent',
-                ),
-                const SizedBox(width: 20),
-                _buildAppBarButton(
-                  'BNB', 
-                  '/airbnb', 
-                  currentListingTypeFilter == 'Airbnb', 
-                ), 
-                const SizedBox(width: 20),
-                _buildAppBarButton('About Us', '/about'),
-                const SizedBox(width: 20),
-                _buildAppBarButton('Agents', '/agents'),
-                const SizedBox(width: 20),
-                _buildAppBarButton('Contact Us', '/contact'),
-                const SizedBox(width: 20),
-                _buildAppBarButton('Blog', '/blogs'),
-                
-                if (isLoggedIn && userId != null)
-                  FutureBuilder<bool>(
-                    future: _firestoreService.checkAdminStatus(userId),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done && snapshot.data == true) {
-                        return Row(
-                          children: [
-                            const SizedBox(width: 20),
-                            _buildAppBarButton('Create Blog', '/create_blog')
-                          ],
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
+          ? SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildAppBarButton('Home', '/home'),
+                  const SizedBox(width: 20),
+                  _buildAppBarButton(
+                    'Buy',
+                    '/buy',
+                    currentListingTypeFilter == 'Buy',
                   ),
-              ],
+                  const SizedBox(width: 20),
+                  _buildAppBarButton(
+                    'Rent',
+                    '/rent',
+                    currentListingTypeFilter == 'Rent',
+                  ),
+                  const SizedBox(width: 20),
+                  _buildAppBarButton(
+                    'BNB', 
+                    '/airbnb', 
+                    currentListingTypeFilter == 'Airbnb', 
+                  ), 
+                  const SizedBox(width: 20),
+                  _buildAppBarButton('About Us', '/about'),
+                  const SizedBox(width: 20),
+                  _buildAppBarButton('Agents', '/agents'),
+                  const SizedBox(width: 20),
+                  _buildAppBarButton('Contact Us', '/contact'),
+                  const SizedBox(width: 20),
+                  _buildAppBarButton('Blog', '/blogs'),
+                  
+                  if (isLoggedIn && userId != null)
+                    FutureBuilder<bool>(
+                      future: _firestoreService.checkAdminStatus(userId),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.done && snapshot.data == true) {
+                          return Row(
+                            children: [
+                              const SizedBox(width: 20),
+                              _buildAppBarButton('Create Blog', '/create_blog')
+                            ],
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                ],
+              ),
             )
           : null,
       actions: [
         // ==========================================
-        // AI CHAT BUTTON & INQUIRY BUTTON INJECTED
+        // AI CHAT BUTTON INJECTED
         // ==========================================
         buildAppBarAiButton(),
-        buildAppBarInquiryButton(),
         // ==========================================
 
         if (kIsWeb && !_isSmallScreen()) // Only show on web and large screens
@@ -960,17 +962,16 @@ class CommonWidgets {
   void openAiChat() {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Allows it to be tall
+      isScrollControlled: true, 
       backgroundColor: Colors.transparent,
       builder: (context) => Padding(
-        // Ensures the keyboard doesn't cover the input field
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: const SoraAiChat(),
       ),
     );
   }
 
-  // 2. AI Chat Button for the AppBar (Next to Inquire Now)
+  // 2. AI Chat Button for the AppBar
   Widget buildAppBarAiButton() {
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -980,7 +981,7 @@ class CommonWidgets {
       child: Container(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF1E90FF), Color(0xFF8A2BE2)], // Blue to Purple
+            colors: [Color(0xFF1E90FF), Color(0xFF8A2BE2)], 
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -991,7 +992,7 @@ class CommonWidgets {
         ),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent, // Let gradient show
+            backgroundColor: Colors.transparent, 
             shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             padding: _isSmallScreen()
@@ -1022,7 +1023,7 @@ class CommonWidgets {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E90FF), Color(0xFF8A2BE2)], // Blue to Purple
+          colors: [Color(0xFF1E90FF), Color(0xFF8A2BE2)], 
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1064,10 +1065,12 @@ class CommonWidgets {
           ),
           content: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            child: Wrap(
+              alignment: WrapAlignment.spaceEvenly,
+              spacing: 15,
+              runSpacing: 15,
               children: [
-                // Call Option
+                // Primary Call Option
                 InkWell(
                   onTap: () async {
                     Navigator.of(ctx).pop(); 
@@ -1200,6 +1203,36 @@ class CommonWidgets {
       elevation: 6,
       icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
       label: const Text('Inquire', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+    );
+  }
+
+  // =========================================================
+  // TENANTS CORNER FAB LOGIC
+  // =========================================================
+
+  Widget buildTenantsCornerFAB() {
+    return FloatingActionButton.extended(
+      heroTag: 'tenants_corner_fab_unique', // Added unique hero tag to prevent crashes
+      onPressed: () {
+        Navigator.pushNamed(context, '/tenants_corner');
+      },
+      backgroundColor: const Color(0xFF2E8B57), // A nice SeaGreen color for distinction
+      elevation: 6,
+      icon: const Icon(Icons.vpn_key, color: Colors.white),
+      label: const Text('Tenants Corner', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+    );
+  }
+
+  // Helper method to stack the FABs cleanly on the screen
+  Widget buildStackedFABs() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        buildInquiryFAB(),
+        const SizedBox(height: 16),
+        buildTenantsCornerFAB(),
+      ],
     );
   }
 

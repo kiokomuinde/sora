@@ -23,7 +23,6 @@ class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
-
 class _HomeScreenState extends State<HomeScreen> {
   late CommonWidgets commonWidgets;
   late Future<List<Map<String, dynamic>>> _propertiesFuture;
@@ -895,8 +894,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: commonWidgets.buildAppBar(),
       endDrawer: !isLargeScreen ? commonWidgets.buildDrawer() : null,
-      floatingActionButton: commonWidgets.buildInquiryFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: commonWidgets.buildStackedFABs(),
       body: SingleChildScrollView(
         child: Column(
           children: [
